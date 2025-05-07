@@ -47,7 +47,7 @@
     },
     {
       "level": "DEEP",
-      "range": { "min": 29.60, "max": 31.20, "inclusive_min": true, "inclusive_max": true },
+      "range": { "min": 29.50, "max": 31.20, "inclusive_min": true, "inclusive_max": true },
       "probability": 0.12,
       "action_brief": "double_monthly_purchase",
       "example_action": "exchange_approx_40k_thb",
@@ -55,7 +55,7 @@
     },
     {
       "level": "OPPORTUNE",
-      "range": { "min": 31.30, "max": 32.00, "inclusive_min": true, "inclusive_max": true },
+      "range": { "min": 31.20, "max": 32.00, "inclusive_min": true, "inclusive_max": true },
       "probability": 0.15,
       "action_brief": "increase_purchase_by_25_to_50_percent",
       "example_action": "exchange_approx_25k_to_30k_thb",
@@ -63,7 +63,7 @@
     },
     {
       "level": "NEUTRAL",
-      "range": { "min": 32.10, "max": 34.00, "inclusive_min": true, "inclusive_max": true },
+      "range": { "min": 32.00, "max": 34.00, "inclusive_min": true, "inclusive_max": true },
       "probability": 0.45,
       "action_brief": "maintain_standard_dca",
       "example_action": "exchange_20k_thb",
@@ -71,7 +71,7 @@
     },
     {
       "level": "USD-RICH",
-      "range": { "min": 34.01, "max": null, "inclusive_min": true, "inclusive_max": false },
+      "range": { "min": 34.00, "max": null, "inclusive_min": true, "inclusive_max": false },
       "probability": 0.25,
       "action_brief": "pause_non_essential_conversions",
       "example_action": "hold_thb_deposit_short_term",
