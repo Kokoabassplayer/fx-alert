@@ -1,40 +1,24 @@
-const API_BASE_URL = "https://api.exchangerate.host";
+
+const API_BASE_URL = "https://api.frankfurter.app";
 
 export interface CurrentRateResponse {
-  motd: {
-    msg: string;
-    url: string;
-  };
-  success: boolean;
+  amount: number;
   base: string;
-  date: string;
+  date: string; // e.g., "2023-10-27"
   rates: {
     THB: number;
-  };
-  error?: { 
-    code: string;
-    message: string;
   };
 }
 
 export interface HistoricalRateResponse {
-  motd: {
-    msg: string;
-    url: string;
-  };
-  success: boolean;
-  timeseries: boolean;
+  amount: number;
   base: string;
-  start_date: string;
-  end_date: string;
+  start_date: string; // e.g., "2023-08-01"
+  end_date: string;   // e.g., "2023-10-27"
   rates: {
-    [date: string]: {
+    [date: string]: { // Date string "YYYY-MM-DD"
       THB: number;
     };
-  };
-  error?: { 
-    code: string;
-    message: string;
   };
 }
 
@@ -45,7 +29,7 @@ export interface FormattedHistoricalRate {
 
 export async function fetchCurrentUsdToThbRate(): Promise<CurrentRateResponse | null> {
   try {
-    const response = await fetch(`${API_BASE_URL}/latest?base=USD&symbols=THB`);
+    const response = await fetch(`${API_BASE_URL}/latest?from=USD&to=THB`);
     if (!response.ok) {
       console.error(
         "Failed to fetch current rate (HTTP status):",
@@ -67,26 +51,12 @@ export async function fetchCurrentUsdToThbRate(): Promise<CurrentRateResponse | 
       return null;
     }
 
-    // Handle cases where data is not a non-null object
     if (typeof data !== 'object' || data === null) {
         console.warn("API response for current rate was not a non-null object:", data);
         return null;
     }
-
-    // Case 1: API returns an empty object {}
-    if (Object.keys(data).length === 0) {
-      console.warn("API returned an empty object for current rate.");
-      return null;
-    }
-
-    // Case 2: API returns a response that explicitly indicates failure (e.g., success: false)
-    if (typeof data.success === 'boolean' && data.success === false) {
-      console.warn("API request for current rate indicated failure:", data.error || data);
-      return null;
-    }
-
-    // Case 3: API returns a response, `success` might be true/missing, but overall structure is invalid.
-    if (typeof data.success !== 'boolean' || !data.rates || typeof data.rates.THB !== 'number') {
+    
+    if (!data.rates || typeof data.rates.THB !== 'number') {
       console.error("Invalid data format or structure for current rate:", data);
       return null;
     }
@@ -110,7 +80,7 @@ export async function fetchUsdToThbRateHistory(): Promise<FormattedHistoricalRat
 
   try {
     const response = await fetch(
-      `${API_BASE_URL}/timeseries?base=USD&symbols=THB&start_date=${startDate}&end_date=${endDate}`
+      `${API_BASE_URL}/${startDate}..${endDate}?from=USD&to=THB`
     );
     if (!response.ok) {
       console.error(
@@ -133,37 +103,32 @@ export async function fetchUsdToThbRateHistory(): Promise<FormattedHistoricalRat
       return [];
     }
 
-    // Handle cases where data is not a non-null object
     if (typeof data !== 'object' || data === null) {
         console.warn("API response for rate history was not a non-null object:", data);
         return [];
     }
     
-    // Case 1: API returns an empty object {}
-    if (Object.keys(data).length === 0) {
-      console.warn("API returned an empty object for rate history.");
-      return [];
-    }
-    
-    // Case 2: API returns a response that explicitly indicates failure (e.g., success: false)
-    if (typeof data.success === 'boolean' && data.success === false) {
-      console.warn("API request for rate history indicated failure:", data.error || data);
-      return [];
-    }
-
-    // Case 3: API returns a response, `success` might be true/missing, but overall structure is invalid for historical data.
-    if (typeof data.success !== 'boolean' || !data.rates || typeof data.rates !== 'object') {
-      console.error("Invalid data format or structure for rate history (e.g. missing success or rates object):", data.error || data);
+    if (!data.rates || typeof data.rates !== 'object') {
+      console.error("Invalid data format or structure for rate history (e.g. missing rates object):", data);
       return [];
     }
     
     const historicalData = data as HistoricalRateResponse;
 
+    // Check if historicalData.rates is empty
+    if (Object.keys(historicalData.rates).length === 0) {
+      console.warn("Historical rate data is empty.");
+      return [];
+    }
+
     const formattedData = Object.entries(historicalData.rates)
       .map(([date, rateData]) => ({
         date,
+        // Ensure rateData and rateData.THB exist and THB is a number, otherwise default to 0 or skip
         rate: (rateData && typeof rateData.THB === 'number') ? rateData.THB : 0, 
       }))
+      // Filter out entries where rate might have defaulted to 0 due to missing THB data, if desired
+      // .filter(item => item.rate !== 0) // Optional: if you don't want to plot 0s for missing data
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
       
     return formattedData;
