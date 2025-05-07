@@ -9,20 +9,30 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, TrendingDown, TrendingUp, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useLocalStorage } from "@/hooks/use-local-storage";
 import { fetchCurrentUsdToThbRate, type CurrentRateResponse } from "@/lib/currency-api";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface CurrentRateDisplayProps {
   refreshTrigger: number;
+  threshold: number;
+  onThresholdChange: (newThreshold: number) => void;
 }
 
-const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({ refreshTrigger }) => {
+const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
+  refreshTrigger,
+  threshold,
+  onThresholdChange
+}) => {
   const [currentRateData, setCurrentRateData] = useState<CurrentRateResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const { toast } = useToast();
-  const [threshold, setThreshold] = useLocalStorage<number>("usdThbThreshold", 32.0);
   const [inputThreshold, setInputThreshold] = useState<string>(threshold.toString());
+  const [suggestedAction, setSuggestedAction] = useState<string | null>(null);
+
+  useEffect(() => {
+    setInputThreshold(threshold.toString());
+  }, [threshold]);
 
   const fetchRate = useCallback(async (isManualRefresh = false) => {
     setIsLoading(true);
@@ -55,6 +65,24 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({ refreshTrigger }) => 
     return () => clearInterval(intervalId);
   }, [fetchRate]);
 
+  const rate = currentRateData?.rates?.THB;
+
+  useEffect(() => {
+    if (rate) {
+      if (rate <= 30.5) {
+        setSuggestedAction("This is an EXTREME opportunity to buy USD (historical odds < 3% of months).");
+      } else if (rate <= 31.2) {
+        setSuggestedAction("This is a DEEP VALUE opportunity to buy USD (historical odds ~1 month in 10).");
+      } else if (rate <= 32.0) {
+        setSuggestedAction("This is an OPPORTUNISTIC time to buy USD (historical odds ~1 month in 4).");
+      } else {
+        setSuggestedAction("The current rate is above the conservative 'cheaper than usual' line. Consider waiting for a better rate.");
+      }
+    } else { 
+      setSuggestedAction(null); 
+    }
+  }, [rate]);
+
   const handleSaveThreshold = () => {
     const newThreshold = parseFloat(inputThreshold);
     if (isNaN(newThreshold)) {
@@ -65,11 +93,10 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({ refreshTrigger }) => 
       });
       return;
     }
-    setThreshold(newThreshold);
+    onThresholdChange(newThreshold);
     toast({ title: "Threshold Saved", description: `New threshold: ${newThreshold.toFixed(2)}` });
   };
 
-  const rate = currentRateData?.rates?.THB;
   const displayRate = rate !== undefined ? rate.toFixed(4) : "N/A";
   const trendIcon = rate !== undefined && rate <= threshold ? (
     <TrendingDown className="h-5 w-5 text-green-600" />
@@ -119,6 +146,12 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({ refreshTrigger }) => 
           <RefreshCw className="mr-2 h-5 w-5" />
           Refresh Rate Now
         </Button>
+        {suggestedAction && !isLoading && rate !== undefined && (
+          <Alert className="mt-4">
+            <AlertTitle>Action Suggestion:</AlertTitle>
+            <AlertDescription>{suggestedAction}</AlertDescription>
+          </Alert>
+        )}
       </CardContent>
     </Card>
   );

@@ -6,9 +6,11 @@ import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
 import CurrentRateDisplay from '@/components/current-rate-display';
 import HistoryChartDisplay from '@/components/history-chart-display';
+import { useLocalStorage } from "@/hooks/use-local-storage";
 
 export default function UsdThbMonitorPage() {
   const [refreshKey, setRefreshKey] = useState(0);
+  const [threshold, setThreshold] = useLocalStorage<number>("usdThbThreshold", 32.0);
 
   const handleRefreshAll = useCallback(() => {
     setRefreshKey(prev => prev + 1);
@@ -23,8 +25,15 @@ export default function UsdThbMonitorPage() {
       </header>
       
       <main className="w-full max-w-xl space-y-6">
-        <CurrentRateDisplay refreshTrigger={refreshKey} />
-        <HistoryChartDisplay refreshTrigger={refreshKey} />
+        <CurrentRateDisplay
+          refreshTrigger={refreshKey}
+          threshold={threshold}
+          onThresholdChange={setThreshold}
+        />
+        <HistoryChartDisplay
+          refreshTrigger={refreshKey}
+          threshold={threshold} 
+        />
 
         <Button 
           onClick={handleRefreshAll} 
@@ -38,3 +47,4 @@ export default function UsdThbMonitorPage() {
     </div>
   );
 }
+
