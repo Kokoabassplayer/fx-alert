@@ -25,7 +25,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="light"> {/* Force light mode */}
+    // The className "light" on the <html> tag enforces light mode.
+    // It's important that there are no whitespace text nodes as direct children
+    // of <html> before <body>, which can cause hydration errors.
+    <html lang="en" className="light">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         {children}
         <Toaster />
