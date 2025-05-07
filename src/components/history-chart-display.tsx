@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, ListChecks } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { fetchUsdToThbRateHistory, type FormattedHistoricalRate } from "@/lib/currency-api";
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceArea, Legend, ReferenceLine } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceArea, Legend } from 'recharts';
 
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { BANDS, type ConversionLogEntry, type AlertPrefs, type BandName, getBandFromRate, type Band } from "@/lib/bands";
@@ -31,7 +31,6 @@ import { Badge } from '@/components/ui/badge';
 
 
 interface HistoryChartDisplayProps {
-  refreshTrigger: number;
   alertPrefs: AlertPrefs;
 }
 
@@ -44,12 +43,11 @@ interface BandUIDefinition {
   strokeVar: string;
   label: string; 
   legendBadgeClass: string;
-  threshold?: number; 
   tooltipLabel?: string; 
 }
 
 
-const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ refreshTrigger, alertPrefs }) => {
+const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ alertPrefs }) => {
   const [chartData, setChartData] = useState<FormattedHistoricalRate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
@@ -65,8 +63,7 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ refreshTrigger, ale
         fillVar: b.chartSettings.fillVar,
         strokeVar: b.chartSettings.strokeVar,
         label: b.displayName,
-        legendBadgeClass: b.badgeClass.split(' ')[0], 
-        threshold: b.chartSettings.threshold,
+        legendBadgeClass: b.badgeClass.split(' ')[0],
         tooltipLabel: b.displayName,
     }));
   }, []);
@@ -92,7 +89,7 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ refreshTrigger, ale
 
   useEffect(() => {
     fetchHistory();
-  }, [fetchHistory, refreshTrigger]);
+  }, [fetchHistory]);
 
   const yAxisDomain = useMemo(() => {
     let minDataRate = 30; 
@@ -233,7 +230,7 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ refreshTrigger, ale
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={chartData} margin={{ top: 5, right: 20, left: 0, bottom: 25 }}>
+            <LineChart data={chartData} margin={{ top: 5, right: 20, left: -10, bottom: 25 }}>
               <XAxis
                 dataKey="date"
                 tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
@@ -250,8 +247,8 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ refreshTrigger, ale
                 tickLine={false}
                 axisLine={{ stroke: 'hsl(var(--border))' }}
                 allowDataOverflow={true}
-                width={50}
-                label={{ value: 'THB/USD', angle: -90, position: 'insideLeft', fill: 'hsl(var(--muted-foreground))', fontSize: 12, dy: 20, dx: -10 }}
+                width={60} // Increased width to accommodate label
+                label={{ value: 'THB/USD', angle: -90, position: 'insideLeft', fill: 'hsl(var(--muted-foreground))', fontSize: 12, dy: 40, dx: -10 }}
               />
               <Tooltip content={<CustomTooltip />} />
 
@@ -270,8 +267,8 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ refreshTrigger, ale
                       fillOpacity={1} 
                       strokeOpacity={1}
                       ifOverflow="visible"
-                      label={{
-                        value: "", // Set label to empty string to hide it
+                       label={{
+                        value: "", // Removed label text
                         position: 'insideTopLeft',
                         fill: 'hsl(var(--muted-foreground))',
                         fontSize: 10,
@@ -285,16 +282,7 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ refreshTrigger, ale
                 return null;
               })}
               
-              {bandUIDefinitions.filter(b => alertPrefs[b.name] && b.threshold !== undefined).map(bandDef => (
-                 <ReferenceLine
-                    key={`ref-line-${bandDef.name}`}
-                    y={bandDef.threshold}
-                    stroke="hsl(var(--border))"
-                    strokeDasharray="3 3"
-                    strokeWidth={1.5}
-                 />
-              ))}
-
+              {/* Removed ReferenceLine components for band thresholds */}
 
               <Line
                 type="monotone"
