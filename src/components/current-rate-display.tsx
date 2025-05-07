@@ -16,7 +16,6 @@ import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover
 import { getBandFromRate, BANDS, type Band, type AlertPrefs, type BandName } from "@/lib/bands";
 
 interface CurrentRateDisplayProps {
-  refreshTrigger: number;
   alertPrefs: AlertPrefs;
   onAlertPrefsChange: (newPrefs: AlertPrefs) => void;
 }
@@ -110,16 +109,23 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
 
         {currentBand && !isLoading && rate !== undefined && (
           <Card className={`shadow-md border-t-4 ${currentBand.borderColorClass} rounded-lg`}>
-             <CardContent className="p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <Badge className={`${currentBand.badgeClass} text-sm px-3 py-1`}>{currentBand.displayName}</Badge>
-                {currentBand.probability && (
-                  <p className="text-xs text-muted-foreground font-medium">
-                    Historical Odds: {currentBand.probability}
+             <CardContent className="p-4 space-y-2"> {/* Adjusted space-y */}
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <Badge className={`${currentBand.badgeClass} text-sm px-3 py-1`}>{currentBand.displayName}</Badge>
+                  {currentBand.probability && (
+                    <p className="text-xs text-muted-foreground font-medium text-right">
+                      Historical Odds: {currentBand.probability}
+                    </p>
+                  )}
+                </div>
+                {currentBand.rangeDisplay && (
+                  <p className="text-xs text-muted-foreground">
+                    Rate Range: {currentBand.rangeDisplay}
                   </p>
                 )}
               </div>
-              <p className="text-sm text-foreground/90">{currentBand.action}</p>
+              <p className="text-sm text-foreground/90 pt-1">{currentBand.action}</p>
             </CardContent>
           </Card>
         )}
