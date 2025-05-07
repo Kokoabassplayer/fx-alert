@@ -1,4 +1,3 @@
-
 "use client";
 
 import type { FC } from 'react';
@@ -109,22 +108,22 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
 
         {currentBand && !isLoading && rate !== undefined && (
           <Card className={`shadow-md border-t-4 ${currentBand.borderColorClass} rounded-lg`}>
-             <CardContent className="p-4 space-y-2"> {/* Adjusted space-y */}
-              <div className="space-y-1">
-                <div className="flex items-center justify-between">
-                  <Badge className={`${currentBand.badgeClass} text-sm px-3 py-1`}>{currentBand.displayName}</Badge>
+            <CardContent className="p-4 space-y-2">
+              <div className="flex items-center">
+                <Badge className={`${currentBand.badgeClass} text-sm px-3 py-1`}>{currentBand.displayName}</Badge>
+              </div>
+              
+              {(currentBand.rangeDisplay || currentBand.probability) && (
+                <div className="text-xs text-muted-foreground space-y-1 pt-1">
+                  {currentBand.rangeDisplay && (
+                    <p>Rate Range: {currentBand.rangeDisplay}</p>
+                  )}
                   {currentBand.probability && (
-                    <p className="text-xs text-muted-foreground font-medium text-right">
-                      Historical Odds: {currentBand.probability}
-                    </p>
+                    <p className="font-medium">Historical Odds: {currentBand.probability}</p>
                   )}
                 </div>
-                {currentBand.rangeDisplay && (
-                  <p className="text-xs text-muted-foreground">
-                    Rate Range: {currentBand.rangeDisplay}
-                  </p>
-                )}
-              </div>
+              )}
+              
               <p className="text-sm text-foreground/90 pt-1">{currentBand.action}</p>
             </CardContent>
           </Card>
