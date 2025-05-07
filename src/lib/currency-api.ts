@@ -69,11 +69,7 @@ export async function fetchCurrentUsdToThbRate(): Promise<CurrentRateResponse | 
     }
 
     // Case 1: API returns an empty object {}
-    // This addresses the specific console error reported by the user.
     if (typeof data === 'object' && data !== null && Object.keys(data).length === 0 && data.constructor === Object) {
-      // Treat as a fetch failure, but don't log the "Invalid data format" error for this specific case.
-      // The UI will show a generic error because null is returned.
-      // console.warn("API returned an empty object for current rate, treating as fetch failure."); // Optional: log as warning
       return null;
     }
 
@@ -84,16 +80,14 @@ export async function fetchCurrentUsdToThbRate(): Promise<CurrentRateResponse | 
     }
 
     // Case 3: API returns a response, `success` might be true/missing, but overall structure is invalid.
-    // This includes `success` missing or not boolean, `rates` missing, or `rates.THB` not a number.
     if (typeof data.success !== 'boolean' || !data.rates || typeof data.rates.THB !== 'number') {
       console.error("Invalid data format or structure for current rate:", data);
       return null;
     }
 
-    // If all checks pass, data should conform to CurrentRateResponse
     return data as CurrentRateResponse;
 
-  } catch (error) { // Catches network errors before response or other unexpected errors in the try block
+  } catch (error) { 
     console.error("Generic error fetching current rate:", error);
     return null;
   }
@@ -121,7 +115,7 @@ export async function fetchUsdToThbRateHistory(): Promise<FormattedHistoricalRat
       return [];
     }
     
-    let data: HistoricalRateResponse;
+    let data: any; // Use 'any' temporarily to inspect structure first
     try {
       data = await response.json();
     } catch (jsonError) {
@@ -133,16 +127,33 @@ export async function fetchUsdToThbRateHistory(): Promise<FormattedHistoricalRat
       return [];
     }
 
-
-    if (!data.success || !data.rates) {
-      console.error("Invalid data format for rate history (e.g. missing success or rates):", data.error || data);
+    // Case 1: API returns an empty object {}
+    if (typeof data === 'object' && data !== null && Object.keys(data).length === 0 && data.constructor === Object) {
+      // API returned an empty object, treat as fetch failure without specific error log for this case.
       return [];
     }
     
-    const formattedData = Object.entries(data.rates)
+    // Case 2: API returns a response that explicitly indicates failure (e.g., success: false)
+    if (typeof data.success === 'boolean' && data.success === false) {
+      console.warn("API request for rate history indicated failure:", data.error || data);
+      return [];
+    }
+
+    // Case 3: API returns a response, `success` might be true/missing, but overall structure is invalid for historical data.
+    // This includes `success` missing or not boolean, or `rates` missing or not an object.
+    if (typeof data.success !== 'boolean' || !data.rates || typeof data.rates !== 'object') {
+      console.error("Invalid data format or structure for rate history (e.g. missing success or rates object):", data.error || data);
+      return [];
+    }
+    
+    // At this point, data should have success: true and a rates object.
+    const historicalData = data as HistoricalRateResponse;
+
+    const formattedData = Object.entries(historicalData.rates)
       .map(([date, rateData]) => ({
         date,
-        rate: typeof rateData.THB === 'number' ? rateData.THB : 0, 
+        // Ensure rateData and rateData.THB exist and THB is a number, otherwise default to 0 or handle as error
+        rate: (rateData && typeof rateData.THB === 'number') ? rateData.THB : 0, 
       }))
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
       
