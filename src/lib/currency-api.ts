@@ -1,4 +1,3 @@
-
 const API_BASE_URL = "https://api.exchangerate.host";
 
 export interface CurrentRateResponse {
@@ -12,7 +11,7 @@ export interface CurrentRateResponse {
   rates: {
     THB: number;
   };
-  error?: { // Added error property for more robust typing of error responses
+  error?: { 
     code: string;
     message: string;
   };
@@ -33,7 +32,7 @@ export interface HistoricalRateResponse {
       THB: number;
     };
   };
-  error?: { // Added error property
+  error?: { 
     code: string;
     message: string;
   };
@@ -68,8 +67,15 @@ export async function fetchCurrentUsdToThbRate(): Promise<CurrentRateResponse | 
       return null;
     }
 
+    // Handle cases where data is not a non-null object
+    if (typeof data !== 'object' || data === null) {
+        console.warn("API response for current rate was not a non-null object:", data);
+        return null;
+    }
+
     // Case 1: API returns an empty object {}
-    if (typeof data === 'object' && data !== null && Object.keys(data).length === 0 && data.constructor === Object) {
+    if (Object.keys(data).length === 0) {
+      console.warn("API returned an empty object for current rate.");
       return null;
     }
 
@@ -115,7 +121,7 @@ export async function fetchUsdToThbRateHistory(): Promise<FormattedHistoricalRat
       return [];
     }
     
-    let data: any; // Use 'any' temporarily to inspect structure first
+    let data: any; 
     try {
       data = await response.json();
     } catch (jsonError) {
@@ -127,9 +133,15 @@ export async function fetchUsdToThbRateHistory(): Promise<FormattedHistoricalRat
       return [];
     }
 
+    // Handle cases where data is not a non-null object
+    if (typeof data !== 'object' || data === null) {
+        console.warn("API response for rate history was not a non-null object:", data);
+        return [];
+    }
+    
     // Case 1: API returns an empty object {}
-    if (typeof data === 'object' && data !== null && Object.keys(data).length === 0 && data.constructor === Object) {
-      // API returned an empty object, treat as fetch failure without specific error log for this case.
+    if (Object.keys(data).length === 0) {
+      console.warn("API returned an empty object for rate history.");
       return [];
     }
     
@@ -140,19 +152,16 @@ export async function fetchUsdToThbRateHistory(): Promise<FormattedHistoricalRat
     }
 
     // Case 3: API returns a response, `success` might be true/missing, but overall structure is invalid for historical data.
-    // This includes `success` missing or not boolean, or `rates` missing or not an object.
     if (typeof data.success !== 'boolean' || !data.rates || typeof data.rates !== 'object') {
       console.error("Invalid data format or structure for rate history (e.g. missing success or rates object):", data.error || data);
       return [];
     }
     
-    // At this point, data should have success: true and a rates object.
     const historicalData = data as HistoricalRateResponse;
 
     const formattedData = Object.entries(historicalData.rates)
       .map(([date, rateData]) => ({
         date,
-        // Ensure rateData and rateData.THB exist and THB is a number, otherwise default to 0 or handle as error
         rate: (rateData && typeof rateData.THB === 'number') ? rateData.THB : 0, 
       }))
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
