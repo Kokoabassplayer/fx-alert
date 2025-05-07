@@ -69,8 +69,8 @@ body {
     --band-extreme-text-color: hsl(0, 84.2%, 60.2%); /* Tailwind red-500 */
     --band-deep-text-color: hsl(262.1, 52%, 47.1%);    /* Tailwind purple-600 */
     --band-opportune-text-color: hsl(145.1, 63.2%, 40%); /* Tailwind green-600 */
-    --band-neutral-text-color: hsl(215, 13.8%, 47.8%); /* Tailwind slate-500 */
-    --band-rich-text-color: hsl(48, 96.2%, 53.1%);    /* Tailwind yellow-400 */
+    --band-neutral-text-color: hsl(var(--foreground)); /* Dark Cool Gray for Neutral text */
+    --band-rich-text-color: hsl(var(--foreground));    /* Dark Cool Gray for Rich text */
   }
 
   .dark {
@@ -131,11 +131,11 @@ body {
     --band-rich-area-border: hsla(48, 96.2%, 53.1%, 0.25);/* Tailwind yellow-400 with alpha */
 
     /* Band Label Text Colors - Dark Mode - Updated to match toggle colors */
-    --band-extreme-text-color: hsl(0, 84.2%, 60.2%); /* Tailwind red-500 */
-    --band-deep-text-color: hsl(262.1, 52%, 47.1%);    /* Tailwind purple-600 */
-    --band-opportune-text-color: hsl(145.1, 63.2%, 40%); /* Tailwind green-600 */
-    --band-neutral-text-color: hsl(215, 13.8%, 47.8%); /* Tailwind slate-500 */
-    --band-rich-text-color: hsl(48, 96.2%, 53.1%);    /* Tailwind yellow-400 */
+    --band-extreme-text-color: hsl(0, 70%, 70%); /* Lighter red for dark mode */
+    --band-deep-text-color: hsl(262.1, 65%, 75%); /* Lighter purple for dark mode */
+    --band-opportune-text-color: hsl(145.1, 70%, 70%); /* Lighter green for dark mode */
+    --band-neutral-text-color: hsl(var(--foreground)); /* Lighter Cool Gray (foreground) for Neutral text */
+    --band-rich-text-color: hsl(var(--foreground)); /* Lighter Cool Gray (foreground) for Rich text */
   }
 }
 
