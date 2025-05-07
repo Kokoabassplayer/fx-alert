@@ -4,10 +4,27 @@
 import type { FC } from 'react';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Loader2, ListChecks } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { fetchUsdToThbRateHistory, type FormattedHistoricalRate } from "@/lib/currency-api";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
+import { useLocalStorage } from "@/hooks/use-local-storage";
+import type { ConversionLogEntry } from "@/lib/bands";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+  DialogClose
+} from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from "@/components/ui/table";
+import { format } from 'date-fns';
+
 
 interface HistoryChartDisplayProps {
   refreshTrigger: number;
@@ -18,6 +35,8 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ refreshTrigger, thr
   const [chartData, setChartData] = useState<FormattedHistoricalRate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  const [conversionLog] = useLocalStorage<ConversionLogEntry[]>("conversionLog", []);
+  const [isLogHistoryOpen, setIsLogHistoryOpen] = useState(false);
 
   const fetchHistory = useCallback(async () => {
     setIsLoading(true);
@@ -26,14 +45,18 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ refreshTrigger, thr
       setChartData(data);
     } else {
       setChartData([]);
-      toast({
-        variant: "destructive",
-        title: "Chart Error",
-        description: "Failed to fetch rate history or no data available.",
-      });
+      // Toast only if not already loading and if data is truly empty after fetch
+      // Avoid toast if component is just mounting and data is not yet there
+      if(!isLoading) {
+        toast({
+          variant: "destructive",
+          title: "Chart Error",
+          description: "Failed to fetch rate history or no data available.",
+        });
+      }
     }
     setIsLoading(false);
-  }, [toast]);
+  }, [toast, isLoading]); // Added isLoading to dependencies to avoid redundant toasts
 
   useEffect(() => {
     fetchHistory();
@@ -41,20 +64,17 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ refreshTrigger, thr
 
   const yAxisDomain = useMemo(() => {
     if (chartData.length === 0 && isLoading) return ['auto', 'auto'] as [number | 'auto', number | 'auto'];
-    // If no data but loading is finished, set a default range around the threshold or a sensible default.
     if (chartData.length === 0 && !isLoading) {
-        // Provides a small window around the threshold if no data is present
-        const padding = threshold * 0.05 > 0.5 ? threshold * 0.05 : 0.5; // 5% or at least 0.5
+        const padding = threshold * 0.05 > 0.5 ? threshold * 0.05 : 0.5;
         return [threshold - padding, threshold + padding] as [number, number];
     }
     
     const rates = chartData.map(d => d.rate);
     const minVal = Math.min(...rates, threshold);
     const maxVal = Math.max(...rates, threshold);
-    // Ensure padding is reasonable, not too small, not zero if minVal equals maxVal
     const range = maxVal - minVal;
-    const padding = range > 0 ? range * 0.1 : Math.max(maxVal * 0.05, 0.5); // 10% of range or 5% of maxVal/0.5 if range is 0
-    return [minVal - padding, maxVal + padding] as [number, number];
+    const padding = range > 0 ? range * 0.1 : Math.max(maxVal * 0.05, 0.5);
+    return [parseFloat((minVal - padding).toFixed(2)), parseFloat((maxVal + padding).toFixed(2))] as [number, number];
   }, [chartData, threshold, isLoading]);
 
   const CustomTooltip: FC<any> = ({ active, payload, label }) => {
@@ -75,7 +95,57 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ refreshTrigger, thr
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           <span>90-Day Trend</span>
-          {isLoading && <Loader2 className="h-5 w-5 animate-spin text-primary" />}
+          <div className="flex items-center space-x-2">
+            <Dialog open={isLogHistoryOpen} onOpenChange={setIsLogHistoryOpen}>
+              <DialogTrigger asChild>
+                <Button variant="ghost" size="icon" aria-label="View conversion log">
+                  <ListChecks className="h-5 w-5 text-primary" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[625px]">
+                <DialogHeader>
+                  <DialogTitle>Conversion Log History</DialogTitle>
+                  <DialogDescription>
+                    Review your past USD conversions.
+                  </DialogDescription>
+                </DialogHeader>
+                <ScrollArea className="h-[400px] pr-4">
+                  {conversionLog.length > 0 ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Date</TableHead>
+                          <TableHead>Rate (THB)</TableHead>
+                          <TableHead>Amount (USD)</TableHead>
+                          <TableHead>Band</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {conversionLog.slice().reverse().map((log) => ( // Show newest first
+                          <TableRow key={log.id}>
+                            <TableCell>{format(new Date(log.date), "MMM dd, yyyy HH:mm")}</TableCell>
+                            <TableCell>{log.rate.toFixed(4)}</TableCell>
+                            <TableCell>{log.amount.toFixed(2)}</TableCell>
+                            <TableCell>{log.band}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <p className="text-center text-muted-foreground py-10">No conversion logs yet.</p>
+                  )}
+                </ScrollArea>
+                <DialogFooter>
+                  <DialogClose asChild>
+                    <Button type="button" variant="outline">
+                      Close
+                    </Button>
+                  </DialogClose>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+            {isLoading && <Loader2 className="h-5 w-5 animate-spin text-primary" />}
+          </div>
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -89,7 +159,7 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ refreshTrigger, thr
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={260}>
-            <LineChart data={chartData} margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
+            <LineChart data={chartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}> {/* Adjusted left margin */}
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
               <XAxis 
                 dataKey="date" 
@@ -105,6 +175,7 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ refreshTrigger, thr
                 tickLine={false}
                 axisLine={{ stroke: 'hsl(var(--border))' }}
                 allowDataOverflow={false}
+                width={50} // Explicitly set width for Y-axis to give space for labels
               />
               <Tooltip content={<CustomTooltip />} />
               <Line 
@@ -114,18 +185,20 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ refreshTrigger, thr
                 strokeWidth={2} 
                 dot={false} 
               />
-              <ReferenceLine
-                y={threshold}
-                label={{ 
-                  value: `Threshold: ${threshold.toFixed(2)}`, 
-                  position: 'insideTopRight', 
-                  fill: 'hsl(var(--muted-foreground))', 
-                  fontSize: 10, 
-                  dy: -5 // Nudge label slightly above the line
-                }}
-                stroke="hsl(var(--accent))"
-                strokeDasharray="4 4" // Dashed line style
-              />
+              {threshold > 0 && (
+                <ReferenceLine
+                  y={threshold}
+                  label={{ 
+                    value: `Threshold: ${threshold.toFixed(2)}`, 
+                    position: 'insideTopRight', 
+                    fill: 'hsl(var(--muted-foreground))', 
+                    fontSize: 10, 
+                    dy: -5 
+                  }}
+                  stroke="hsl(var(--accent))"
+                  strokeDasharray="4 4"
+                />
+              )}
             </LineChart>
           </ResponsiveContainer>
         )}
@@ -135,4 +208,3 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ refreshTrigger, thr
 };
 
 export default HistoryChartDisplay;
-

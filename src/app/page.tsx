@@ -1,22 +1,18 @@
+
 "use client";
 
 import { useState, useCallback } from 'react';
-import { Button } from '@/components/ui/button';
-import { RefreshCw } from 'lucide-react';
 import CurrentRateDisplay from '@/components/current-rate-display';
 import HistoryChartDisplay from '@/components/history-chart-display';
 import { useLocalStorage } from "@/hooks/use-local-storage";
-import { useToast } from "@/hooks/use-toast";
 
 export default function UsdThbMonitorPage() {
-  const [refreshKey, setRefreshKey] = useState(0);
+  const [refreshKey, setRefreshKey] = useState(0); // Still useful if other manual triggers are needed later
   const [threshold, setThreshold] = useLocalStorage<number>("usdThbThreshold", 32.0);
-  const { toast } = useToast();
 
-  const handleRefreshAll = useCallback(() => {
-    setRefreshKey(prev => prev + 1);
-    toast({ title: "Data Refreshing", description: "Fetching latest rates and history." });
-  }, [toast]);
+  // The individual components handle their own refresh intervals and triggers.
+  // A global refresh might still be useful if there were more shared data sources,
+  // but for now, with CurrentRateDisplay auto-refreshing, it's less critical.
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col items-center p-4 sm:p-6">
@@ -33,18 +29,10 @@ export default function UsdThbMonitorPage() {
           onThresholdChange={setThreshold}
         />
         <HistoryChartDisplay
-          refreshTrigger={refreshKey}
+          refreshTrigger={refreshKey} // History might still benefit from a manual refresh trigger
           threshold={threshold} 
         />
-
-        <Button 
-          onClick={handleRefreshAll} 
-          className="w-full mt-4 sm:mt-6 py-3 text-lg" // Increased padding and text size for emphasis
-          aria-label="Refresh all data"
-        >
-          <RefreshCw className="mr-2 h-5 w-5" />
-          Refresh All Data
-        </Button>
+        {/* Refresh All Data button removed as per user request for redundancy */}
       </main>
     </div>
   );
