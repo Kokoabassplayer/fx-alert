@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { FC } from 'react';
@@ -66,42 +67,42 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
   const rate = currentRateData?.rates?.THB;
 
   useEffect(() => {
-    if (rate) {
-      if (rate <= 30.5) {
-        setSuggestedAction("This is an EXTREME opportunity to buy USD (historical odds < 3% of months).");
-      } else if (rate <= 31.2) {
-        setSuggestedAction("This is a DEEP VALUE opportunity to buy USD (historical odds ~1 month in 10).");
-      } else if (rate <= 32.0) {
-        setSuggestedAction("This is an OPPORTUNISTIC time to buy USD (historical odds ~1 month in 4).");
-      } else {
-        setSuggestedAction("The current rate is above the conservative 'cheaper than usual' line. Consider waiting for a better rate.");
+    if (rate !== undefined && threshold !== undefined) {
+      if (rate <= threshold * 0.95) { // Significantly below threshold
+        setSuggestedAction(`Rate is ${((1 - (rate / threshold)) * 100).toFixed(1)}% below your threshold. This is an EXCELLENT opportunity to buy USD.`);
+      } else if (rate <= threshold) { // At or slightly below threshold
+        setSuggestedAction(`Rate is at or slightly below your threshold. This is a GOOD opportunity to buy USD.`);
+      } else if (rate <= threshold * 1.05) { // Slightly above threshold
+        setSuggestedAction(`Rate is ${(((rate / threshold) - 1) * 100).toFixed(1)}% above your threshold. Consider monitoring for a dip.`);
+      } else { // Significantly above threshold
+        setSuggestedAction(`Rate is significantly above your threshold. Consider waiting for a better rate.`);
       }
     } else { 
       setSuggestedAction(null); 
     }
-  }, [rate]);
+  }, [rate, threshold]);
 
   const handleSaveThreshold = () => {
     const newThreshold = parseFloat(inputThreshold);
-    if (isNaN(newThreshold)) {
+    if (isNaN(newThreshold) || newThreshold <= 0) {
       toast({
         variant: "destructive",
         title: "Invalid Input",
-        description: "Please enter a valid number for the threshold.",
+        description: "Please enter a valid positive number for the threshold.",
       });
       return;
     }
     onThresholdChange(newThreshold);
-    toast({ title: "Threshold Saved", description: `New threshold: ${newThreshold.toFixed(2)}` });
+    toast({ title: "Threshold Saved", description: `New threshold: ${newThreshold.toFixed(2)} THB` });
   };
 
   const displayRate = rate !== undefined ? rate.toFixed(4) : "N/A";
-  const trendIcon = rate !== undefined && rate <= threshold ? (
+  const trendIcon = rate !== undefined && threshold !== undefined && rate <= threshold ? (
     <TrendingDown className="h-5 w-5 text-green-600" />
   ) : (
     <TrendingUp className="h-5 w-5 text-destructive" />
   );
-  const rateColorClass = rate !== undefined && rate <= threshold ? "text-green-600" : "text-foreground";
+  const rateColorClass = rate !== undefined && threshold !== undefined && rate <= threshold ? "text-green-600" : "text-foreground";
 
   return (
     <Card>
@@ -135,12 +136,13 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
               value={inputThreshold}
               onChange={(e) => setInputThreshold(e.target.value)}
               className="text-base"
+              aria-label="Buy signal threshold in THB"
             />
             <Button onClick={handleSaveThreshold}>Save</Button>
           </div>
+           <p className="text-xs text-muted-foreground">Set your target rate to buy USD.</p>
         </div>
         
-        {/* Removed "Refresh Rate Now" button as it's redundant with auto-refresh */}
         {suggestedAction && !isLoading && rate !== undefined && (
           <Alert className="mt-4">
             <AlertTitle>Action Suggestion:</AlertTitle>
