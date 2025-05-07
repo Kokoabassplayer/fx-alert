@@ -22,7 +22,6 @@ interface CurrentRateDisplayProps {
 }
 
 const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
-  refreshTrigger,
   alertPrefs,
   onAlertPrefsChange,
 }) => {
@@ -56,7 +55,7 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
 
   useEffect(() => {
     fetchRate();
-  }, [fetchRate, refreshTrigger]);
+  }, [fetchRate]);
 
   useEffect(() => {
     const intervalId = setInterval(() => {
@@ -114,6 +113,11 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
              <CardContent className="p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <Badge className={`${currentBand.badgeClass} text-sm px-3 py-1`}>{currentBand.displayName}</Badge>
+                {currentBand.probability && (
+                  <p className="text-xs text-muted-foreground font-medium">
+                    Historical Odds: {currentBand.probability}
+                  </p>
+                )}
               </div>
               <p className="text-sm text-foreground/90">{currentBand.action}</p>
             </CardContent>
