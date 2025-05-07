@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, TrendingDown, TrendingUp } from "lucide-react";
+import { Loader2, TrendingDown, TrendingUp, Target } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { fetchCurrentUsdToThbRate, type CurrentRateResponse } from "@/lib/currency-api";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -17,6 +17,12 @@ interface CurrentRateDisplayProps {
   threshold: number;
   onThresholdChange: (newThreshold: number) => void;
 }
+
+const TIERS = {
+  EXTREME: { value: 29.5, label: "Extreme", odds: "< 3% of months" },
+  DEEP_VALUE: { value: 30.5, label: "Deep Value", odds: "~1 month in 10" },
+  OPPORTUNISTIC: { value: 31.2, label: "Opportunistic", odds: "~1 month in 4" },
+};
 
 const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
   refreshTrigger,
@@ -40,8 +46,6 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
     if (data) {
       setCurrentRateData(data);
       setLastUpdated(new Date());
-      // Toast for manual refresh was removed as the button is gone.
-      // The main page's "Refresh All Data" button will show its own toast.
     } else {
       toast({
         variant: "destructive",
@@ -67,15 +71,18 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
   const rate = currentRateData?.rates?.THB;
 
   useEffect(() => {
-    if (rate !== undefined && threshold !== undefined) {
-      if (rate <= threshold * 0.95) { // Significantly below threshold
-        setSuggestedAction(`Rate is ${((1 - (rate / threshold)) * 100).toFixed(1)}% below your threshold. This is an EXCELLENT opportunity to buy USD.`);
-      } else if (rate <= threshold) { // At or slightly below threshold
-        setSuggestedAction(`Rate is at or slightly below your threshold. This is a GOOD opportunity to buy USD.`);
-      } else if (rate <= threshold * 1.05) { // Slightly above threshold
-        setSuggestedAction(`Rate is ${(((rate / threshold) - 1) * 100).toFixed(1)}% above your threshold. Consider monitoring for a dip.`);
-      } else { // Significantly above threshold
-        setSuggestedAction(`Rate is significantly above your threshold. Consider waiting for a better rate.`);
+    if (rate !== undefined) {
+      if (rate <= TIERS.EXTREME.value) {
+        setSuggestedAction(`Rate at ${rate.toFixed(4)} THB. This is an EXTREME opportunity to buy USD (historical odds: ${TIERS.EXTREME.odds}).`);
+      } else if (rate <= TIERS.DEEP_VALUE.value) {
+        setSuggestedAction(`Rate at ${rate.toFixed(4)} THB. This is a DEEP VALUE opportunity to buy USD (historical odds: ${TIERS.DEEP_VALUE.odds}).`);
+      } else if (rate <= TIERS.OPPORTUNISTIC.value) {
+        setSuggestedAction(`Rate at ${rate.toFixed(4)} THB. This is an OPPORTUNISTIC opportunity to buy USD (historical odds: ${TIERS.OPPORTUNISTIC.odds}).`);
+      } else if (rate <= threshold) {
+         setSuggestedAction(`Rate at ${rate.toFixed(4)} THB. The current rate is near or below your threshold of ${threshold.toFixed(2)} THB. Consider buying USD if it aligns with your strategy.`);
+      }
+       else {
+        setSuggestedAction(`Rate at ${rate.toFixed(4)} THB. The current rate is above your threshold of ${threshold.toFixed(2)} THB. Consider waiting for a better rate.`);
       }
     } else { 
       setSuggestedAction(null); 
@@ -94,6 +101,12 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
     }
     onThresholdChange(newThreshold);
     toast({ title: "Threshold Saved", description: `New threshold: ${newThreshold.toFixed(2)} THB` });
+  };
+
+  const handleQuickSetThreshold = (tierValue: number) => {
+    onThresholdChange(tierValue);
+    setInputThreshold(tierValue.toString()); // Update input field as well
+    toast({ title: "Threshold Updated", description: `Threshold set to ${tierValue.toFixed(2)} THB` });
   };
 
   const displayRate = rate !== undefined ? rate.toFixed(4) : "N/A";
@@ -142,10 +155,29 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
           </div>
            <p className="text-xs text-muted-foreground">Set your target rate to buy USD.</p>
         </div>
+
+        <div className="space-y-2">
+          <Label>Quick Set Thresholds</Label>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <Button variant="outline" size="sm" onClick={() => handleQuickSetThreshold(TIERS.OPPORTUNISTIC.value)}>
+              <Target className="mr-2 h-4 w-4" />
+              {TIERS.OPPORTUNISTIC.label} ({TIERS.OPPORTUNISTIC.value.toFixed(1)})
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => handleQuickSetThreshold(TIERS.DEEP_VALUE.value)}>
+               <Target className="mr-2 h-4 w-4" />
+              {TIERS.DEEP_VALUE.label} ({TIERS.DEEP_VALUE.value.toFixed(1)})
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => handleQuickSetThreshold(TIERS.EXTREME.value)}>
+               <Target className="mr-2 h-4 w-4" />
+              {TIERS.EXTREME.label} ({TIERS.EXTREME.value.toFixed(1)})
+            </Button>
+          </div>
+        </div>
         
         {suggestedAction && !isLoading && rate !== undefined && (
           <Alert className="mt-4">
-            <AlertTitle>Action Suggestion:</AlertTitle>
+             {rate <= threshold ? <TrendingDown className="h-4 w-4" /> : <TrendingUp className="h-4 w-4" />}
+            <AlertTitle>Action Suggestion</AlertTitle>
             <AlertDescription>{suggestedAction}</AlertDescription>
           </Alert>
         )}
