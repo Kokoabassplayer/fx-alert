@@ -1,4 +1,3 @@
-
 "use client";
 
 import type { FC } from 'react';
@@ -7,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, TrendingDown, TrendingUp, RefreshCw } from "lucide-react";
+import { Loader2, TrendingDown, TrendingUp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { fetchCurrentUsdToThbRate, type CurrentRateResponse } from "@/lib/currency-api";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -34,15 +33,14 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
     setInputThreshold(threshold.toString());
   }, [threshold]);
 
-  const fetchRate = useCallback(async (isManualRefresh = false) => {
+  const fetchRate = useCallback(async () => {
     setIsLoading(true);
     const data = await fetchCurrentUsdToThbRate();
     if (data) {
       setCurrentRateData(data);
       setLastUpdated(new Date());
-      if (isManualRefresh) {
-        toast({ title: "Rate Updated", description: `USD/THB: ${data.rates.THB.toFixed(4)}` });
-      }
+      // Toast for manual refresh was removed as the button is gone.
+      // The main page's "Refresh All Data" button will show its own toast.
     } else {
       toast({
         variant: "destructive",
@@ -142,10 +140,7 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
           </div>
         </div>
         
-        <Button onClick={() => fetchRate(true)} className="w-full" variant="outline">
-          <RefreshCw className="mr-2 h-5 w-5" />
-          Refresh Rate Now
-        </Button>
+        {/* Removed "Refresh Rate Now" button as it's redundant with auto-refresh */}
         {suggestedAction && !isLoading && rate !== undefined && (
           <Alert className="mt-4">
             <AlertTitle>Action Suggestion:</AlertTitle>

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useCallback } from 'react';
@@ -7,14 +6,17 @@ import { RefreshCw } from 'lucide-react';
 import CurrentRateDisplay from '@/components/current-rate-display';
 import HistoryChartDisplay from '@/components/history-chart-display';
 import { useLocalStorage } from "@/hooks/use-local-storage";
+import { useToast } from "@/hooks/use-toast";
 
 export default function UsdThbMonitorPage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [threshold, setThreshold] = useLocalStorage<number>("usdThbThreshold", 32.0);
+  const { toast } = useToast();
 
   const handleRefreshAll = useCallback(() => {
     setRefreshKey(prev => prev + 1);
-  }, []);
+    toast({ title: "Data Refreshing", description: "Fetching latest rates and history." });
+  }, [toast]);
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col items-center p-4 sm:p-6">
@@ -47,4 +49,3 @@ export default function UsdThbMonitorPage() {
     </div>
   );
 }
-
