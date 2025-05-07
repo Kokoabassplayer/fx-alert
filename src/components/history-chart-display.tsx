@@ -10,9 +10,8 @@ import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { fetchUsdToThbRateHistory, type FormattedHistoricalRate } from "@/lib/currency-api";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceArea } from 'recharts';
-
-import { BANDS, type AlertPrefs, type BandName, getBandFromRate, type Band } from "@/lib/bands";
 import { Badge } from '@/components/ui/badge';
+import { BANDS, type AlertPrefs, type BandName, getBandFromRate, type Band } from "@/lib/bands";
 
 
 interface HistoryChartDisplayProps {
@@ -183,7 +182,7 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ alertPrefs }) => {
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={chartData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+            <LineChart data={chartData} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
               <XAxis
                 dataKey="date"
                 tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
@@ -200,8 +199,8 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ alertPrefs }) => {
                 tickLine={false}
                 axisLine={{ strokeWidth: 0 }}
                 allowDataOverflow={true}
-                width={50} // Adjusted width
-                label={{ value: 'THB/USD', angle: -90, position: 'insideLeft', fill: 'hsl(var(--muted-foreground))', fontSize: 12, dy: 40, dx: -5 }}
+                width={50}
+                label={{ value: 'THB/USD', angle: -90, position: 'insideLeft', fill: 'hsl(var(--muted-foreground))', fontSize: 12, dy: 40, dx: -10 }}
               />
               <Tooltip content={<CustomTooltip />} />
 
@@ -246,4 +245,3 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ alertPrefs }) => {
 };
 
 export default HistoryChartDisplay;
-
