@@ -42,10 +42,10 @@ interface BandUIDefinition {
   y2?: number;
   fillVar: string;
   strokeVar: string;
-  label: string; // For chart area label
+  label: string; 
   legendBadgeClass: string;
-  threshold?: number; // For drawing reference lines
-  tooltipLabel?: string; // For tooltip, if different from legend
+  threshold?: number; 
+  tooltipLabel?: string; 
 }
 
 
@@ -65,7 +65,7 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ refreshTrigger, ale
         fillVar: b.chartSettings.fillVar,
         strokeVar: b.chartSettings.strokeVar,
         label: b.displayName,
-        legendBadgeClass: b.badgeClass.split(' ')[0], // e.g. bg-red-500
+        legendBadgeClass: b.badgeClass.split(' ')[0], 
         threshold: b.chartSettings.threshold,
         tooltipLabel: b.displayName,
     }));
@@ -251,7 +251,7 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ refreshTrigger, ale
                 axisLine={{ stroke: 'hsl(var(--border))' }}
                 allowDataOverflow={true}
                 width={50}
-                label={{ value: 'THB/USD', angle: -90, position: 'insideLeft', fill: 'hsl(var(--muted-foreground))', fontSize: 12, dy: 20, dx: -5 }}
+                label={{ value: 'THB/USD', angle: -90, position: 'insideLeft', fill: 'hsl(var(--muted-foreground))', fontSize: 12, dy: 20, dx: -10 }}
               />
               <Tooltip content={<CustomTooltip />} />
 
@@ -271,7 +271,7 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ refreshTrigger, ale
                       strokeOpacity={1}
                       ifOverflow="visible"
                       label={{
-                        value: bandDef.label,
+                        value: "", // Set label to empty string to hide it
                         position: 'insideTopLeft',
                         fill: 'hsl(var(--muted-foreground))',
                         fontSize: 10,
@@ -328,3 +328,4 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ refreshTrigger, ale
 };
 
 export default HistoryChartDisplay;
+
