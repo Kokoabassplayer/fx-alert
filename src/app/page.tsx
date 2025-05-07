@@ -1,9 +1,10 @@
+
 "use client";
 
 import type { FC } from 'react';
-import { useState, useEffect } from 'react';
 import CurrentRateDisplay from '@/components/current-rate-display';
 import HistoryChartDisplay from '@/components/history-chart-display';
+import AnalysisDisplay from '@/components/analysis-display'; // Added import
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import type { AlertPrefs } from '@/lib/bands';
 import { DEFAULT_ALERT_PREFS } from '@/lib/bands';
@@ -27,12 +28,13 @@ const UsdThbMonitorPage: FC = () => {
         <HistoryChartDisplay
           alertPrefs={alertPrefs}
         />
+        <AnalysisDisplay /> {/* Added AnalysisDisplay component */}
       </main>
       <footer className="w-full max-w-xl mt-8 pt-6 border-t border-border text-left">
         <div className="mb-4">
           <h2 className="text-sm font-semibold text-foreground mb-1">Data Source & Analysis</h2>
           <p className="text-xs text-muted-foreground">
-            Rate bands, probabilities, and suggestions are based on an analysis of historical USD/THB data (2010-2024) and simulated monthly volatility. Exchange rate predictions are inherently uncertain.
+            Exchange rate data is sourced from the Frankfurter API. Rate bands, probabilities, and suggestions are based on an analysis of historical USD/THB data (2010-2024) and simulated monthly volatility. See full analysis details below the chart. Exchange rate predictions are inherently uncertain.
           </p>
         </div>
         <div>
