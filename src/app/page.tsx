@@ -1,14 +1,14 @@
-
 "use client";
 
-import { useState } from 'react';
+import type { FC } from 'react';
+import { useState, useEffect } from 'react';
 import CurrentRateDisplay from '@/components/current-rate-display';
 import HistoryChartDisplay from '@/components/history-chart-display';
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import type { AlertPrefs } from '@/lib/bands';
 import { DEFAULT_ALERT_PREFS } from '@/lib/bands';
 
-export default function UsdThbMonitorPage() {
+const UsdThbMonitorPage: FC = () => {
   const [alertPrefs, setAlertPrefs] = useLocalStorage<AlertPrefs>("alertPrefs", DEFAULT_ALERT_PREFS);
 
   return (
@@ -28,18 +28,25 @@ export default function UsdThbMonitorPage() {
           alertPrefs={alertPrefs}
         />
       </main>
-      <footer className="w-full max-w-xl mt-8 pt-4 border-t border-border text-left">
-        <p className="text-xs text-muted-foreground mb-3">
-          Rate bands, probabilities, and suggestions are based on an analysis of historical USD/THB data (2010-2024) and simulated monthly volatility. Exchange rate predictions are inherently uncertain.
-        </p>
-        <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
-          <li>This tool is for informational and illustrative purposes only and does not constitute financial, investment, or trading advice.</li>
-          <li>Always conduct your own research and consult with a qualified financial advisor before making any financial decisions.</li>
-          <li>The creators of this tool are not liable for any losses or damages arising from the use of or reliance on the information provided.</li>
-          <li>Past performance is not indicative of future results. All investments carry risk, and you may lose money.</li>
-        </ul>
+      <footer className="w-full max-w-xl mt-8 pt-6 border-t border-border text-left">
+        <div className="mb-4">
+          <h2 className="text-sm font-semibold text-foreground mb-1">Data Source & Analysis</h2>
+          <p className="text-xs text-muted-foreground">
+            Rate bands, probabilities, and suggestions are based on an analysis of historical USD/THB data (2010-2024) and simulated monthly volatility. Exchange rate predictions are inherently uncertain.
+          </p>
+        </div>
+        <div>
+          <h2 className="text-sm font-semibold text-foreground mb-2">Important Disclaimers</h2>
+          <ul className="text-xs text-muted-foreground space-y-1.5 list-disc list-inside">
+            <li>This tool is for informational and illustrative purposes only. It does not constitute financial, investment, or trading advice.</li>
+            <li>Always conduct your own research and consult a qualified financial advisor before making financial decisions.</li>
+            <li>The creators of this tool are not liable for any losses or damages arising from the use of or reliance on the information provided.</li>
+            <li>Past performance is not indicative of future results. All investments carry risk, and you may lose money.</li>
+          </ul>
+        </div>
       </footer>
     </div>
   );
 }
 
+export default UsdThbMonitorPage;
