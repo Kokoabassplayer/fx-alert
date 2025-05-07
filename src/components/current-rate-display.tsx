@@ -197,15 +197,15 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
               Alert & Chart Band Preferences
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-80 shadow-xl rounded-lg">
-            <div className="grid gap-4">
-                <div className="space-y-2">
+          <PopoverContent className="w-80 shadow-xl rounded-lg p-4">
+            <div className="space-y-2">
+                <div className="space-y-1 mb-3">
                     <h4 className="font-medium leading-none text-primary">Preferences</h4>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-xs text-muted-foreground">
                         Manage notifications and chart band visibility.
                     </p>
                 </div>
-                <div className="grid gap-2">
+                <div className="grid gap-3">
                 {(Object.keys(alertPrefs) as BandName[]).map((bandKey) => {
                     const band = BANDS.find(b => b.name === bandKey);
                     if (!band) return null;
@@ -213,7 +213,7 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
                     return (
                     <div key={bandKey} className="flex items-center justify-between p-2 rounded-md hover:bg-muted/50 transition-colors">
                         <Label htmlFor={`alert-${bandKey.toLowerCase()}`} className="flex items-center space-x-3 cursor-pointer">
-                        <span className={`w-3 h-3 rounded-full ${band.switchColorClass}`}></span>
+                        <span className={`w-3 h-3 rounded-full ${band.badgeClass.split(' ')[0]}`}></span>
                         <span className="text-sm font-medium text-foreground">{bandLabel}</span>
                         </Label>
                         <Switch
@@ -221,7 +221,7 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
                         checked={alertPrefs[bandKey]}
                         onCheckedChange={(checked) => handleAlertPrefChange(bandKey, checked)}
                         aria-label={`Toggle alerts and chart visibility for ${bandLabel}`}
-                        className={`data-[state=checked]:${band.switchColorClass} data-[state=unchecked]:bg-input`}
+                        className={`${band.switchColorClass} data-[state=unchecked]:bg-input`}
                         />
                     </div>
                     );

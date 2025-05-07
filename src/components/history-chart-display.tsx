@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { fetchUsdToThbRateHistory, type FormattedHistoricalRate } from "@/lib/currency-api";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceArea, Legend } from 'recharts';
 import { useLocalStorage } from "@/hooks/use-local-storage";
-import { BANDS, type ConversionLogEntry, type AlertPrefs, type BandName, getBandFromRate, type Band } from "@/lib/bands";
+import { BANDS, type ConversionLogEntry, type AlertPrefs, type BandName, getBandFromRate } from "@/lib/bands";
 import {
   Dialog,
   DialogContent,
@@ -37,9 +37,10 @@ interface BandUIDefinition {
   name: BandName;
   y1?: number;
   y2?: number;
-  fillClass: string; // Used for legend badge, not for area fill
-  strokeClass: string;
+  fillVar: string; 
+  strokeVar: string;
   label: string;
+  legendBadgeClass: string;
 }
 
 
@@ -50,6 +51,40 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ refreshTrigger, ale
   const [conversionLog] = useLocalStorage<ConversionLogEntry[]>("conversionLog", []);
   const [isLogHistoryOpen, setIsLogHistoryOpen] = useState(false);
 
+  const bandUIDefinitions = useMemo((): BandUIDefinition[] => {
+    return BANDS.map(b => {
+      let y1: number | undefined = undefined;
+      let y2: number | undefined = undefined;
+
+      if (b.name === 'EXTREME') { 
+        y1 = undefined; 
+        y2 = 29.5;
+      } else if (b.name === 'DEEP') { 
+        y1 = 29.5;
+        y2 = 31.2;
+      } else if (b.name === 'OPPORTUNE') { 
+        y1 = 31.2;
+        y2 = 32.0;
+      } else if (b.name === 'NEUTRAL') { 
+        y1 = 32.0;
+        y2 = 34.0;
+      } else if (b.name === 'RICH') { 
+        y1 = 34.0;
+        y2 = undefined; 
+      }
+      return {
+          name: b.name,
+          y1: y1,
+          y2: y2,
+          fillVar: `var(--band-${b.name.toLowerCase()}-area-bg)`,
+          strokeVar: `var(--band-${b.name.toLowerCase()}-area-border)`,
+          label: b.name.charAt(0) + b.name.slice(1).toLowerCase(),
+          legendBadgeClass: b.badgeClass.split(' ')[0], // e.g. bg-red-500
+      };
+    });
+  }, []);
+
+
   const fetchHistory = useCallback(async () => {
     setIsLoading(true);
     const data = await fetchUsdToThbRateHistory();
@@ -57,7 +92,7 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ refreshTrigger, ale
       setChartData(data);
     } else {
       setChartData([]);
-      if(!isLoading) { // Prevent toast on initial load if data is empty
+      if(!isLoading) { 
         toast({
           variant: "destructive",
           title: "Chart Error",
@@ -66,74 +101,56 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ refreshTrigger, ale
       }
     }
     setIsLoading(false);
-  }, [toast, isLoading]); // Added isLoading to dependency array
+  }, [toast, isLoading]); 
 
   useEffect(() => {
     fetchHistory();
   }, [fetchHistory, refreshTrigger]);
 
   const yAxisDomain = useMemo(() => {
-    let minRate = 28;
-    let maxRate = 38;
+    let minDataRate = 30; // Default fallback if no data
+    let maxDataRate = 36; // Default fallback if no data
 
     if (chartData.length > 0) {
       const rates = chartData.map(d => d.rate);
-      minRate = Math.min(...rates);
-      maxRate = Math.max(...rates);
+      minDataRate = Math.min(...rates);
+      maxDataRate = Math.max(...rates);
     }
 
-    const activeBandBoundaries: number[] = [];
-    BANDS.forEach(band => {
-      if (alertPrefs[band.name]) {
-        if (band.name === 'EXTREME') activeBandBoundaries.push(29.5); 
-        else if (band.name === 'DEEP') { activeBandBoundaries.push(29.5); activeBandBoundaries.push(31.2); }
-        else if (band.name === 'OPPORTUNE') { activeBandBoundaries.push(31.2); activeBandBoundaries.push(32.0); }
-        else if (band.name === 'NEUTRAL') { activeBandBoundaries.push(32.0); activeBandBoundaries.push(34.0); }
-        else if (band.name === 'RICH') activeBandBoundaries.push(34.0); 
+    const activeBandNumericBoundaries: number[] = [];
+    bandUIDefinitions.forEach(bandDef => {
+      if (alertPrefs[bandDef.name]) { 
+        if (bandDef.y1 !== undefined) activeBandNumericBoundaries.push(bandDef.y1);
+        if (bandDef.y2 !== undefined) activeBandNumericBoundaries.push(bandDef.y2);
       }
     });
+    
+    let overallMin = minDataRate;
+    let overallMax = maxDataRate;
 
-    if (activeBandBoundaries.length > 0) {
-      minRate = Math.min(minRate, ...activeBandBoundaries);
-      maxRate = Math.max(maxRate, ...activeBandBoundaries);
+    if (activeBandNumericBoundaries.length > 0) {
+      overallMin = Math.min(minDataRate, ...activeBandNumericBoundaries);
+      overallMax = Math.max(maxDataRate, ...activeBandNumericBoundaries);
+    }
+    
+    if (chartData.length === 0 && activeBandNumericBoundaries.length === 0) {
+        overallMin = 28; 
+        overallMax = 38;
+    } else if (chartData.length > 0 && activeBandNumericBoundaries.length === 0) {
+        // Domain from data only
+        // overallMin, overallMax already set from data
+    } else if (chartData.length === 0 && activeBandNumericBoundaries.length > 0) {
+        overallMin = Math.min(...activeBandNumericBoundaries);
+        overallMax = Math.max(...activeBandNumericBoundaries);
     }
 
-    const padding = (maxRate - minRate) * 0.1 || 1;
 
-    return [parseFloat((minRate - padding).toFixed(2)), parseFloat((maxRate + padding).toFixed(2))] as [number, number];
+    const range = overallMax - overallMin;
+    const padding = range === 0 ? 1 : range * 0.1; // Ensure some padding if range is 0
+    
+    return [parseFloat((overallMin - padding).toFixed(2)), parseFloat((overallMax + padding).toFixed(2))] as [number, number];
 
-  }, [chartData, alertPrefs]);
-
-
-  const bandUIDefinitions: BandUIDefinition[] = BANDS.map(b => {
-    let y1: number | undefined = undefined;
-    let y2: number | undefined = undefined;
-
-    if (b.name === 'EXTREME') { 
-      y1 = undefined; 
-      y2 = 29.5;
-    } else if (b.name === 'DEEP') { 
-      y1 = 29.5;
-      y2 = 31.2;
-    } else if (b.name === 'OPPORTUNE') { 
-      y1 = 31.2;
-      y2 = 32.0;
-    } else if (b.name === 'NEUTRAL') { 
-      y1 = 32.0;
-      y2 = 34.0;
-    } else if (b.name === 'RICH') { 
-      y1 = 34.0;
-      y2 = undefined; 
-    }
-    return {
-        name: b.name,
-        y1: y1,
-        y2: y2,
-        fillClass: b.badgeClass.split(' ')[0], // For legend badge color consistency
-        strokeClass: b.chartStrokeClass,
-        label: b.name.charAt(0) + b.name.slice(1).toLowerCase(),
-    };
-  });
+  }, [chartData, alertPrefs, bandUIDefinitions]);
 
 
   const CustomTooltip: FC<any> = ({ active, payload, label }) => {
@@ -228,8 +245,7 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ refreshTrigger, ale
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={chartData} margin={{ top: 5, right: 10, left: -25, bottom: 5 }}>
-              {/* <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" /> */}
+            <LineChart data={chartData} margin={{ top: 5, right: 10, left: -15, bottom: 25 }}>
               <XAxis
                 dataKey="date"
                 tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
@@ -247,8 +263,8 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ refreshTrigger, ale
                 tickLine={false}
                 axisLine={{ stroke: 'hsl(var(--border))' }}
                 allowDataOverflow={true}
-                width={70} // Adjusted width
-                label={{ value: 'THB per USD', angle: -90, position: 'insideLeft', fill: 'hsl(var(--muted-foreground))', fontSize: 12, dy: 40, dx: -20 }} // Adjusted dx for label
+                width={60} 
+                label={{ value: 'THB per USD', angle: -90, position: 'insideLeft', fill: 'hsl(var(--muted-foreground))', fontSize: 12, dy: 40, dx: -10 }}
               />
               <Tooltip content={<CustomTooltip />} />
 
@@ -262,8 +278,10 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ refreshTrigger, ale
                       key={bandDef.name}
                       y1={y1Actual}
                       y2={y2Actual}
-                      className={`${bandDef.strokeClass}`} 
-                      fillOpacity={0} 
+                      fill={bandDef.fillVar}
+                      stroke={bandDef.strokeVar}
+                      fillOpacity={1} // Opacity is now part of the CSS variable
+                      strokeOpacity={1} // Opacity is now part of the CSS variable
                       ifOverflow="visible"
                       label={{
                         value: bandDef.label,
@@ -289,15 +307,15 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ refreshTrigger, ale
                 activeDot={{ r: 5, stroke: 'hsl(var(--background))', strokeWidth: 2, fill: 'hsl(var(--primary))' }}
                 name="USD/THB Rate"
               />
-              <Legend
+               <Legend
                 verticalAlign="bottom"
-                height={36}
+                wrapperStyle={{ paddingTop: '20px' }} 
                 content={
-                  <div className="flex items-center justify-center pt-2 space-x-4">
-                    {BANDS.filter(b => alertPrefs[b.name]).map((band) => (
+                  <div className="flex items-center justify-center flex-wrap gap-x-4 gap-y-2">
+                    {bandUIDefinitions.filter(b => alertPrefs[b.name]).map((band) => (
                       <div key={band.name} className="flex items-center space-x-1.5">
-                        <span className={`h-3 w-3 rounded-sm ${band.badgeClass.split(' ')[0]}`} style={{opacity: 0.3}}></span>
-                        <span className="text-xs text-muted-foreground">{band.name.charAt(0) + band.name.slice(1).toLowerCase()}</span>
+                        <span className={`h-3 w-3 rounded-sm ${band.legendBadgeClass}`} style={{ opacity: 0.6 }}></span>
+                        <span className="text-xs text-muted-foreground">{band.label}</span>
                       </div>
                     ))}
                   </div>

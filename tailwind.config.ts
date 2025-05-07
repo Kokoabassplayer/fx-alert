@@ -7,17 +7,18 @@ export default {
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
-  safelist: [ // Safelist dynamic classes for bands
-    // Fill classes (e.g., fill-red-500/10)
-    ...['red', 'purple', 'green', 'slate', 'yellow'].flatMap(color => [`fill-${color}-500/10`, `fill-${color}-400/10`]),
-    // Stroke classes (e.g., stroke-red-500/30)
-    ...['red', 'purple', 'green', 'slate', 'yellow'].flatMap(color => [`stroke-${color}-500/30`, `stroke-${color}-400/30`]),
+  safelist: [ 
+    // Safelist dynamic classes for bands (switches, badges, toasts, borders)
     // Background classes for switches (e.g., data-[state=checked]:bg-red-500)
-    ...['red', 'purple', 'green', 'slate', 'yellow'].flatMap(color => [`data-[state=checked]:bg-${color}-500`, `data-[state=checked]:bg-${color}-400`]),
-    // Background classes for toast (e.g., bg-red-500)
-    ...['red', 'purple', 'green', 'slate', 'yellow'].flatMap(color => [`bg-${color}-500`, `bg-${color}-400`]),
+    ...['red-500', 'purple-600', 'green-600', 'slate-500', 'yellow-400'].map(color => `data-[state=checked]:bg-${color}`),
+    // Background classes for badges and toasts (e.g., bg-red-500)
+    ...['red-500', 'purple-600', 'green-600', 'slate-500', 'yellow-400'].map(color => `bg-${color}`),
+     // Hover background classes for badges (e.g., hover:bg-red-600)
+    ...['red-600', 'purple-700', 'green-700', 'slate-600', 'yellow-500'].map(color => `hover:bg-${color}`),
     // Border classes (e.g., border-red-500)
-    ...['red', 'purple', 'green', 'slate', 'yellow'].flatMap(color => [`border-${color}-500`, `border-${color}-400`]),
+    ...['red-500', 'purple-600', 'green-600', 'slate-500', 'yellow-400'].map(color => `border-${color}`),
+    // Text color for yellow band badge
+    'text-black',
   ],
   theme: {
   	extend: {

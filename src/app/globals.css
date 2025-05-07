@@ -56,14 +56,14 @@ body {
     /* Band Area Colors for Chart */
     --band-extreme-area-bg: hsla(0, 72%, 51%, 0.1);
     --band-extreme-area-border: hsla(0, 72%, 51%, 0.3);
-    --band-deep-area-bg: hsla(270, 52%, 47%, 0.1); /* Adjusted purple to match Tailwind purple-600 better */
-    --band-deep-area-border: hsla(270, 52%, 47%, 0.3);
-    --band-opportune-area-bg: hsla(145, 58%, 42%, 0.1); /* Adjusted green to match Tailwind green-600 */
+    --band-deep-area-bg: hsla(270, 60%, 55%, 0.1); 
+    --band-deep-area-border: hsla(270, 60%, 55%, 0.3);
+    --band-opportune-area-bg: hsla(145, 58%, 42%, 0.1);
     --band-opportune-area-border: hsla(145, 58%, 42%, 0.3);
-    --band-neutral-area-bg: hsla(222, 12%, 47%, 0.1); /* Adjusted slate to match Tailwind slate-500 */
-    --band-neutral-area-border: hsla(222, 12%, 47%, 0.3);
-    --band-rich-area-bg: hsla(46, 92%, 50%, 0.1); /* Adjusted yellow to match Tailwind yellow-500 */
-    --band-rich-area-border: hsla(46, 92%, 50%, 0.3);
+    --band-neutral-area-bg: hsla(215, 15%, 55%, 0.1);
+    --band-neutral-area-border: hsla(215, 15%, 55%, 0.3);
+    --band-rich-area-bg: hsla(45, 100%, 51%, 0.1); 
+    --band-rich-area-border: hsla(45, 100%, 51%, 0.3);
   }
 
   .dark {
@@ -110,17 +110,17 @@ body {
     --sidebar-border: 210 10% 28%;
     --sidebar-ring: 180 100% 40%;
 
-    /* Band Area Colors for Chart - Dark Mode (consider if they need adjustment) */
+    /* Band Area Colors for Chart - Dark Mode */
     --band-extreme-area-bg: hsla(0, 60%, 45%, 0.15);
     --band-extreme-area-border: hsla(0, 60%, 45%, 0.35);
-    --band-deep-area-bg: hsla(270, 50%, 50%, 0.15);
-    --band-deep-area-border: hsla(270, 50%, 50%, 0.35);
+    --band-deep-area-bg: hsla(270, 55%, 60%, 0.15);
+    --band-deep-area-border: hsla(270, 55%, 60%, 0.35);
     --band-opportune-area-bg: hsla(145, 55%, 45%, 0.15);
     --band-opportune-area-border: hsla(145, 55%, 45%, 0.35);
-    --band-neutral-area-bg: hsla(220, 10%, 50%, 0.15);
-    --band-neutral-area-border: hsla(220, 10%, 50%, 0.35);
-    --band-rich-area-bg: hsla(46, 90%, 55%, 0.15);
-    --band-rich-area-border: hsla(46, 90%, 55%, 0.35);
+    --band-neutral-area-bg: hsla(215, 12%, 60%, 0.15);
+    --band-neutral-area-border: hsla(215, 12%, 60%, 0.35);
+    --band-rich-area-bg: hsla(45, 90%, 55%, 0.15);
+    --band-rich-area-border: hsla(45, 90%, 55%, 0.35);
   }
 }
 
