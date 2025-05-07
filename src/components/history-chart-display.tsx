@@ -1,3 +1,4 @@
+
 // src/components/history-chart-display.tsx
 
 "use client";
@@ -9,9 +10,10 @@ import { Button } from "@/components/ui/button";
 import { Loader2, ListChecks } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { fetchUsdToThbRateHistory, type FormattedHistoricalRate } from "@/lib/currency-api";
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceArea, Legend } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceArea, Legend, ReferenceLine } from 'recharts';
+
 import { useLocalStorage } from "@/hooks/use-local-storage";
-import { BANDS, type ConversionLogEntry, type AlertPrefs, type BandName, getBandFromRate } from "@/lib/bands";
+import { BANDS, type ConversionLogEntry, type AlertPrefs, type BandName, getBandFromRate, type Band } from "@/lib/bands";
 import {
   Dialog,
   DialogContent,
@@ -35,12 +37,15 @@ interface HistoryChartDisplayProps {
 
 interface BandUIDefinition {
   name: BandName;
+  displayName: string;
   y1?: number;
   y2?: number;
-  fillVar: string; 
+  fillVar: string;
   strokeVar: string;
-  label: string;
+  label: string; // For chart area label
   legendBadgeClass: string;
+  threshold?: number; // For drawing reference lines
+  tooltipLabel?: string; // For tooltip, if different from legend
 }
 
 
@@ -52,36 +57,18 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ refreshTrigger, ale
   const [isLogHistoryOpen, setIsLogHistoryOpen] = useState(false);
 
   const bandUIDefinitions = useMemo((): BandUIDefinition[] => {
-    return BANDS.map(b => {
-      let y1: number | undefined = undefined;
-      let y2: number | undefined = undefined;
-
-      if (b.name === 'EXTREME') { 
-        y1 = undefined; 
-        y2 = 29.5;
-      } else if (b.name === 'DEEP') { 
-        y1 = 29.5;
-        y2 = 31.2;
-      } else if (b.name === 'OPPORTUNE') { 
-        y1 = 31.2;
-        y2 = 32.0;
-      } else if (b.name === 'NEUTRAL') { 
-        y1 = 32.0;
-        y2 = 34.0;
-      } else if (b.name === 'RICH') { 
-        y1 = 34.0;
-        y2 = undefined; 
-      }
-      return {
-          name: b.name,
-          y1: y1,
-          y2: y2,
-          fillVar: `var(--band-${b.name.toLowerCase()}-area-bg)`,
-          strokeVar: `var(--band-${b.name.toLowerCase()}-area-border)`,
-          label: b.name.charAt(0) + b.name.slice(1).toLowerCase(),
-          legendBadgeClass: b.badgeClass.split(' ')[0], // e.g. bg-red-500
-      };
-    });
+    return BANDS.map(b => ({
+        name: b.name,
+        displayName: b.displayName,
+        y1: b.chartSettings.y1,
+        y2: b.chartSettings.y2,
+        fillVar: b.chartSettings.fillVar,
+        strokeVar: b.chartSettings.strokeVar,
+        label: b.displayName,
+        legendBadgeClass: b.badgeClass.split(' ')[0], // e.g. bg-red-500
+        threshold: b.chartSettings.threshold,
+        tooltipLabel: b.displayName,
+    }));
   }, []);
 
 
@@ -92,7 +79,7 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ refreshTrigger, ale
       setChartData(data);
     } else {
       setChartData([]);
-      if(!isLoading) { 
+      if(!isLoading) {
         toast({
           variant: "destructive",
           title: "Chart Error",
@@ -101,15 +88,15 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ refreshTrigger, ale
       }
     }
     setIsLoading(false);
-  }, [toast, isLoading]); 
+  }, [toast, isLoading]);
 
   useEffect(() => {
     fetchHistory();
   }, [fetchHistory, refreshTrigger]);
 
   const yAxisDomain = useMemo(() => {
-    let minDataRate = 30; // Default fallback if no data
-    let maxDataRate = 36; // Default fallback if no data
+    let minDataRate = 30; 
+    let maxDataRate = 36; 
 
     if (chartData.length > 0) {
       const rates = chartData.map(d => d.rate);
@@ -119,7 +106,7 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ refreshTrigger, ale
 
     const activeBandNumericBoundaries: number[] = [];
     bandUIDefinitions.forEach(bandDef => {
-      if (alertPrefs[bandDef.name]) { 
+      if (alertPrefs[bandDef.name]) {
         if (bandDef.y1 !== undefined) activeBandNumericBoundaries.push(bandDef.y1);
         if (bandDef.y2 !== undefined) activeBandNumericBoundaries.push(bandDef.y2);
       }
@@ -134,19 +121,17 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ refreshTrigger, ale
     }
     
     if (chartData.length === 0 && activeBandNumericBoundaries.length === 0) {
-        overallMin = 28; 
+        overallMin = 28;
         overallMax = 38;
     } else if (chartData.length > 0 && activeBandNumericBoundaries.length === 0) {
         // Domain from data only
-        // overallMin, overallMax already set from data
     } else if (chartData.length === 0 && activeBandNumericBoundaries.length > 0) {
         overallMin = Math.min(...activeBandNumericBoundaries);
         overallMax = Math.max(...activeBandNumericBoundaries);
     }
 
-
     const range = overallMax - overallMin;
-    const padding = range === 0 ? 1 : range * 0.1; // Ensure some padding if range is 0
+    const padding = range === 0 ? 1 : range * 0.1; 
     
     return [parseFloat((overallMin - padding).toFixed(2)), parseFloat((overallMax + padding).toFixed(2))] as [number, number];
 
@@ -156,14 +141,14 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ refreshTrigger, ale
   const CustomTooltip: FC<any> = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       const rateValue = payload[0].value;
-      const band = getBandFromRate(rateValue);
+      const band: Band | undefined = getBandFromRate(rateValue);
       return (
         <div className="bg-background/90 backdrop-blur-sm p-3 border border-border rounded-lg shadow-xl">
           <p className="text-xs text-muted-foreground">{`Date: ${label}`}</p>
           <p className="text-sm text-primary font-semibold">{`Rate: ${typeof rateValue === 'number' ? rateValue.toFixed(4) : 'N/A'}`}</p>
           {band && (
             <div className="mt-1">
-              <Badge className={`${band.badgeClass} text-xs px-2 py-0.5`}>{band.name}</Badge>
+              <Badge className={`${band.badgeClass} text-xs px-2 py-0.5`}>{band.displayName}</Badge>
             </div>
           )}
         </div>
@@ -203,18 +188,21 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ refreshTrigger, ale
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {conversionLog.slice().reverse().map((log) => (
-                          <TableRow key={log.id}>
-                            <TableCell>{format(new Date(log.date), "MMM dd, yyyy HH:mm")}</TableCell>
-                            <TableCell>{log.rate.toFixed(4)}</TableCell>
-                            <TableCell>{log.amount.toFixed(2)}</TableCell>
-                            <TableCell>
-                              <Badge className={`${BANDS.find(b => b.name === log.band)?.badgeClass || ''} px-2 py-0.5`}>
-                                {log.band}
-                              </Badge>
-                            </TableCell>
-                          </TableRow>
-                        ))}
+                        {conversionLog.slice().reverse().map((log) => {
+                          const bandDetails = BANDS.find(b => b.name === log.band);
+                          return (
+                            <TableRow key={log.id}>
+                              <TableCell>{format(new Date(log.date), "MMM dd, yyyy HH:mm")}</TableCell>
+                              <TableCell>{log.rate.toFixed(4)}</TableCell>
+                              <TableCell>{log.amount.toFixed(2)}</TableCell>
+                              <TableCell>
+                                <Badge className={`${bandDetails?.badgeClass || ''} px-2 py-0.5`}>
+                                  {bandDetails?.displayName || log.band}
+                                </Badge>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
                       </TableBody>
                     </Table>
                   ) : (
@@ -245,7 +233,7 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ refreshTrigger, ale
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={chartData} margin={{ top: 5, right: 10, left: -15, bottom: 25 }}>
+            <LineChart data={chartData} margin={{ top: 5, right: 20, left: 0, bottom: 25 }}>
               <XAxis
                 dataKey="date"
                 tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
@@ -254,7 +242,6 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ refreshTrigger, ale
                 axisLine={{ stroke: 'hsl(var(--border))' }}
                 interval="preserveStartEnd"
                 minTickGap={30}
-
               />
               <YAxis
                 domain={yAxisDomain}
@@ -263,8 +250,8 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ refreshTrigger, ale
                 tickLine={false}
                 axisLine={{ stroke: 'hsl(var(--border))' }}
                 allowDataOverflow={true}
-                width={60} 
-                label={{ value: 'THB per USD', angle: -90, position: 'insideLeft', fill: 'hsl(var(--muted-foreground))', fontSize: 12, dy: 40, dx: -10 }}
+                width={50}
+                label={{ value: 'THB/USD', angle: -90, position: 'insideLeft', fill: 'hsl(var(--muted-foreground))', fontSize: 12, dy: 20, dx: -5 }}
               />
               <Tooltip content={<CustomTooltip />} />
 
@@ -280,8 +267,8 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ refreshTrigger, ale
                       y2={y2Actual}
                       fill={bandDef.fillVar}
                       stroke={bandDef.strokeVar}
-                      fillOpacity={1} // Opacity is now part of the CSS variable
-                      strokeOpacity={1} // Opacity is now part of the CSS variable
+                      fillOpacity={1} 
+                      strokeOpacity={1}
                       ifOverflow="visible"
                       label={{
                         value: bandDef.label,
@@ -297,19 +284,30 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ refreshTrigger, ale
                 }
                 return null;
               })}
+              
+              {bandUIDefinitions.filter(b => alertPrefs[b.name] && b.threshold !== undefined).map(bandDef => (
+                 <ReferenceLine
+                    key={`ref-line-${bandDef.name}`}
+                    y={bandDef.threshold}
+                    stroke="hsl(var(--border))"
+                    strokeDasharray="3 3"
+                    strokeWidth={1.5}
+                 />
+              ))}
+
 
               <Line
                 type="monotone"
                 dataKey="rate"
                 stroke="hsl(var(--primary))"
                 strokeWidth={2}
-                dot={{ r: 0 }} 
+                dot={{ r: 0 }}
                 activeDot={{ r: 5, stroke: 'hsl(var(--background))', strokeWidth: 2, fill: 'hsl(var(--primary))' }}
                 name="USD/THB Rate"
               />
                <Legend
                 verticalAlign="bottom"
-                wrapperStyle={{ paddingTop: '20px' }} 
+                wrapperStyle={{ paddingTop: '20px' }}
                 content={
                   <div className="flex items-center justify-center flex-wrap gap-x-4 gap-y-2">
                     {bandUIDefinitions.filter(b => alertPrefs[b.name]).map((band) => (

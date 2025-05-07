@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { FC } from 'react';
@@ -23,8 +24,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
-import { useLocalStorage } from "@/hooks/use-local-storage";
-import { getBandFromRate, BANDS, type Band, type ConversionLogEntry, type AlertPrefs, DEFAULT_ALERT_PREFS, type BandName } from "@/lib/bands";
+
+import { getBandFromRate, BANDS, type Band, type ConversionLogEntry, type AlertPrefs, type BandName } from "@/lib/bands";
+import { useLocalStorage } from '@/hooks/use-local-storage';
 
 interface CurrentRateDisplayProps {
   refreshTrigger: number;
@@ -86,7 +88,7 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
     if (currentBand && rate !== undefined && alertPrefs[currentBand.name]) {
       if (currentBand.name !== prevBandRef.current && ['EXTREME', 'DEEP', 'OPPORTUNE'].includes(currentBand.name)) {
          toast({
-            title: `Rate Alert: ${currentBand.name} Zone!`,
+            title: `Rate Alert: ${currentBand.displayName} Zone!`,
             description: `USD/THB at ${rate.toFixed(4)}. Suggestion: ${currentBand.action}`,
             variant: currentBand.name === 'EXTREME' ? 'destructive' : 'default',
             className: currentBand.toastClass
@@ -116,7 +118,7 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
       currency: "USD",
     };
     setConversionLog([...conversionLog, newLogEntry]);
-    toast({ title: "Conversion Logged", description: `${amount} USD at ${rate.toFixed(4)} THB (${currentBand.name})` });
+    toast({ title: "Conversion Logged", description: `${amount} USD at ${rate.toFixed(4)} THB (${currentBand.displayName})` });
     setConversionAmountInput("");
     setIsLogConversionDialogOpen(false);
   };
@@ -153,7 +155,7 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
           <Card className={`shadow-md border-t-4 ${currentBand.borderColorClass} rounded-lg`}>
              <CardContent className="p-4 space-y-3">
               <div className="flex items-center justify-between">
-                <Badge className={`${currentBand.badgeClass} text-sm px-3 py-1`}>{currentBand.name}</Badge>
+                <Badge className={`${currentBand.badgeClass} text-sm px-3 py-1`}>{currentBand.displayName}</Badge>
                  {currentBand.logButtonVisible && (
                     <AlertDialog open={isLogConversionDialogOpen} onOpenChange={setIsLogConversionDialogOpen}>
                       <AlertDialogTrigger asChild>
@@ -209,7 +211,7 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
                 {(Object.keys(alertPrefs) as BandName[]).map((bandKey) => {
                     const band = BANDS.find(b => b.name === bandKey);
                     if (!band) return null;
-                    const bandLabel = band.name.charAt(0) + band.name.slice(1).toLowerCase() + " Band";
+                    const bandLabel = `${band.displayName} Band`;
                     return (
                     <div key={bandKey} className="flex items-center justify-between p-2 rounded-md hover:bg-muted/50 transition-colors">
                         <Label htmlFor={`alert-${bandKey.toLowerCase()}`} className="flex items-center space-x-3 cursor-pointer">
