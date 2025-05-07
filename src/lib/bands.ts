@@ -17,6 +17,7 @@ export interface Band {
     fillVar: string;
     strokeVar: string;
     threshold?: number;
+    labelTextColorVar: string; // New property for label text color
   };
 }
 
@@ -37,6 +38,7 @@ export const BANDS: Band[] = [
       fillVar: "var(--band-extreme-area-bg)",
       strokeVar: "var(--band-extreme-area-border)",
       threshold: 29.5,
+      labelTextColorVar: "var(--band-extreme-text-color)",
     },
   },
   {
@@ -55,6 +57,7 @@ export const BANDS: Band[] = [
       fillVar: "var(--band-deep-area-bg)",
       strokeVar: "var(--band-deep-area-border)",
       threshold: 31.2,
+      labelTextColorVar: "var(--band-deep-text-color)",
     },
   },
   {
@@ -73,6 +76,7 @@ export const BANDS: Band[] = [
       fillVar: "var(--band-opportune-area-bg)",
       strokeVar: "var(--band-opportune-area-border)",
       threshold: 32.0,
+      labelTextColorVar: "var(--band-opportune-text-color)",
     },
   },
   {
@@ -89,6 +93,7 @@ export const BANDS: Band[] = [
       y2: 34.0,
       fillVar: "var(--band-neutral-area-bg)",
       strokeVar: "var(--band-neutral-area-border)",
+      labelTextColorVar: "var(--band-neutral-text-color)",
     },
   },
   {
@@ -104,6 +109,7 @@ export const BANDS: Band[] = [
       y1: 34.0,
       fillVar: "var(--band-rich-area-bg)",
       strokeVar: "var(--band-rich-area-border)",
+      labelTextColorVar: "var(--band-rich-text-color)",
     },
   },
 ];

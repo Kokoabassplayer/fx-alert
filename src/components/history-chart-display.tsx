@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, ListChecks } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { fetchUsdToThbRateHistory, type FormattedHistoricalRate } from "@/lib/currency-api";
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceArea, Legend } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceArea } from 'recharts';
 
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { BANDS, type ConversionLogEntry, type AlertPrefs, type BandName, getBandFromRate, type Band } from "@/lib/bands";
@@ -41,8 +41,7 @@ interface BandUIDefinition {
   y2?: number;
   fillVar: string;
   strokeVar: string;
-  label: string; 
-  legendBadgeClass: string;
+  labelTextColorVar: string; 
   tooltipLabel?: string; 
 }
 
@@ -62,8 +61,7 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ alertPrefs }) => {
         y2: b.chartSettings.y2,
         fillVar: b.chartSettings.fillVar,
         strokeVar: b.chartSettings.strokeVar,
-        label: b.displayName,
-        legendBadgeClass: b.badgeClass.split(' ')[0],
+        labelTextColorVar: b.chartSettings.labelTextColorVar,
         tooltipLabel: b.displayName,
     }));
   }, []);
@@ -128,7 +126,7 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ alertPrefs }) => {
     }
 
     const range = overallMax - overallMin;
-    const padding = range === 0 ? 1 : range * 0.1; 
+    const padding = range === 0 ? 1 : range * 0.05; // Reduced padding a bit
     
     return [parseFloat((overallMin - padding).toFixed(2)), parseFloat((overallMax + padding).toFixed(2))] as [number, number];
 
@@ -230,7 +228,7 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ alertPrefs }) => {
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={chartData} margin={{ top: 5, right: 20, left: -10, bottom: 25 }}>
+            <LineChart data={chartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
               <XAxis
                 dataKey="date"
                 tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
@@ -245,10 +243,10 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ alertPrefs }) => {
                 tickFormatter={(value) => typeof value === 'number' ? value.toFixed(2) : ''}
                 tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
                 tickLine={false}
-                axisLine={{ stroke: 'hsl(var(--border))' }}
+                axisLine={{ stroke: 'hsl(var(--border))', strokeWidth: 0 }} // Hide Y-axis line
                 allowDataOverflow={true}
-                width={60} // Increased width to accommodate label
-                label={{ value: 'THB/USD', angle: -90, position: 'insideLeft', fill: 'hsl(var(--muted-foreground))', fontSize: 12, dy: 40, dx: -10 }}
+                width={60} 
+                label={{ value: 'THB/USD', angle: -90, position: 'insideLeft', fill: 'hsl(var(--muted-foreground))', fontSize: 12, dy: 40, dx: -15 }}
               />
               <Tooltip content={<CustomTooltip />} />
 
@@ -264,17 +262,18 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ alertPrefs }) => {
                       y2={y2Actual}
                       fill={bandDef.fillVar}
                       stroke={bandDef.strokeVar}
+                      strokeWidth={0.5}
                       fillOpacity={1} 
                       strokeOpacity={1}
                       ifOverflow="visible"
                        label={{
-                        value: "", // Removed label text
+                        value: bandDef.displayName,
+                        fill: bandDef.labelTextColorVar,
                         position: 'insideTopLeft',
-                        fill: 'hsl(var(--muted-foreground))',
-                        fontSize: 10,
-                        dx: 5,
-                        dy: 12,
-                        className: 'font-semibold'
+                        fontSize: 11,
+                        fontWeight: 'bold',
+                        dx: 8, // horizontal padding from left
+                        dy: 13, // vertical padding from top
                       }}
                     />
                   );
@@ -282,8 +281,6 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ alertPrefs }) => {
                 return null;
               })}
               
-              {/* Removed ReferenceLine components for band thresholds */}
-
               <Line
                 type="monotone"
                 dataKey="rate"
@@ -292,20 +289,6 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ alertPrefs }) => {
                 dot={{ r: 0 }}
                 activeDot={{ r: 5, stroke: 'hsl(var(--background))', strokeWidth: 2, fill: 'hsl(var(--primary))' }}
                 name="USD/THB Rate"
-              />
-               <Legend
-                verticalAlign="bottom"
-                wrapperStyle={{ paddingTop: '20px' }}
-                content={
-                  <div className="flex items-center justify-center flex-wrap gap-x-4 gap-y-2">
-                    {bandUIDefinitions.filter(b => alertPrefs[b.name]).map((band) => (
-                      <div key={band.name} className="flex items-center space-x-1.5">
-                        <span className={`h-3 w-3 rounded-sm ${band.legendBadgeClass}`} style={{ opacity: 0.6 }}></span>
-                        <span className="text-xs text-muted-foreground">{band.label}</span>
-                      </div>
-                    ))}
-                  </div>
-                }
               />
             </LineChart>
           </ResponsiveContainer>
@@ -316,4 +299,3 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ alertPrefs }) => {
 };
 
 export default HistoryChartDisplay;
-
