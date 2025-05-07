@@ -26,9 +26,9 @@ export interface Band {
 export const BANDS: Band[] = [
   {
     name: "EXTREME", // Rate <= 29.5
-    displayName: "Extreme",
+    displayName: "EXTREME",
     condition: (rate) => rate <= 29.5,
-    action: "Convert as much THB to USD as liquidity allows now (pre-fund future buys).",
+    action: "Convert as much THB to USD as liquidity allows now.",
     probability: "≈ 3%",
     rangeDisplay: "≤ 29.5 THB/USD",
     badgeClass: "bg-red-500 text-white hover:bg-red-600",
@@ -45,7 +45,7 @@ export const BANDS: Band[] = [
   },
   {
     name: "DEEP", // Rate 29.6 – 31.2 (means > 29.5 and <= 31.2)
-    displayName: "Deep",
+    displayName: "DEEP",
     condition: (rate) => rate > 29.5 && rate <= 31.2,
     action: "Double this month’s USD purchase.",
     probability: "≈ 12%",
@@ -65,9 +65,9 @@ export const BANDS: Band[] = [
   },
   {
     name: "OPPORTUNE", // Rate 31.3 – 32.0 (means > 31.2 and <= 32.0)
-    displayName: "Opportune",
+    displayName: "OPPORTUNE",
     condition: (rate) => rate > 31.2 && rate <= 32.0,
-    action: "Add 25-50% extra to your usual 20k THB.",
+    action: "Add 25–50 % to normal DCA.",
     probability: "≈ 15%",
     rangeDisplay: "31.3 – 32.0 THB/USD",
     badgeClass: "bg-green-600 text-white hover:bg-green-700",
@@ -85,9 +85,9 @@ export const BANDS: Band[] = [
   },
   {
     name: "NEUTRAL", // Rate 32.1 – 34.0 (means > 32.0 and <= 34.0)
-    displayName: "Neutral",
+    displayName: "NEUTRAL",
     condition: (rate) => rate > 32.0 && rate <= 34.0,
-    action: "Stick to normal 20k THB DCA.",
+    action: "Stick to standard DCA.",
     probability: "≈ 45%",
     rangeDisplay: "32.1 – 34.0 THB/USD",
     badgeClass: "bg-slate-500 text-white hover:bg-slate-600",
@@ -103,9 +103,9 @@ export const BANDS: Band[] = [
   },
   {
     name: "RICH", // Rate > 34.0
-    displayName: "USD Rich",
+    displayName: "USD-RICH",
     condition: (rate) => rate > 34.0,
-    action: "Pause discretionary USD buys.",
+    action: "Pause non-essential USD conversions.",
     probability: "≈ 25%",
     rangeDisplay: "> 34.0 THB/USD",
     badgeClass: "bg-yellow-400 text-black hover:bg-yellow-500", // text-black for readability on yellow
