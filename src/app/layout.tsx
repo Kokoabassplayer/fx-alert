@@ -1,4 +1,3 @@
-
 import type {Metadata} from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
@@ -15,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'USD-THB Monitor',
-  description: 'Monitor USD to THB exchange rates and trends.',
+  title: 'RateRefresher',
+  description: 'Monitor USD to THB exchange rates and trends, with actionable insights based on rate bands.',
 };
 
 export default function RootLayout({
@@ -28,11 +27,9 @@ export default function RootLayout({
     // The className "light" on the <html> tag enforces light mode.
     // It's important that there are no whitespace text nodes as direct children
     // of <html> before <body>, which can cause hydration errors.
-    <html lang="en" className="light">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+    <html lang="en" className="light"><body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         {children}
         <Toaster />
-      </body>
-    </html>
+      </body></html>
   );
 }

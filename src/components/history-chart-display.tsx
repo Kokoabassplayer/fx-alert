@@ -1,4 +1,3 @@
-
 "use client";
 
 import type { FC } from 'react';
@@ -8,9 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Loader2, ListChecks } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { fetchUsdToThbRateHistory, type FormattedHistoricalRate } from "@/lib/currency-api";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceArea } from 'recharts';
 import { useLocalStorage } from "@/hooks/use-local-storage";
-import type { ConversionLogEntry } from "@/lib/bands";
+import { BANDS, type ConversionLogEntry, type AlertPrefs, type BandName } from "@/lib/bands";
 import {
   Dialog,
   DialogContent,
@@ -22,16 +21,25 @@ import {
   DialogClose
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from 'date-fns';
-
 
 interface HistoryChartDisplayProps {
   refreshTrigger: number;
-  threshold: number;
+  alertPrefs: AlertPrefs;
 }
 
-const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ refreshTrigger, threshold }) => {
+interface BandUIDefinition {
+  name: BandName;
+  y1?: number;
+  y2?: number;
+  fill: string;
+  stroke: string;
+  label: string;
+}
+
+
+const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ refreshTrigger, alertPrefs }) => {
   const [chartData, setChartData] = useState<FormattedHistoricalRate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
@@ -45,8 +53,6 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ refreshTrigger, thr
       setChartData(data);
     } else {
       setChartData([]);
-      // Toast only if not already loading and if data is truly empty after fetch
-      // Avoid toast if component is just mounting and data is not yet there
       if(!isLoading) {
         toast({
           variant: "destructive",
@@ -56,26 +62,53 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ refreshTrigger, thr
       }
     }
     setIsLoading(false);
-  }, [toast, isLoading]); // Added isLoading to dependencies to avoid redundant toasts
+  }, [toast, isLoading]);
 
   useEffect(() => {
     fetchHistory();
   }, [fetchHistory, refreshTrigger]);
 
   const yAxisDomain = useMemo(() => {
-    if (chartData.length === 0 && isLoading) return ['auto', 'auto'] as [number | 'auto', number | 'auto'];
-    if (chartData.length === 0 && !isLoading) {
-        const padding = threshold * 0.05 > 0.5 ? threshold * 0.05 : 0.5;
-        return [threshold - padding, threshold + padding] as [number, number];
+    let minRate = 28; // Default min
+    let maxRate = 38; // Default max
+
+    if (chartData.length > 0) {
+      const rates = chartData.map(d => d.rate);
+      minRate = Math.min(...rates);
+      maxRate = Math.max(...rates);
+    }
+
+    // Adjust domain based on active bands
+    const activeBandBoundaries: number[] = [];
+    BANDS.forEach(band => {
+      if (alertPrefs[band.name]) {
+        if (band.name === 'EXTREME') activeBandBoundaries.push(29.5);
+        else if (band.name === 'DEEP') { activeBandBoundaries.push(29.5); activeBandBoundaries.push(31.2); }
+        else if (band.name === 'OPPORTUNE') { activeBandBoundaries.push(31.2); activeBandBoundaries.push(32.0); }
+        else if (band.name === 'NEUTRAL') { activeBandBoundaries.push(32.0); activeBandBoundaries.push(34.0); }
+        else if (band.name === 'RICH') activeBandBoundaries.push(34.0);
+      }
+    });
+    
+    if (activeBandBoundaries.length > 0) {
+      minRate = Math.min(minRate, ...activeBandBoundaries);
+      maxRate = Math.max(maxRate, ...activeBandBoundaries);
     }
     
-    const rates = chartData.map(d => d.rate);
-    const minVal = Math.min(...rates, threshold);
-    const maxVal = Math.max(...rates, threshold);
-    const range = maxVal - minVal;
-    const padding = range > 0 ? range * 0.1 : Math.max(maxVal * 0.05, 0.5);
-    return [parseFloat((minVal - padding).toFixed(2)), parseFloat((maxVal + padding).toFixed(2))] as [number, number];
-  }, [chartData, threshold, isLoading]);
+    const padding = (maxRate - minRate) * 0.1 || 1; // Ensure padding is not 0, default to 1 if range is 0
+    
+    return [parseFloat((minRate - padding).toFixed(2)), parseFloat((maxRate + padding).toFixed(2))] as [number, number];
+
+  }, [chartData, alertPrefs, isLoading]);
+
+
+  const bandUIDefinitions: BandUIDefinition[] = [
+    { name: 'EXTREME', y2: 29.5, fill: 'var(--band-extreme-area-bg)', stroke: 'var(--band-extreme-area-border)', label: 'EXTREME' },
+    { name: 'DEEP', y1: 29.5, y2: 31.2, fill: 'var(--band-deep-area-bg)', stroke: 'var(--band-deep-area-border)', label: 'DEEP' },
+    { name: 'OPPORTUNE', y1: 31.2, y2: 32.0, fill: 'var(--band-opportune-area-bg)', stroke: 'var(--band-opportune-area-border)', label: 'OPPORTUNE' },
+    { name: 'NEUTRAL', y1: 32.0, y2: 34.0, fill: 'var(--band-neutral-area-bg)', stroke: 'var(--band-neutral-area-border)', label: 'NEUTRAL' },
+    { name: 'RICH', y1: 34.0, fill: 'var(--band-rich-area-bg)', stroke: 'var(--band-rich-area-border)', label: 'RICH' },
+  ];
 
   const CustomTooltip: FC<any> = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
@@ -121,7 +154,7 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ refreshTrigger, thr
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {conversionLog.slice().reverse().map((log) => ( // Show newest first
+                        {conversionLog.slice().reverse().map((log) => (
                           <TableRow key={log.id}>
                             <TableCell>{format(new Date(log.date), "MMM dd, yyyy HH:mm")}</TableCell>
                             <TableCell>{log.rate.toFixed(4)}</TableCell>
@@ -159,7 +192,7 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ refreshTrigger, thr
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={260}>
-            <LineChart data={chartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}> {/* Adjusted left margin */}
+            <LineChart data={chartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
               <XAxis 
                 dataKey="date" 
@@ -174,31 +207,48 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ refreshTrigger, thr
                 tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
                 tickLine={false}
                 axisLine={{ stroke: 'hsl(var(--border))' }}
-                allowDataOverflow={false}
-                width={50} // Explicitly set width for Y-axis to give space for labels
+                allowDataOverflow={true} // Allow overflow so ReferenceArea can extend
+                width={50}
               />
               <Tooltip content={<CustomTooltip />} />
+              
+              {bandUIDefinitions.map((bandDef) => {
+                if (alertPrefs[bandDef.name]) {
+                  // For EXTREME, y1 is chart bottom; for RICH, y2 is chart top.
+                  const y1Actual = bandDef.name === 'EXTREME' ? yAxisDomain[0] : bandDef.y1;
+                  const y2Actual = bandDef.name === 'RICH' ? yAxisDomain[1] : bandDef.y2;
+
+                  return (
+                    <ReferenceArea
+                      key={bandDef.name}
+                      y1={y1Actual}
+                      y2={y2Actual}
+                      fill={bandDef.fill}
+                      stroke={bandDef.stroke}
+                      strokeOpacity={0.5}
+                      ifOverflow="visible" // Allow bands to extend to chart edges if needed
+                      label={{ 
+                        value: bandDef.label, 
+                        position: 'insideTopLeft', 
+                        fill: 'hsl(var(--muted-foreground))', 
+                        fontSize: 10,
+                        dx: 5,
+                        dy: 5
+                      }}
+                    />
+                  );
+                }
+                return null;
+              })}
+
               <Line 
                 type="monotone" 
                 dataKey="rate" 
                 stroke="hsl(var(--primary))" 
                 strokeWidth={2} 
                 dot={false} 
+                zIndex={10} // Ensure line is above reference areas
               />
-              {threshold > 0 && (
-                <ReferenceLine
-                  y={threshold}
-                  label={{ 
-                    value: `Threshold: ${threshold.toFixed(2)}`, 
-                    position: 'insideTopRight', 
-                    fill: 'hsl(var(--muted-foreground))', 
-                    fontSize: 10, 
-                    dy: -5 
-                  }}
-                  stroke="hsl(var(--accent))"
-                  strokeDasharray="4 4"
-                />
-              )}
             </LineChart>
           </ResponsiveContainer>
         )}
