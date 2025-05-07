@@ -10,14 +10,13 @@ export interface Band {
   borderColorClass: string; // For Card top border
   switchColorClass: string; // For Switch component
   toastClass?: string; // For Toast component (optional)
-  logButtonVisible?: boolean;
   chartSettings: {
     y1?: number;
     y2?: number;
     fillVar: string;
     strokeVar: string;
     threshold?: number;
-    labelTextColorVar: string; // New property for label text color
+    labelTextColorVar: string; 
   };
 }
 
@@ -32,7 +31,6 @@ export const BANDS: Band[] = [
     borderColorClass: "border-red-500",
     switchColorClass: "data-[state=checked]:bg-red-500",
     toastClass: "bg-red-500 text-white",
-    logButtonVisible: true,
     chartSettings: {
       y2: 29.5,
       fillVar: "var(--band-extreme-area-bg)",
@@ -50,7 +48,6 @@ export const BANDS: Band[] = [
     borderColorClass: "border-purple-600",
     switchColorClass: "data-[state=checked]:bg-purple-600",
     toastClass: "bg-purple-600 text-white",
-    logButtonVisible: true,
     chartSettings: {
       y1: 29.5,
       y2: 31.2,
@@ -69,7 +66,6 @@ export const BANDS: Band[] = [
     borderColorClass: "border-green-600",
     switchColorClass: "data-[state=checked]:bg-green-600",
     toastClass: "bg-green-600 text-white",
-    logButtonVisible: true,
     chartSettings: {
       y1: 31.2,
       y2: 32.0,
@@ -87,7 +83,6 @@ export const BANDS: Band[] = [
     badgeClass: "bg-slate-500 text-white hover:bg-slate-600",
     borderColorClass: "border-slate-500",
     switchColorClass: "data-[state=checked]:bg-slate-500",
-    logButtonVisible: false,
     chartSettings: {
       y1: 32.0,
       y2: 34.0,
@@ -104,7 +99,6 @@ export const BANDS: Band[] = [
     badgeClass: "bg-yellow-400 text-black hover:bg-yellow-500",
     borderColorClass: "border-yellow-400",
     switchColorClass: "data-[state=checked]:bg-yellow-400",
-    logButtonVisible: false,
     chartSettings: {
       y1: 34.0,
       fillVar: "var(--band-rich-area-bg)",
@@ -117,15 +111,6 @@ export const BANDS: Band[] = [
 export const getBandFromRate = (rate: number): Band | undefined => {
   return BANDS.find((band) => band.condition(rate));
 };
-
-export interface ConversionLogEntry {
-  id: string;
-  date: string;
-  rate: number;
-  amount: number;
-  band: BandName;
-  currency: "USD";
-}
 
 export interface AlertPrefs {
   EXTREME: boolean;

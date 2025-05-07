@@ -5,28 +5,15 @@ import type { FC } from 'react';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Settings, Bell, Edit } from "lucide-react";
+import { Loader2, Settings, Bell } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { fetchCurrentUsdToThbRate, type CurrentRateResponse } from "@/lib/currency-api";
 import { Badge } from "@/components/ui/badge";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 
-import { getBandFromRate, BANDS, type Band, type ConversionLogEntry, type AlertPrefs, type BandName } from "@/lib/bands";
-import { useLocalStorage } from '@/hooks/use-local-storage';
+import { getBandFromRate, BANDS, type Band, type AlertPrefs, type BandName } from "@/lib/bands";
 
 interface CurrentRateDisplayProps {
   refreshTrigger: number;
@@ -45,10 +32,6 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
   const { toast } = useToast();
   const [currentBand, setCurrentBand] = useState<Band | undefined>(undefined);
   const prevBandRef = useRef<BandName | undefined>(undefined);
-
-  const [isLogConversionDialogOpen, setIsLogConversionDialogOpen] = useState(false);
-  const [conversionAmountInput, setConversionAmountInput] = useState("");
-  const [conversionLog, setConversionLog] = useLocalStorage<ConversionLogEntry[]>("conversionLog", []);
   
   const rate = currentRateData?.rates?.THB;
 
@@ -98,31 +81,6 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
     prevBandRef.current = currentBand?.name;
   }, [currentBand, rate, alertPrefs, toast]);
 
-  const handleLogConversion = () => {
-    if (!rate || !currentBand) return;
-    const amount = parseFloat(conversionAmountInput);
-    if (isNaN(amount) || amount <= 0) {
-      toast({
-        variant: "destructive",
-        title: "Invalid Amount",
-        description: "Please enter a valid positive number for the amount.",
-      });
-      return;
-    }
-    const newLogEntry: ConversionLogEntry = {
-      id: new Date().toISOString() + Math.random().toString(), // simple unique id
-      date: new Date().toISOString(),
-      rate: rate,
-      amount: amount,
-      band: currentBand.name,
-      currency: "USD",
-    };
-    setConversionLog([...conversionLog, newLogEntry]);
-    toast({ title: "Conversion Logged", description: `${amount} USD at ${rate.toFixed(4)} THB (${currentBand.displayName})` });
-    setConversionAmountInput("");
-    setIsLogConversionDialogOpen(false);
-  };
-
   const handleAlertPrefChange = (bandName: BandName, checked: boolean) => {
     onAlertPrefsChange({ ...alertPrefs, [bandName]: checked });
   };
@@ -156,35 +114,6 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
              <CardContent className="p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <Badge className={`${currentBand.badgeClass} text-sm px-3 py-1`}>{currentBand.displayName}</Badge>
-                 {currentBand.logButtonVisible && (
-                    <AlertDialog open={isLogConversionDialogOpen} onOpenChange={setIsLogConversionDialogOpen}>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="outline" size="sm" className="border-primary text-primary hover:bg-primary/10">
-                          <Edit className="mr-2 h-4 w-4" /> Log Conversion
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Log USD Conversion</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Enter the amount of USD you converted at the current rate of {rate.toFixed(4)} THB.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <Input
-                          type="number"
-                          placeholder="USD Amount"
-                          value={conversionAmountInput}
-                          onChange={(e) => setConversionAmountInput(e.target.value)}
-                          className="text-base"
-                          autoFocus
-                        />
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction onClick={handleLogConversion}>Log</AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  )}
               </div>
               <p className="text-sm text-foreground/90">{currentBand.action}</p>
             </CardContent>

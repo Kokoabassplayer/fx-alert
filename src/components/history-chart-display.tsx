@@ -6,27 +6,12 @@
 import type { FC } from 'react';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Loader2, ListChecks } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { fetchUsdToThbRateHistory, type FormattedHistoricalRate } from "@/lib/currency-api";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceArea } from 'recharts';
 
-import { useLocalStorage } from "@/hooks/use-local-storage";
-import { BANDS, type ConversionLogEntry, type AlertPrefs, type BandName, getBandFromRate, type Band } from "@/lib/bands";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter,
-  DialogClose
-} from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { format } from 'date-fns';
+import { BANDS, type AlertPrefs, type BandName, getBandFromRate, type Band } from "@/lib/bands";
 import { Badge } from '@/components/ui/badge';
 
 
@@ -50,8 +35,6 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ alertPrefs }) => {
   const [chartData, setChartData] = useState<FormattedHistoricalRate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
-  const [conversionLog] = useLocalStorage<ConversionLogEntry[]>("conversionLog", []);
-  const [isLogHistoryOpen, setIsLogHistoryOpen] = useState(false);
 
   const bandUIDefinitions = useMemo((): BandUIDefinition[] => {
     return BANDS.map(b => ({
@@ -126,7 +109,7 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ alertPrefs }) => {
     }
 
     const range = overallMax - overallMin;
-    const padding = range === 0 ? 1 : range * 0.05; // Reduced padding a bit
+    const padding = range === 0 ? 1 : range * 0.05; 
     
     return [parseFloat((overallMin - padding).toFixed(2)), parseFloat((overallMax + padding).toFixed(2))] as [number, number];
 
@@ -158,61 +141,6 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ alertPrefs }) => {
         <CardTitle className="flex items-center justify-between text-primary">
           <span>90-Day Trend</span>
           <div className="flex items-center space-x-2">
-            <Dialog open={isLogHistoryOpen} onOpenChange={setIsLogHistoryOpen}>
-              <DialogTrigger asChild>
-                <Button variant="ghost" size="icon" aria-label="View conversion log" className="text-primary hover:bg-primary/10">
-                  <ListChecks className="h-5 w-5" />
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[625px] shadow-xl rounded-lg">
-                <DialogHeader>
-                  <DialogTitle>Conversion Log History</DialogTitle>
-                  <DialogDescription>
-                    Review your past USD conversions.
-                  </DialogDescription>
-                </DialogHeader>
-                <ScrollArea className="h-[400px] pr-4">
-                  {conversionLog.length > 0 ? (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Date</TableHead>
-                          <TableHead>Rate (THB)</TableHead>
-                          <TableHead>Amount (USD)</TableHead>
-                          <TableHead>Band</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {conversionLog.slice().reverse().map((log) => {
-                          const bandDetails = BANDS.find(b => b.name === log.band);
-                          return (
-                            <TableRow key={log.id}>
-                              <TableCell>{format(new Date(log.date), "MMM dd, yyyy HH:mm")}</TableCell>
-                              <TableCell>{log.rate.toFixed(4)}</TableCell>
-                              <TableCell>{log.amount.toFixed(2)}</TableCell>
-                              <TableCell>
-                                <Badge className={`${bandDetails?.badgeClass || ''} px-2 py-0.5`}>
-                                  {bandDetails?.displayName || log.band}
-                                </Badge>
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
-                  ) : (
-                    <p className="text-center text-muted-foreground py-10">No conversion logs yet.</p>
-                  )}
-                </ScrollArea>
-                <DialogFooter>
-                  <DialogClose asChild>
-                    <Button type="button" variant="outline">
-                      Close
-                    </Button>
-                  </DialogClose>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
             {isLoading && <Loader2 className="h-5 w-5 animate-spin text-primary" />}
           </div>
         </CardTitle>
@@ -243,7 +171,7 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ alertPrefs }) => {
                 tickFormatter={(value) => typeof value === 'number' ? value.toFixed(2) : ''}
                 tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
                 tickLine={false}
-                axisLine={{ stroke: 'hsl(var(--border))', strokeWidth: 0 }} // Hide Y-axis line
+                axisLine={{ strokeWidth: 0 }} 
                 allowDataOverflow={true}
                 width={60} 
                 label={{ value: 'THB/USD', angle: -90, position: 'insideLeft', fill: 'hsl(var(--muted-foreground))', fontSize: 12, dy: 40, dx: -15 }}
@@ -268,12 +196,12 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ alertPrefs }) => {
                       ifOverflow="visible"
                        label={{
                         value: bandDef.displayName,
-                        fill: bandDef.labelTextColorVar,
+                        fill: `hsl(var(--${bandDef.name.toLowerCase()}-text-color, var(--foreground)))`,
                         position: 'insideTopLeft',
                         fontSize: 11,
                         fontWeight: 'bold',
-                        dx: 8, // horizontal padding from left
-                        dy: 13, // vertical padding from top
+                        dx: 8, 
+                        dy: 13, 
                       }}
                     />
                   );

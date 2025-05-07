@@ -8,7 +8,6 @@ import type { AlertPrefs } from '@/lib/bands';
 import { DEFAULT_ALERT_PREFS } from '@/lib/bands';
 
 export default function UsdThbMonitorPage() {
-  const [refreshKey, setRefreshKey] = useState(0);
   const [alertPrefs, setAlertPrefs] = useLocalStorage<AlertPrefs>("alertPrefs", DEFAULT_ALERT_PREFS);
 
   return (
@@ -21,12 +20,11 @@ export default function UsdThbMonitorPage() {
       
       <main className="w-full max-w-xl space-y-6">
         <CurrentRateDisplay
-          refreshTrigger={refreshKey}
+          refreshTrigger={0} // refreshTrigger is kept for potential future use, though not actively used now
           alertPrefs={alertPrefs}
           onAlertPrefsChange={setAlertPrefs}
         />
         <HistoryChartDisplay
-          refreshTrigger={refreshKey}
           alertPrefs={alertPrefs}
         />
       </main>
