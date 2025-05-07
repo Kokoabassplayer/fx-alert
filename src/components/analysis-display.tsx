@@ -17,33 +17,79 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { FULL_ANALYSIS_DATA } from '@/lib/bands';
 
-const trendSummaryData = [
-  { period: "2010 – 2014", description: "Baht strong, mostly 29 – 33 THB/USD" },
-  { period: "2015 – 2017", description: "Sharp weakening; mid-30s peak in 2016" },
-  { period: "2018 – 2019", description: "Re-strengthening; average < 32 THB/USD in 2019" },
-  { period: "2020 – 2021", description: "Covid volatility; baht softens to 33 – 34" },
-  { period: "2022", description: "Spike > 35 as Fed rate hikes lift USD" },
-  { period: "2023 – 2024", description: "Gradual pull-back, still mid-30s" },
-];
+const { trend_summary, distribution_statistics, threshold_bands } = FULL_ANALYSIS_DATA;
+
+const trendSummaryData = trend_summary.map(item => ({
+  period: item.period.replace(/–/g, ' – '), // Ensure consistent spacing for en-dash
+  description: item.description,
+}));
 
 const distributionStatisticsData = [
-  { metric: "Mean", value: "32.69" },
-  { metric: "Median", value: "32.63" },
-  { metric: "10th percentile", value: "30.50" },
-  { metric: "25th percentile", value: "31.22" },
-  { metric: "75th percentile", value: "34.08" },
-  { metric: "90th percentile", value: "35.19" },
-  { metric: "Maximum", value: "36.46" },
+  { metric: "Mean", value: distribution_statistics.mean.toFixed(2) },
+  { metric: "Median", value: distribution_statistics.median.toFixed(2) },
+  { metric: "10th percentile", value: distribution_statistics.p10.toFixed(2) },
+  { metric: "25th percentile", value: distribution_statistics.p25.toFixed(2) },
+  { metric: "75th percentile", value: distribution_statistics.p75.toFixed(2) },
+  { metric: "90th percentile", value: distribution_statistics.p90.toFixed(2) },
+  { metric: "Maximum", value: distribution_statistics.max.toFixed(2) },
 ];
 
-const actionableThresholdsData = [
-  { range: "≤ 29.5", level: "EXTREME", probability: "≈ 3 %", action: "Convert as much THB to USD as liquidity allows now", example: "Exchange 60 – 80 k THB; keep 3 – 6 mo THB buffer", reason: "Very rare strong baht — lock in cheap USD" },
-  { range: "29.6 – 31.2", level: "DEEP", probability: "≈ 12 %", action: "Double this month’s USD purchase", example: "Exchange ≈ 40 k THB", reason: "Well below long-term average; capitalize without draining reserves" },
-  { range: "31.3 – 32.0", level: "OPPORTUNE", probability: "≈ 15 %", action: "Add 25 – 50 % to normal DCA", example: "Exchange ≈ 25 – 30 k THB", reason: "Slightly below average — worth topping up" },
-  { range: "32.1 – 34.0", level: "NEUTRAL", probability: "≈ 45 %", action: "Stick to standard DCA", example: "Exchange 20 k THB", reason: "Typical price zone; maintain discipline" },
-  { range: "> 34.0", level: "USD-RICH", probability: "≈ 25 %", action: "Pause non-essential USD conversions", example: "Hold THB; place excess in short-term deposits/bonds", reason: "USD expensive vs. baht — wait for better levels" },
-];
+const formatActionBrief = (actionBriefKey: string): string => {
+  if (!actionBriefKey) return "N/A";
+  return actionBriefKey
+    .split('_')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+};
+
+const formatExampleAction = (exampleActionKey: string): string => {
+  if (!exampleActionKey) return "N/A";
+  return exampleActionKey
+    .split('_')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
+    .replace(/Thb/g, 'THB')
+    .replace(/Usd/g, 'USD')
+    .replace(/Dca/g, 'DCA')
+    .replace(/Approx /g, '≈ ')
+    .replace(/k /g, 'k ');
+};
+
+const formatReason = (reasonKey: string): string => {
+  if (!reasonKey) return "No specific reason provided.";
+  return reasonKey
+    .split('_')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
+    .replace(/ Usd /g, ' USD ')
+    .replace(/ Thb /g, ' THB ');
+};
+
+
+const actionableThresholdsData = threshold_bands.map(band => {
+  let rangeDisplay = "";
+  if (band.range.max === null && band.range.min !== null) {
+    rangeDisplay = `> ${band.range.min.toFixed(1)}`;
+  } else if (band.range.min === 0 && band.range.max !== null) {
+    rangeDisplay = `≤ ${band.range.max.toFixed(1)}`;
+  } else if (band.range.min !== null && band.range.max !== null) {
+    rangeDisplay = `${band.range.min.toFixed(1)} – ${band.range.max.toFixed(1)}`;
+  } else {
+    rangeDisplay = "N/A";
+  }
+
+  return {
+    range: rangeDisplay,
+    level: band.level,
+    probability: `≈ ${(band.probability * 100).toFixed(0)} %`,
+    action: formatActionBrief(band.action_brief),
+    example: formatExampleAction(band.example_action),
+    reason: formatReason(band.reason),
+  };
+});
+
 
 const AnalysisDisplay: FC = () => {
   return (
@@ -66,7 +112,7 @@ const AnalysisDisplay: FC = () => {
       <Card className="overflow-hidden shadow-lg rounded-xl">
         <CardHeader>
           <CardTitle className="text-primary">Distribution Statistics</CardTitle>
-          <CardDescription>180 monthly observations (2010 – 2024)</CardDescription>
+          <CardDescription>{`Based on ${distribution_statistics.sample_months} monthly observations (${distribution_statistics.sample_period})`}</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
@@ -125,7 +171,7 @@ const AnalysisDisplay: FC = () => {
         </CardContent>
       </Card>
        <p className="text-xs text-muted-foreground text-center mt-4">
-            Analysis data created by GPT-3.
+            Analysis data created by Nuttapong Buttprom &amp; AI.
        </p>
     </div>
   );
