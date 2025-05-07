@@ -12,6 +12,10 @@ export interface CurrentRateResponse {
   rates: {
     THB: number;
   };
+  error?: { // Added error property for more robust typing of error responses
+    code: string;
+    message: string;
+  };
 }
 
 export interface HistoricalRateResponse {
@@ -29,6 +33,10 @@ export interface HistoricalRateResponse {
       THB: number;
     };
   };
+  error?: { // Added error property
+    code: string;
+    message: string;
+  };
 }
 
 export interface FormattedHistoricalRate {
@@ -40,17 +48,53 @@ export async function fetchCurrentUsdToThbRate(): Promise<CurrentRateResponse | 
   try {
     const response = await fetch(`${API_BASE_URL}/latest?base=USD&symbols=THB`);
     if (!response.ok) {
-      console.error("Failed to fetch current rate:", response.status, await response.text());
+      console.error(
+        "Failed to fetch current rate (HTTP status):",
+        response.status,
+        await response.text().catch(() => "Could not read response text")
+      );
       return null;
     }
-    const data = await response.json();
-    if (!data.success || !data.rates || typeof data.rates.THB !== 'number') {
-      console.error("Invalid data format for current rate:", data);
+
+    let data: any;
+    try {
+      data = await response.json();
+    } catch (jsonError) {
+      console.error(
+        "Failed to parse JSON response for current rate:",
+        jsonError,
+        await response.text().catch(() => "Could not read response text (after JSON parse failure)")
+      );
       return null;
     }
+
+    // Case 1: API returns an empty object {}
+    // This addresses the specific console error reported by the user.
+    if (typeof data === 'object' && data !== null && Object.keys(data).length === 0 && data.constructor === Object) {
+      // Treat as a fetch failure, but don't log the "Invalid data format" error for this specific case.
+      // The UI will show a generic error because null is returned.
+      // console.warn("API returned an empty object for current rate, treating as fetch failure."); // Optional: log as warning
+      return null;
+    }
+
+    // Case 2: API returns a response that explicitly indicates failure (e.g., success: false)
+    if (typeof data.success === 'boolean' && data.success === false) {
+      console.warn("API request for current rate indicated failure:", data.error || data);
+      return null;
+    }
+
+    // Case 3: API returns a response, `success` might be true/missing, but overall structure is invalid.
+    // This includes `success` missing or not boolean, `rates` missing, or `rates.THB` not a number.
+    if (typeof data.success !== 'boolean' || !data.rates || typeof data.rates.THB !== 'number') {
+      console.error("Invalid data format or structure for current rate:", data);
+      return null;
+    }
+
+    // If all checks pass, data should conform to CurrentRateResponse
     return data as CurrentRateResponse;
-  } catch (error) {
-    console.error("Error fetching current rate:", error);
+
+  } catch (error) { // Catches network errors before response or other unexpected errors in the try block
+    console.error("Generic error fetching current rate:", error);
     return null;
   }
 }
@@ -69,20 +113,36 @@ export async function fetchUsdToThbRateHistory(): Promise<FormattedHistoricalRat
       `${API_BASE_URL}/timeseries?base=USD&symbols=THB&start_date=${startDate}&end_date=${endDate}`
     );
     if (!response.ok) {
-      console.error("Failed to fetch rate history:", response.status, await response.text());
+      console.error(
+        "Failed to fetch rate history (HTTP status):",
+        response.status,
+        await response.text().catch(() => "Could not read response text")
+      );
       return [];
     }
-    const data = (await response.json()) as HistoricalRateResponse;
+    
+    let data: HistoricalRateResponse;
+    try {
+      data = await response.json();
+    } catch (jsonError) {
+       console.error(
+        "Failed to parse JSON response for rate history:",
+        jsonError,
+        await response.text().catch(() => "Could not read response text (after JSON parse failure)")
+      );
+      return [];
+    }
+
 
     if (!data.success || !data.rates) {
-      console.error("Invalid data format for rate history:", data);
+      console.error("Invalid data format for rate history (e.g. missing success or rates):", data.error || data);
       return [];
     }
     
     const formattedData = Object.entries(data.rates)
       .map(([date, rateData]) => ({
         date,
-        rate: typeof rateData.THB === 'number' ? rateData.THB : 0, // Fallback for missing THB
+        rate: typeof rateData.THB === 'number' ? rateData.THB : 0, 
       }))
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
       
