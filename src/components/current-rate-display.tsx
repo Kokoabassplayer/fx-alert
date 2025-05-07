@@ -67,6 +67,7 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
   // Notification Hook
   useEffect(() => {
     if (currentBand && rate !== undefined && alertPrefs[currentBand.name]) {
+      // Notify only for actionable bands and if the band has changed
       if (currentBand.name !== prevBandRef.current && ['EXTREME', 'DEEP', 'OPPORTUNE'].includes(currentBand.name)) {
          toast({
             title: `Rate Alert: ${currentBand.displayName} Zone!`,
@@ -128,6 +129,11 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
               </div>
               
               <p className="text-sm text-foreground/90 pt-1">{currentBand.action}</p>
+              {currentBand.reason && (
+                <p className="text-xs text-muted-foreground/80 pt-1 italic">
+                  <span className="font-semibold">Reason:</span> {currentBand.reason}
+                </p>
+              )}
             </CardContent>
           </Card>
         )}

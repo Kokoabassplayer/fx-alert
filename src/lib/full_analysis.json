@@ -1,0 +1,81 @@
+{
+  "trend_summary": [
+    {
+      "period": "2010-2014",
+      "description": "Baht strong, mostly 29–33 THB/USD"
+    },
+    {
+      "period": "2015-2017",
+      "description": "Sharp weakening; mid-30s peak in 2016"
+    },
+    {
+      "period": "2018-2019",
+      "description": "Re-strengthening; average sub-32 in 2019"
+    },
+    {
+      "period": "2020-2021",
+      "description": "Covid volatility; baht softens to 33–34"
+    },
+    {
+      "period": "2022",
+      "description": "Spike above 35 as Fed hikes lift USD"
+    },
+    {
+      "period": "2023-2024",
+      "description": "Gradual pull-back, still mid-30s"
+    }
+  ],
+  "distribution_statistics": {
+    "mean": 32.69,
+    "median": 32.63,
+    "p10": 30.50,
+    "p25": 31.22,
+    "p75": 34.08,
+    "p90": 35.19,
+    "max": 36.46,
+    "sample_months": 180,
+    "sample_period": "2010-2024"
+  },
+  "threshold_bands": [
+    {
+      "level": "EXTREME",
+      "range": { "min": 0.00, "max": 29.50, "inclusive_min": true, "inclusive_max": true },
+      "probability": 0.03,
+      "action_brief": "convert_max",
+      "example_action": "exchange_60k_to_80k_thb_and_keep_3_to_6_month_cash_buffer",
+      "reason": "very_rare_strong_baht_best_time_to_lock_in_cheap_usd"
+    },
+    {
+      "level": "DEEP",
+      "range": { "min": 29.60, "max": 31.20, "inclusive_min": true, "inclusive_max": true },
+      "probability": 0.12,
+      "action_brief": "double_monthly_purchase",
+      "example_action": "exchange_approx_40k_thb",
+      "reason": "well_below_long_term_average_capitalize_without_draining_reserves"
+    },
+    {
+      "level": "OPPORTUNE",
+      "range": { "min": 31.30, "max": 32.00, "inclusive_min": true, "inclusive_max": true },
+      "probability": 0.15,
+      "action_brief": "increase_purchase_by_25_to_50_percent",
+      "example_action": "exchange_approx_25k_to_30k_thb",
+      "reason": "slightly_below_average_worth_topping_up_but_not_overcommitting"
+    },
+    {
+      "level": "NEUTRAL",
+      "range": { "min": 32.10, "max": 34.00, "inclusive_min": true, "inclusive_max": true },
+      "probability": 0.45,
+      "action_brief": "maintain_standard_dca",
+      "example_action": "exchange_20k_thb",
+      "reason": "typical_price_zone_maintain_discipline"
+    },
+    {
+      "level": "USD-RICH",
+      "range": { "min": 34.01, "max": null, "inclusive_min": true, "inclusive_max": false },
+      "probability": 0.25,
+      "action_brief": "pause_non_essential_conversions",
+      "example_action": "hold_thb_deposit_short_term",
+      "reason": "usd_expensive_vs_baht_wait_for_better_levels"
+    }
+  ]
+}

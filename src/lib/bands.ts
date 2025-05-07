@@ -1,17 +1,20 @@
 
-export type BandName = "EXTREME" | "DEEP" | "OPPORTUNE" | "NEUTRAL" | "RICH";
+import analysisData from '@/lib/full_analysis.json';
+
+export type BandName = "EXTREME" | "DEEP" | "OPPORTUNE" | "NEUTRAL" | "USD-RICH";
 
 export interface Band {
   name: BandName;
   displayName: string;
   condition: (rate: number) => boolean;
   action: string;
+  reason: string;
   probability?: string;
-  rangeDisplay: string; // Added field for displaying the rate range
+  rangeDisplay: string;
   badgeClass: string;
-  borderColorClass: string; // For Card top border
-  switchColorClass: string; // For Switch component
-  toastClass?: string; // For Toast component (optional)
+  borderColorClass: string;
+  switchColorClass: string;
+  toastClass?: string;
   chartSettings: {
     y1?: number;
     y2?: number;
@@ -22,106 +25,127 @@ export interface Band {
   };
 }
 
-// Updated band definitions based on new context
-export const BANDS: Band[] = [
-  {
-    name: "EXTREME", // Rate <= 29.5
-    displayName: "EXTREME",
-    condition: (rate) => rate <= 29.5,
-    action: "Convert as much THB to USD as liquidity allows now.",
-    probability: "≈ 3%",
-    rangeDisplay: "≤ 29.5 THB/USD",
-    badgeClass: "bg-red-500 text-white hover:bg-red-600",
-    borderColorClass: "border-red-500",
-    switchColorClass: "data-[state=checked]:bg-red-500",
-    toastClass: "bg-red-500 text-white",
+const formatReason = (reasonKey: string): string => {
+  if (!reasonKey) return "No specific reason provided.";
+  return reasonKey
+    .split('_')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
+    .replace(/ Usd /g, ' USD ')
+    .replace(/ Thb /g, ' THB ');
+};
+
+
+export const BANDS: Band[] = analysisData.threshold_bands.map(bandData => {
+  const name = bandData.level as BandName;
+  let conditionFunc: (rate: number) => boolean;
+
+  if (bandData.range.max === null) { // For USD-RICH where max is unbounded
+    conditionFunc = (rate) => rate >= bandData.range.min;
+  } else if (bandData.range.min === 0) { // For EXTREME where min is effectively unbounded downwards (or starts from 0)
+     conditionFunc = (rate) => rate <= bandData.range.max;
+  }
+  else {
+    conditionFunc = (rate) => rate >= bandData.range.min && rate <= bandData.range.max;
+  }
+  
+  let badgeClass = "";
+  let borderColorClass = "";
+  let switchColorClass = "";
+  let toastClass = "";
+  let chartFillVar = "";
+  let chartStrokeVar = "";
+  let chartLabelTextColorVar = "";
+
+  switch (name) {
+    case "EXTREME":
+      badgeClass = "bg-red-500 text-white hover:bg-red-600";
+      borderColorClass = "border-red-500";
+      switchColorClass = "data-[state=checked]:bg-red-500";
+      toastClass = "bg-red-500 text-white";
+      chartFillVar = "var(--band-extreme-area-bg)";
+      chartStrokeVar = "var(--band-extreme-area-border)";
+      chartLabelTextColorVar = "var(--band-extreme-text-color-hsl)";
+      break;
+    case "DEEP":
+      badgeClass = "bg-purple-600 text-white hover:bg-purple-700";
+      borderColorClass = "border-purple-600";
+      switchColorClass = "data-[state=checked]:bg-purple-600";
+      toastClass = "bg-purple-600 text-white";
+      chartFillVar = "var(--band-deep-area-bg)";
+      chartStrokeVar = "var(--band-deep-area-border)";
+      chartLabelTextColorVar = "var(--band-deep-text-color-hsl)";
+      break;
+    case "OPPORTUNE":
+      badgeClass = "bg-green-600 text-white hover:bg-green-700";
+      borderColorClass = "border-green-600";
+      switchColorClass = "data-[state=checked]:bg-green-600";
+      toastClass = "bg-green-600 text-white";
+      chartFillVar = "var(--band-opportune-area-bg)";
+      chartStrokeVar = "var(--band-opportune-area-border)";
+      chartLabelTextColorVar = "var(--band-opportune-text-color-hsl)";
+      break;
+    case "NEUTRAL":
+      badgeClass = "bg-slate-500 text-white hover:bg-slate-600";
+      borderColorClass = "border-slate-500";
+      switchColorClass = "data-[state=checked]:bg-slate-500";
+      chartFillVar = "var(--band-neutral-area-bg)";
+      chartStrokeVar = "var(--band-neutral-area-border)";
+      chartLabelTextColorVar = "var(--band-neutral-text-color-hsl)";
+      break;
+    case "USD-RICH":
+      badgeClass = "bg-yellow-400 text-black hover:bg-yellow-500";
+      borderColorClass = "border-yellow-400";
+      switchColorClass = "data-[state=checked]:bg-yellow-400";
+      chartFillVar = "var(--band-rich-area-bg)";
+      chartStrokeVar = "var(--band-rich-area-border)";
+      chartLabelTextColorVar = "var(--band-rich-text-color-hsl)";
+      break;
+  }
+  
+  let rangeDisplayVal = "";
+  if (bandData.range.max === null && bandData.range.min !== null) {
+    rangeDisplayVal = `> ${(bandData.range.min - 0.01).toFixed(1)} THB/USD`; 
+  } else if (bandData.range.min === 0 && bandData.range.max !== null) {
+     rangeDisplayVal = `≤ ${bandData.range.max.toFixed(1)} THB/USD`;
+  } else if (bandData.range.min !== null && bandData.range.max !== null) {
+    rangeDisplayVal = `${bandData.range.min.toFixed(1)} – ${bandData.range.max.toFixed(1)} THB/USD`;
+  } else {
+    rangeDisplayVal = "N/A"; // Should not happen with current data
+  }
+
+
+  return {
+    name: name,
+    displayName: name === 'USD-RICH' ? 'USD Rich' : name.charAt(0) + name.slice(1).toLowerCase(),
+    condition: conditionFunc,
+    action: formatReason(bandData.action_brief),
+    reason: formatReason(bandData.reason),
+    probability: `≈ ${(bandData.probability * 100).toFixed(0)}%`,
+    rangeDisplay: rangeDisplayVal,
+    badgeClass,
+    borderColorClass,
+    switchColorClass,
+    toastClass,
     chartSettings: {
-      y2: 29.5,
-      fillVar: "var(--band-extreme-area-bg)",
-      strokeVar: "var(--band-extreme-area-border)",
-      threshold: 29.5,
-      labelTextColorVar: "var(--band-extreme-text-color-hsl)",
-    },
-  },
-  {
-    name: "DEEP", // Rate 29.6 – 31.2 (means > 29.5 and <= 31.2)
-    displayName: "DEEP",
-    condition: (rate) => rate > 29.5 && rate <= 31.2,
-    action: "Double this month’s USD purchase.",
-    probability: "≈ 12%",
-    rangeDisplay: "29.6 – 31.2 THB/USD",
-    badgeClass: "bg-purple-600 text-white hover:bg-purple-700",
-    borderColorClass: "border-purple-600",
-    switchColorClass: "data-[state=checked]:bg-purple-600",
-    toastClass: "bg-purple-600 text-white",
-    chartSettings: {
-      y1: 29.5,
-      y2: 31.2,
-      fillVar: "var(--band-deep-area-bg)",
-      strokeVar: "var(--band-deep-area-border)",
-      threshold: 31.2,
-      labelTextColorVar: "var(--band-deep-text-color-hsl)",
-    },
-  },
-  {
-    name: "OPPORTUNE", // Rate 31.3 – 32.0 (means > 31.2 and <= 32.0)
-    displayName: "OPPORTUNE",
-    condition: (rate) => rate > 31.2 && rate <= 32.0,
-    action: "Add 25–50 % to normal DCA.",
-    probability: "≈ 15%",
-    rangeDisplay: "31.3 – 32.0 THB/USD",
-    badgeClass: "bg-green-600 text-white hover:bg-green-700",
-    borderColorClass: "border-green-600",
-    switchColorClass: "data-[state=checked]:bg-green-600",
-    toastClass: "bg-green-600 text-white",
-    chartSettings: {
-      y1: 31.2,
-      y2: 32.0,
-      fillVar: "var(--band-opportune-area-bg)",
-      strokeVar: "var(--band-opportune-area-border)",
-      threshold: 32.0,
-      labelTextColorVar: "var(--band-opportune-text-color-hsl)",
-    },
-  },
-  {
-    name: "NEUTRAL", // Rate 32.1 – 34.0 (means > 32.0 and <= 34.0)
-    displayName: "NEUTRAL",
-    condition: (rate) => rate > 32.0 && rate <= 34.0,
-    action: "Stick to standard DCA.",
-    probability: "≈ 45%",
-    rangeDisplay: "32.1 – 34.0 THB/USD",
-    badgeClass: "bg-slate-500 text-white hover:bg-slate-600",
-    borderColorClass: "border-slate-500",
-    switchColorClass: "data-[state=checked]:bg-slate-500",
-    chartSettings: {
-      y1: 32.0,
-      y2: 34.0,
-      fillVar: "var(--band-neutral-area-bg)",
-      strokeVar: "var(--band-neutral-area-border)",
-      labelTextColorVar: "var(--band-neutral-text-color-hsl)",
-    },
-  },
-  {
-    name: "RICH", // Rate > 34.0
-    displayName: "USD-RICH",
-    condition: (rate) => rate > 34.0,
-    action: "Pause non-essential USD conversions.",
-    probability: "≈ 25%",
-    rangeDisplay: "> 34.0 THB/USD",
-    badgeClass: "bg-yellow-400 text-black hover:bg-yellow-500", // text-black for readability on yellow
-    borderColorClass: "border-yellow-400",
-    switchColorClass: "data-[state=checked]:bg-yellow-400",
-    chartSettings: {
-      y1: 34.0,
-      fillVar: "var(--band-rich-area-bg)",
-      strokeVar: "var(--band-rich-area-border)",
-      labelTextColorVar: "var(--band-rich-text-color-hsl)",
-    },
-  },
-];
+      y1: bandData.range.min === 0 ? undefined : bandData.range.min,
+      y2: bandData.range.max === null ? undefined : bandData.range.max,
+      fillVar: chartFillVar,
+      strokeVar: chartStrokeVar,
+      threshold: bandData.range.max === null ? bandData.range.min : bandData.range.max,
+      labelTextColorVar: chartLabelTextColorVar,
+    }
+  };
+});
+
 
 export const getBandFromRate = (rate: number): Band | undefined => {
-  return BANDS.find((band) => band.condition(rate));
+  for (const band of BANDS) {
+    if (band.condition(rate)) {
+      return band;
+    }
+  }
+  return undefined; 
 };
 
 export interface AlertPrefs {
@@ -129,7 +153,7 @@ export interface AlertPrefs {
   DEEP: boolean;
   OPPORTUNE: boolean;
   NEUTRAL: boolean;
-  RICH: boolean;
+  "USD-RICH": boolean;
 }
 
 export const DEFAULT_ALERT_PREFS: AlertPrefs = {
@@ -137,5 +161,7 @@ export const DEFAULT_ALERT_PREFS: AlertPrefs = {
   DEEP: true,
   OPPORTUNE: true,
   NEUTRAL: true,
-  RICH: true,
+  "USD-RICH": true,
 };
+
+export const FULL_ANALYSIS_DATA = analysisData;
