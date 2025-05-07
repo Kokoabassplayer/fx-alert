@@ -26,9 +26,33 @@ interface BandUIDefinition {
   y2?: number;
   fillVar: string;
   strokeVar: string;
-  labelTextColorVar: string; 
-  tooltipLabel?: string; 
+  labelTextColorVar: string;
+  tooltipLabel?: string;
 }
+
+// Custom Label component for ReferenceArea
+const BandLabel: FC<{ viewBox?: { x?: number; y?: number }; value: string; fill: string }> = ({ viewBox, value, fill }) => {
+  if (!viewBox || typeof viewBox.x === 'undefined' || typeof viewBox.y === 'undefined') {
+    return null; // Or some default positioning if viewBox is not fully defined
+  }
+  const { x, y } = viewBox;
+  // Offset the label slightly from the top-left corner of the ReferenceArea
+  const dx = 8;
+  const dy = 13; // Adjusted for better vertical alignment based on font size
+
+  return (
+    <text
+      x={x + dx}
+      y={y + dy}
+      fill={fill}
+      fontSize={11}
+      fontWeight="bold"
+      textAnchor="start"
+    >
+      {value}
+    </text>
+  );
+};
 
 
 const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ alertPrefs }) => {
@@ -57,7 +81,8 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ alertPrefs }) => {
       setChartData(data);
     } else {
       setChartData([]);
-      if(!isLoading) {
+      // Avoid toast on initial load if data is empty then, only if subsequent fetches fail
+      if(!isLoading && chartData.length > 0) { // Check if it was previously loading or had data
         toast({
           variant: "destructive",
           title: "Chart Error",
@@ -66,15 +91,17 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ alertPrefs }) => {
       }
     }
     setIsLoading(false);
-  }, [toast, isLoading]);
+  }, [toast, isLoading, chartData.length ]); // Added chartData.length to dependencies
 
   useEffect(() => {
     fetchHistory();
-  }, [fetchHistory]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Fetch only once on mount, or manage refresh differently if needed
+
 
   const yAxisDomain = useMemo(() => {
-    let minDataRate = 30; 
-    let maxDataRate = 36; 
+    let minDataRate = 30;
+    let maxDataRate = 36;
 
     if (chartData.length > 0) {
       const rates = chartData.map(d => d.rate);
@@ -89,7 +116,7 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ alertPrefs }) => {
         if (bandDef.y2 !== undefined) activeBandNumericBoundaries.push(bandDef.y2);
       }
     });
-    
+
     let overallMin = minDataRate;
     let overallMax = maxDataRate;
 
@@ -97,7 +124,7 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ alertPrefs }) => {
       overallMin = Math.min(minDataRate, ...activeBandNumericBoundaries);
       overallMax = Math.max(maxDataRate, ...activeBandNumericBoundaries);
     }
-    
+
     if (chartData.length === 0 && activeBandNumericBoundaries.length === 0) {
         overallMin = 28;
         overallMax = 38;
@@ -109,8 +136,8 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ alertPrefs }) => {
     }
 
     const range = overallMax - overallMin;
-    const padding = range === 0 ? 1 : range * 0.05; 
-    
+    const padding = range === 0 ? 1 : range * 0.05;
+
     return [parseFloat((overallMin - padding).toFixed(2)), parseFloat((overallMax + padding).toFixed(2))] as [number, number];
 
   }, [chartData, alertPrefs, bandUIDefinitions]);
@@ -156,7 +183,7 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ alertPrefs }) => {
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={chartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+            <LineChart data={chartData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
               <XAxis
                 dataKey="date"
                 tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
@@ -171,10 +198,10 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ alertPrefs }) => {
                 tickFormatter={(value) => typeof value === 'number' ? value.toFixed(2) : ''}
                 tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
                 tickLine={false}
-                axisLine={{ strokeWidth: 0 }} 
+                axisLine={{ strokeWidth: 0 }}
                 allowDataOverflow={true}
-                width={60} 
-                label={{ value: 'THB/USD', angle: -90, position: 'insideLeft', fill: 'hsl(var(--muted-foreground))', fontSize: 12, dy: 40, dx: -15 }}
+                width={50} // Adjusted width
+                label={{ value: 'THB/USD', angle: -90, position: 'insideLeft', fill: 'hsl(var(--muted-foreground))', fontSize: 12, dy: 40, dx: -5 }}
               />
               <Tooltip content={<CustomTooltip />} />
 
@@ -191,24 +218,16 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ alertPrefs }) => {
                       fill={bandDef.fillVar}
                       stroke={bandDef.strokeVar}
                       strokeWidth={0.5}
-                      fillOpacity={1} 
+                      fillOpacity={1}
                       strokeOpacity={1}
                       ifOverflow="visible"
-                       label={{
-                        value: bandDef.displayName,
-                        fill: `hsl(var(--${bandDef.name.toLowerCase()}-text-color, var(--foreground)))`,
-                        position: 'insideTopLeft',
-                        fontSize: 11,
-                        fontWeight: 'bold',
-                        dx: 8, 
-                        dy: 13, 
-                      }}
+                      label={<BandLabel value={bandDef.displayName} fill={`hsl(${bandDef.labelTextColorVar})`} />}
                     />
                   );
                 }
                 return null;
               })}
-              
+
               <Line
                 type="monotone"
                 dataKey="rate"
@@ -227,3 +246,4 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ alertPrefs }) => {
 };
 
 export default HistoryChartDisplay;
+

@@ -16,7 +16,7 @@ export interface Band {
     fillVar: string;
     strokeVar: string;
     threshold?: number;
-    labelTextColorVar: string; 
+    labelTextColorVar: string; // This will now be the HSL variable string
   };
 }
 
@@ -36,7 +36,7 @@ export const BANDS: Band[] = [
       fillVar: "var(--band-extreme-area-bg)",
       strokeVar: "var(--band-extreme-area-border)",
       threshold: 29.5,
-      labelTextColorVar: "var(--band-extreme-text-color)",
+      labelTextColorVar: "var(--band-extreme-text-color-hsl)",
     },
   },
   {
@@ -54,7 +54,7 @@ export const BANDS: Band[] = [
       fillVar: "var(--band-deep-area-bg)",
       strokeVar: "var(--band-deep-area-border)",
       threshold: 31.2,
-      labelTextColorVar: "var(--band-deep-text-color)",
+      labelTextColorVar: "var(--band-deep-text-color-hsl)",
     },
   },
   {
@@ -72,7 +72,7 @@ export const BANDS: Band[] = [
       fillVar: "var(--band-opportune-area-bg)",
       strokeVar: "var(--band-opportune-area-border)",
       threshold: 32.0,
-      labelTextColorVar: "var(--band-opportune-text-color)",
+      labelTextColorVar: "var(--band-opportune-text-color-hsl)",
     },
   },
   {
@@ -88,7 +88,7 @@ export const BANDS: Band[] = [
       y2: 34.0,
       fillVar: "var(--band-neutral-area-bg)",
       strokeVar: "var(--band-neutral-area-border)",
-      labelTextColorVar: "var(--band-neutral-text-color)",
+      labelTextColorVar: "var(--band-neutral-text-color-hsl)",
     },
   },
   {
@@ -96,14 +96,14 @@ export const BANDS: Band[] = [
     displayName: "USD Rich",
     condition: (rate) => rate > 34.0,
     action: "Pause discretionary USD buys.",
-    badgeClass: "bg-yellow-400 text-black hover:bg-yellow-500",
+    badgeClass: "bg-yellow-400 text-black hover:bg-yellow-500", // text-black for readability on yellow
     borderColorClass: "border-yellow-400",
     switchColorClass: "data-[state=checked]:bg-yellow-400",
     chartSettings: {
       y1: 34.0,
       fillVar: "var(--band-rich-area-bg)",
       strokeVar: "var(--band-rich-area-border)",
-      labelTextColorVar: "var(--band-rich-text-color)",
+      labelTextColorVar: "var(--band-rich-text-color-hsl)",
     },
   },
 ];
