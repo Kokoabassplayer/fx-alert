@@ -22,6 +22,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Switch } from "@/components/ui/switch";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { getBandFromRate, BANDS, type Band, type ConversionLogEntry, type AlertPrefs, DEFAULT_ALERT_PREFS, type BandName } from "@/lib/bands";
 
@@ -83,11 +84,12 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
   // Notification Hook
   useEffect(() => {
     if (currentBand && rate !== undefined && alertPrefs[currentBand.name]) {
-      if (currentBand.name !== prevBandRef.current && ['EXTREME', 'DEEP', 'OPPORTUNE'].includes(currentBand.name)) { // Only notify for these initial bands
+      if (currentBand.name !== prevBandRef.current && ['EXTREME', 'DEEP', 'OPPORTUNE'].includes(currentBand.name)) {
          toast({
             title: `Rate Alert: ${currentBand.name} Zone!`,
             description: `USD/THB at ${rate.toFixed(4)}. Suggestion: ${currentBand.action}`,
-            variant: currentBand.name === 'EXTREME' ? 'destructive' : 'default'
+            variant: currentBand.name === 'EXTREME' ? 'destructive' : 'default',
+            className: currentBand.toastClass
          });
       }
     }
@@ -124,22 +126,21 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
   };
 
   const displayRate = rate !== undefined ? rate.toFixed(4) : "N/A";
-  const rateColorClass = currentBand ? "text-foreground" : "text-muted-foreground"; // Color based on band later if needed
+  const rateColorClass = currentBand ? "text-foreground" : "text-muted-foreground"; 
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
+    <Card className="overflow-hidden shadow-lg rounded-xl">
+      <CardHeader className="bg-card/50">
+        <CardTitle className="flex items-center justify-between text-primary">
           <span>USD / THB Exchange Rate</span>
           {isLoading && <Loader2 className="h-5 w-5 animate-spin text-primary" />}
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-6 p-6">
         <div className="text-center">
           <p className="text-sm text-muted-foreground">Current Rate</p>
-          <div className={`text-4xl font-bold flex items-center justify-center space-x-2 ${rateColorClass}`}>
+          <div className={`text-5xl font-bold flex items-center justify-center space-x-2 ${rateColorClass}`}>
             <span>{displayRate}</span>
-            {/* Trend icon removed as it was based on threshold */}
           </div>
           {lastUpdated && (
             <p className="text-xs text-muted-foreground mt-1">
@@ -149,14 +150,14 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
         </div>
 
         {currentBand && !isLoading && rate !== undefined && (
-          <Card className="mt-4 shadow-md">
-            <CardContent className="p-4 space-y-3">
+          <Card className={`shadow-md border-t-4 ${currentBand.borderColorClass} rounded-lg`}>
+             <CardContent className="p-4 space-y-3">
               <div className="flex items-center justify-between">
-                <Badge className={currentBand.badgeClass}>{currentBand.name}</Badge>
+                <Badge className={`${currentBand.badgeClass} text-sm px-3 py-1`}>{currentBand.name}</Badge>
                  {currentBand.logButtonVisible && (
                     <AlertDialog open={isLogConversionDialogOpen} onOpenChange={setIsLogConversionDialogOpen}>
                       <AlertDialogTrigger asChild>
-                        <Button variant="outline" size="sm">
+                        <Button variant="outline" size="sm" className="border-primary text-primary hover:bg-primary/10">
                           <Edit className="mr-2 h-4 w-4" /> Log Conversion
                         </Button>
                       </AlertDialogTrigger>
@@ -183,38 +184,52 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
                     </AlertDialog>
                   )}
               </div>
-              <p className="text-sm">{currentBand.action}</p>
+              <p className="text-sm text-foreground/90">{currentBand.action}</p>
             </CardContent>
           </Card>
         )}
-        {/* Threshold input and quick set buttons removed */}
-        {/* Action suggestion alert removed */}
       </CardContent>
-      <CardFooter className="flex-col items-start space-y-3 p-4 border-t">
-        <div className="flex items-center space-x-2">
-          <Settings className="h-5 w-5 text-muted-foreground" />
-          <h3 className="text-md font-semibold">Alert & Chart Band Preferences</h3>
-        </div>
-        <p className="text-xs text-muted-foreground">Enable notifications and chart bands.</p>
-        <div className="w-full space-y-2 pt-2">
-          {(Object.keys(alertPrefs) as BandName[]).map((bandKey) => {
-            const bandLabel = BANDS.find(b => b.name === bandKey)?.name.charAt(0) + BANDS.find(b => b.name === bandKey)?.name.slice(1).toLowerCase() + " Band" || `${bandKey} Band`;
-            return (
-              <div key={bandKey} className="flex items-center justify-between">
-                <Label htmlFor={`alert-${bandKey.toLowerCase()}`} className="flex items-center space-x-2">
-                  <Bell className="h-4 w-4" />
-                  <span>{bandLabel}</span>
-                </Label>
-                <Switch
-                  id={`alert-${bandKey.toLowerCase()}`}
-                  checked={alertPrefs[bandKey]}
-                  onCheckedChange={(checked) => handleAlertPrefChange(bandKey, checked)}
-                  aria-label={`Toggle alerts and chart visibility for ${bandLabel}`}
-                />
-              </div>
-            );
-          })}
-        </div>
+      <CardFooter className="p-4 border-t bg-card/50">
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="ghost" className="w-full justify-start text-muted-foreground hover:text-primary hover:bg-primary/5">
+              <Settings className="mr-2 h-4 w-4" />
+              Alert & Chart Band Preferences
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-80 shadow-xl rounded-lg">
+            <div className="grid gap-4">
+                <div className="space-y-2">
+                    <h4 className="font-medium leading-none text-primary">Preferences</h4>
+                    <p className="text-sm text-muted-foreground">
+                        Manage notifications and chart band visibility.
+                    </p>
+                </div>
+                <div className="grid gap-2">
+                {(Object.keys(alertPrefs) as BandName[]).map((bandKey) => {
+                    const band = BANDS.find(b => b.name === bandKey);
+                    if (!band) return null;
+                    const bandLabel = band.name.charAt(0) + band.name.slice(1).toLowerCase() + " Band";
+                    return (
+                    <div key={bandKey} className="flex items-center justify-between p-2 rounded-md hover:bg-muted/50 transition-colors">
+                        <Label htmlFor={`alert-${bandKey.toLowerCase()}`} className="flex items-center space-x-3 cursor-pointer">
+                        <span className={`w-3 h-3 rounded-full ${band.switchColorClass}`}></span>
+                        <span className="text-sm font-medium text-foreground">{bandLabel}</span>
+                        </Label>
+                        <Switch
+                        id={`alert-${bandKey.toLowerCase()}`}
+                        checked={alertPrefs[bandKey]}
+                        onCheckedChange={(checked) => handleAlertPrefChange(bandKey, checked)}
+                        aria-label={`Toggle alerts and chart visibility for ${bandLabel}`}
+                        className={`data-[state=checked]:${band.switchColorClass} data-[state=unchecked]:bg-input`}
+                        />
+                    </div>
+                    );
+                })}
+                </div>
+            </div>
+          </PopoverContent>
+        </Popover>
       </CardFooter>
     </Card>
   );
