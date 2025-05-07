@@ -41,39 +41,39 @@
       "level": "EXTREME",
       "range": { "min": 0.00, "max": 29.50, "inclusive_min": true, "inclusive_max": true },
       "probability": 0.03,
-      "action_brief": "convert_max",
+      "action_brief": "Convert as much THB to USD as liquidity allows now",
       "example_action": "exchange_60k_to_80k_thb_and_keep_3_to_6_month_cash_buffer",
       "reason": "very_rare_strong_baht_best_time_to_lock_in_cheap_usd"
     },
     {
       "level": "DEEP",
-      "range": { "min": 29.50, "max": 31.20, "inclusive_min": true, "inclusive_max": true },
+      "range": { "min": 29.51, "max": 31.20, "inclusive_min": true, "inclusive_max": true },
       "probability": 0.12,
-      "action_brief": "double_monthly_purchase",
+      "action_brief": "Double this month’s USD purchase",
       "example_action": "exchange_approx_40k_thb",
       "reason": "well_below_long_term_average_capitalize_without_draining_reserves"
     },
     {
       "level": "OPPORTUNE",
-      "range": { "min": 31.20, "max": 32.00, "inclusive_min": true, "inclusive_max": true },
+      "range": { "min": 31.21, "max": 32.00, "inclusive_min": true, "inclusive_max": true },
       "probability": 0.15,
-      "action_brief": "increase_purchase_by_25_to_50_percent",
+      "action_brief": "Add 25–50 % to normal DCA",
       "example_action": "exchange_approx_25k_to_30k_thb",
       "reason": "slightly_below_average_worth_topping_up_but_not_overcommitting"
     },
     {
       "level": "NEUTRAL",
-      "range": { "min": 32.00, "max": 34.00, "inclusive_min": true, "inclusive_max": true },
+      "range": { "min": 32.01, "max": 34.00, "inclusive_min": true, "inclusive_max": true },
       "probability": 0.45,
-      "action_brief": "maintain_standard_dca",
+      "action_brief": "Stick to standard DCA",
       "example_action": "exchange_20k_thb",
       "reason": "typical_price_zone_maintain_discipline"
     },
     {
       "level": "USD-RICH",
-      "range": { "min": 34.00, "max": null, "inclusive_min": true, "inclusive_max": false },
+      "range": { "min": 34.01, "max": null, "inclusive_min": true, "inclusive_max": false },
       "probability": 0.25,
-      "action_brief": "pause_non_essential_conversions",
+      "action_brief": "Pause non-essential USD conversions",
       "example_action": "hold_thb_deposit_short_term",
       "reason": "usd_expensive_vs_baht_wait_for_better_levels"
     }

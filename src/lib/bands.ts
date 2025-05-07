@@ -1,5 +1,5 @@
 
-import analysisData from '@/lib/full_analysis.json';
+import analysisData from './full_analysis.json'; // Adjusted path
 
 export type BandName = "EXTREME" | "DEEP" | "OPPORTUNE" | "NEUTRAL" | "USD-RICH";
 
@@ -40,13 +40,16 @@ export const BANDS: Band[] = analysisData.threshold_bands.map(bandData => {
   const name = bandData.level as BandName;
   let conditionFunc: (rate: number) => boolean;
 
-  if (bandData.range.max === null) { // For USD-RICH where max is unbounded
-    conditionFunc = (rate) => rate >= bandData.range.min;
-  } else if (bandData.range.min === 0) { // For EXTREME where min is effectively unbounded downwards (or starts from 0)
-     conditionFunc = (rate) => rate <= bandData.range.max;
+  // Using direct min/max from JSON for conditions
+  if (bandData.range.max === null && bandData.range.min !== null) { // For USD-RICH where max is unbounded
+    conditionFunc = (rate) => rate >= bandData.range.min!;
+  } else if (bandData.range.min === 0 && bandData.range.max !== null) { // For EXTREME where min is effectively 0
+     conditionFunc = (rate) => rate <= bandData.range.max!;
+  } else if (bandData.range.min !== null && bandData.range.max !== null) { // For bands with both min and max
+    conditionFunc = (rate) => rate >= bandData.range.min! && rate <= bandData.range.max!;
   }
-  else {
-    conditionFunc = (rate) => rate >= bandData.range.min && rate <= bandData.range.max;
+  else { // Fallback, though current data structure should not hit this
+    conditionFunc = (_rate) => false;
   }
   
   let badgeClass = "";
@@ -105,13 +108,13 @@ export const BANDS: Band[] = analysisData.threshold_bands.map(bandData => {
   
   let rangeDisplayVal = "";
   if (bandData.range.max === null && bandData.range.min !== null) {
-    rangeDisplayVal = `> ${(bandData.range.min - 0.01).toFixed(1)} THB/USD`; 
+    rangeDisplayVal = `> ${bandData.range.min.toFixed(1)} THB/USD`; 
   } else if (bandData.range.min === 0 && bandData.range.max !== null) {
      rangeDisplayVal = `≤ ${bandData.range.max.toFixed(1)} THB/USD`;
   } else if (bandData.range.min !== null && bandData.range.max !== null) {
     rangeDisplayVal = `${bandData.range.min.toFixed(1)} – ${bandData.range.max.toFixed(1)} THB/USD`;
   } else {
-    rangeDisplayVal = "N/A"; // Should not happen with current data
+    rangeDisplayVal = "N/A"; 
   }
 
 
@@ -119,8 +122,8 @@ export const BANDS: Band[] = analysisData.threshold_bands.map(bandData => {
     name: name,
     displayName: name === 'USD-RICH' ? 'USD Rich' : name.charAt(0) + name.slice(1).toLowerCase(),
     condition: conditionFunc,
-    action: formatReason(bandData.action_brief),
-    reason: formatReason(bandData.reason),
+    action: bandData.action_brief, // Use action_brief directly
+    reason: formatReason(bandData.reason), // Continue formatting reason
     probability: `≈ ${(bandData.probability * 100).toFixed(0)}%`,
     rangeDisplay: rangeDisplayVal,
     badgeClass,
@@ -140,12 +143,20 @@ export const BANDS: Band[] = analysisData.threshold_bands.map(bandData => {
 
 
 export const getBandFromRate = (rate: number): Band | undefined => {
-  for (const band of BANDS) {
-    if (band.condition(rate)) {
-      return band;
-    }
-  }
-  return undefined; 
+  // Ensure bands are sorted by their operational range if needed, or process in specific order
+  // For example, EXTREME should be checked first if its range is a subset of DEEP, etc.
+  // Current logic iterates in order of definition in JSON.
+  // With distinct, non-overlapping ranges (except at boundaries), order might not strictly matter
+  // as long as boundary conditions are handled consistently (e.g. <= vs <)
+  
+  // For precise matching with new JSON ranges:
+  if (rate <= 29.50) return BANDS.find(b => b.name === "EXTREME");
+  if (rate >= 29.51 && rate <= 31.20) return BANDS.find(b => b.name === "DEEP");
+  if (rate >= 31.21 && rate <= 32.00) return BANDS.find(b => b.name === "OPPORTUNE");
+  if (rate >= 32.01 && rate <= 34.00) return BANDS.find(b => b.name === "NEUTRAL");
+  if (rate >= 34.01) return BANDS.find(b => b.name === "USD-RICH");
+  
+  return undefined; // Should ideally not be reached if ranges cover all possibilities
 };
 
 export interface AlertPrefs {
@@ -160,8 +171,8 @@ export const DEFAULT_ALERT_PREFS: AlertPrefs = {
   EXTREME: true,
   DEEP: true,
   OPPORTUNE: true,
-  NEUTRAL: true,
-  "USD-RICH": true,
+  NEUTRAL: false, // Per previous update, Neutral might be off by default for notifications
+  "USD-RICH": false, // USD-Rich might also be off by default for notifications
 };
 
 export const FULL_ANALYSIS_DATA = analysisData;
