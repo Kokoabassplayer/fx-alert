@@ -109,20 +109,22 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
         {currentBand && !isLoading && rate !== undefined && (
           <Card className={`shadow-md border-t-4 ${currentBand.borderColorClass} rounded-lg`}>
             <CardContent className="p-4 space-y-2">
-              <div className="flex items-center">
-                <Badge className={`${currentBand.badgeClass} text-sm px-3 py-1`}>{currentBand.displayName}</Badge>
+              <div className="flex items-start justify-between">
+                <Badge className={`${currentBand.badgeClass} text-sm px-3 py-1 shrink-0`}>
+                  {currentBand.displayName}
+                </Badge>
+                
+                {(currentBand.rangeDisplay || currentBand.probability) && (
+                  <div className="text-xs text-muted-foreground text-right space-y-0.5 pl-2">
+                    {currentBand.rangeDisplay && (
+                      <p>Rate Range: {currentBand.rangeDisplay}</p>
+                    )}
+                    {currentBand.probability && (
+                      <p className="font-medium">Historical Odds: {currentBand.probability}</p>
+                    )}
+                  </div>
+                )}
               </div>
-              
-              {(currentBand.rangeDisplay || currentBand.probability) && (
-                <div className="text-xs text-muted-foreground space-y-1 pt-1">
-                  {currentBand.rangeDisplay && (
-                    <p>Rate Range: {currentBand.rangeDisplay}</p>
-                  )}
-                  {currentBand.probability && (
-                    <p className="font-medium">Historical Odds: {currentBand.probability}</p>
-                  )}
-                </div>
-              )}
               
               <p className="text-sm text-foreground/90 pt-1">{currentBand.action}</p>
             </CardContent>
