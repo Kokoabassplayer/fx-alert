@@ -29,17 +29,16 @@ export default function UsdThbMonitorPage() {
         />
       </main>
       <footer className="w-full max-w-xl mt-8 pt-4 border-t border-border text-center">
-        <p className="text-xs text-muted-foreground">
+        <p className="text-xs text-muted-foreground mt-2">
           Rate bands, probabilities, and suggestions are based on an analysis of historical USD/THB data (2010-2024) and simulated monthly volatility. Exchange rate predictions are inherently uncertain.
         </p>
-        <p className="text-xs text-muted-foreground mt-1">
+        <p className="text-xs text-muted-foreground mt-2">
           This tool is for informational and illustrative purposes only and does not constitute financial, investment, or trading advice. Always conduct your own research and consult with a qualified financial advisor before making any financial decisions.
         </p>
-        <p className="text-xs text-muted-foreground mt-1">
-          The creators of this tool are not liable for any losses or damages arising from the use of or reliance on the information provided. Past performance is not indicative of future results.
+        <p className="text-xs text-muted-foreground mt-2">
+          The creators of this tool are not liable for any losses or damages arising from the use of or reliance on the information provided. Past performance is not indicative of future results. All investments carry risk, and you may lose money.
         </p>
       </footer>
     </div>
   );
 }
-
