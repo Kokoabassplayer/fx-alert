@@ -15,7 +15,7 @@ const UsdThbMonitorPage: FC = () => {
     <div className="min-h-screen bg-background text-foreground flex flex-col items-center p-4 sm:p-6">
       <header className="w-full max-w-xl mb-6 sm:mb-8">
         <h1 className="text-3xl sm:text-4xl font-bold text-center text-primary">
-          RateRefresher
+          FX Alert
         </h1>
       </header>
       

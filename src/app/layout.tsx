@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'RateRefresher',
+  title: 'FX Alert',
   description: 'Monitor USD to THB exchange rates and trends, with actionable insights based on rate bands.',
 };
 
