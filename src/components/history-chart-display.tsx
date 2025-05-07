@@ -1,3 +1,5 @@
+// src/components/history-chart-display.tsx
+
 "use client";
 
 import type { FC } from 'react';
@@ -7,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, ListChecks } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { fetchUsdToThbRateHistory, type FormattedHistoricalRate } from "@/lib/currency-api";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceArea, Legend } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceArea, Legend } from 'recharts';
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { BANDS, type ConversionLogEntry, type AlertPrefs, type BandName, getBandFromRate, type Band } from "@/lib/bands";
 import {
@@ -35,7 +37,7 @@ interface BandUIDefinition {
   name: BandName;
   y1?: number;
   y2?: number;
-  fillClass: string;
+  fillClass: string; // Used for legend badge, not for area fill
   strokeClass: string;
   label: string;
 }
@@ -55,7 +57,7 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ refreshTrigger, ale
       setChartData(data);
     } else {
       setChartData([]);
-      if(!isLoading) {
+      if(!isLoading) { // Prevent toast on initial load if data is empty
         toast({
           variant: "destructive",
           title: "Chart Error",
@@ -64,7 +66,7 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ refreshTrigger, ale
       }
     }
     setIsLoading(false);
-  }, [toast, isLoading]);
+  }, [toast, isLoading]); // Added isLoading to dependency array
 
   useEffect(() => {
     fetchHistory();
@@ -83,11 +85,11 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ refreshTrigger, ale
     const activeBandBoundaries: number[] = [];
     BANDS.forEach(band => {
       if (alertPrefs[band.name]) {
-        if (band.name === 'EXTREME') activeBandBoundaries.push(29.5); // Lower bound for EXTREME effectively
+        if (band.name === 'EXTREME') activeBandBoundaries.push(29.5); 
         else if (band.name === 'DEEP') { activeBandBoundaries.push(29.5); activeBandBoundaries.push(31.2); }
         else if (band.name === 'OPPORTUNE') { activeBandBoundaries.push(31.2); activeBandBoundaries.push(32.0); }
         else if (band.name === 'NEUTRAL') { activeBandBoundaries.push(32.0); activeBandBoundaries.push(34.0); }
-        else if (band.name === 'RICH') activeBandBoundaries.push(34.0); // Upper bound for NEUTRAL effectively
+        else if (band.name === 'RICH') activeBandBoundaries.push(34.0); 
       }
     });
 
@@ -107,28 +109,27 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ refreshTrigger, ale
     let y1: number | undefined = undefined;
     let y2: number | undefined = undefined;
 
-    // Define y1 and y2 based on band logic
-    if (b.name === 'EXTREME') { // Rate <= 29.5
-      y1 = undefined; // Or yAxisDomain[0] if you want it to go to the bottom of the chart
+    if (b.name === 'EXTREME') { 
+      y1 = undefined; 
       y2 = 29.5;
-    } else if (b.name === 'DEEP') { // Rate 29.51 – 31.2
+    } else if (b.name === 'DEEP') { 
       y1 = 29.5;
       y2 = 31.2;
-    } else if (b.name === 'OPPORTUNE') { // Rate 31.21 – 32.0
+    } else if (b.name === 'OPPORTUNE') { 
       y1 = 31.2;
       y2 = 32.0;
-    } else if (b.name === 'NEUTRAL') { // Rate 32.01 – 34.0
+    } else if (b.name === 'NEUTRAL') { 
       y1 = 32.0;
       y2 = 34.0;
-    } else if (b.name === 'RICH') { // Rate > 34.0
+    } else if (b.name === 'RICH') { 
       y1 = 34.0;
-      y2 = undefined; // Or yAxisDomain[1] if you want it to go to the top of the chart
+      y2 = undefined; 
     }
     return {
         name: b.name,
         y1: y1,
         y2: y2,
-        fillClass: b.chartFillClass,
+        fillClass: b.badgeClass.split(' ')[0], // For legend badge color consistency
         strokeClass: b.chartStrokeClass,
         label: b.name.charAt(0) + b.name.slice(1).toLowerCase(),
     };
@@ -218,17 +219,17 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ refreshTrigger, ale
       </CardHeader>
       <CardContent className="pt-6 pb-2">
         {isLoading && chartData.length === 0 ? (
-          <div className="h-[260px] flex items-center justify-center">
+          <div className="h-[300px] flex items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : chartData.length === 0 && !isLoading ? (
-          <div className="h-[260px] flex items-center justify-center text-muted-foreground">
+          <div className="h-[300px] flex items-center justify-center text-muted-foreground">
             No historical data to display.
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={chartData} margin={{ top: 5, right: 10, left: -15, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+            <LineChart data={chartData} margin={{ top: 5, right: 10, left: -25, bottom: 5 }}>
+              {/* <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" /> */}
               <XAxis
                 dataKey="date"
                 tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
@@ -246,8 +247,8 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ refreshTrigger, ale
                 tickLine={false}
                 axisLine={{ stroke: 'hsl(var(--border))' }}
                 allowDataOverflow={true}
-                width={60}
-                label={{ value: 'THB per USD', angle: -90, position: 'insideLeft', fill: 'hsl(var(--muted-foreground))', fontSize: 12, dy: 40, dx: -15 }}
+                width={70} // Adjusted width
+                label={{ value: 'THB per USD', angle: -90, position: 'insideLeft', fill: 'hsl(var(--muted-foreground))', fontSize: 12, dy: 40, dx: -20 }} // Adjusted dx for label
               />
               <Tooltip content={<CustomTooltip />} />
 
@@ -261,9 +262,8 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ refreshTrigger, ale
                       key={bandDef.name}
                       y1={y1Actual}
                       y2={y2Actual}
-                      className={`${bandDef.strokeClass}`} // Apply only stroke class for color and its alpha
-                      fillOpacity={0} // Make the fill transparent
-                      // strokeOpacity prop removed to let Tailwind class control stroke opacity
+                      className={`${bandDef.strokeClass}`} 
+                      fillOpacity={0} 
                       ifOverflow="visible"
                       label={{
                         value: bandDef.label,
@@ -285,7 +285,7 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ refreshTrigger, ale
                 dataKey="rate"
                 stroke="hsl(var(--primary))"
                 strokeWidth={2}
-                dot={{ r: 0 }} // Removed dots for a cleaner line
+                dot={{ r: 0 }} 
                 activeDot={{ r: 5, stroke: 'hsl(var(--background))', strokeWidth: 2, fill: 'hsl(var(--primary))' }}
                 name="USD/THB Rate"
               />
