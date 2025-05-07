@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { FC } from 'react';
@@ -131,7 +132,7 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
           </Card>
         )}
       </CardContent>
-      <CardFooter className="p-4 border-t bg-card/50">
+      <CardFooter className="p-4 border-t bg-card/50 flex-col items-start space-y-3">
         <Popover>
           <PopoverTrigger asChild>
             <Button variant="ghost" className="w-full justify-start text-muted-foreground hover:text-primary hover:bg-primary/5">
@@ -172,9 +173,13 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
             </div>
           </PopoverContent>
         </Popover>
+        <p className="text-xs text-muted-foreground pt-2 w-full text-center">
+          Rate bands and suggestions are based on an analysis of historical USD/THB data (2010-2024).
+        </p>
       </CardFooter>
     </Card>
   );
 };
 
 export default CurrentRateDisplay;
+
