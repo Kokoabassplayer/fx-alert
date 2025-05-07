@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -20,7 +21,6 @@ export default function UsdThbMonitorPage() {
       
       <main className="w-full max-w-xl space-y-6">
         <CurrentRateDisplay
-          refreshTrigger={0} // refreshTrigger is kept for potential future use, though not actively used now
           alertPrefs={alertPrefs}
           onAlertPrefsChange={setAlertPrefs}
         />
@@ -28,6 +28,14 @@ export default function UsdThbMonitorPage() {
           alertPrefs={alertPrefs}
         />
       </main>
+      <footer className="w-full max-w-xl mt-8 pt-4 border-t border-border text-center">
+        <p className="text-xs text-muted-foreground">
+          Rate bands and suggestions are based on an analysis of historical USD/THB data (2010-2024).
+        </p>
+        <p className="text-xs text-muted-foreground mt-1">
+          This tool is for informational purposes only and not financial advice.
+        </p>
+      </footer>
     </div>
   );
 }
