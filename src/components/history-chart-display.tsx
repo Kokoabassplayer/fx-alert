@@ -13,23 +13,21 @@ import { Badge } from '@/components/ui/badge';
 import {
   type AlertPrefs,
   type BandDefinition, // This is the enriched type with colorConfig
-  classifyRateToBand, // Updated to use this for better classification logic
+  classifyRateDynamic, 
   HORIZON_MONTHS,
-  DEFAULT_DYNAMIC_HORIZON_KEY, // Use the key for horizon
+  DEFAULT_DYNAMIC_HORIZON_KEY, 
   type BandName,
+  getStaticBandColorConfig, // Import this utility
 } from "@/lib/bands";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 
 interface HistoryChartDisplayProps {
-  alertPrefs: AlertPrefs;
-  historicalRates: FormattedHistoricalRate[];
+  initialHistoricalRates: FormattedHistoricalRate[];
   dynamicBands: BandDefinition[]; 
-  selectedHorizon: string; // Now a string key for HORIZON_MONTHS
+  selectedHorizon: string; 
 }
 
-// This interface might become redundant if BandDefinition has all needed fields directly.
-// For now, keeping it as it defines the structure for ReferenceArea props specifically.
 interface BandUIDefinition {
   level: BandName;
   displayName: string;
@@ -46,8 +44,8 @@ const BandLabel: FC<{ viewBox?: { x?: number; y?: number, height?: number }; val
     return null;
   }
   const { x, y } = viewBox;
-  const dx = 10;
-  const dy = (viewBox?.height ?? 20) / 2 + 5;
+  const dx = 10; 
+  const dy = (viewBox?.height ?? 20) / 2 + 5; // Center vertically within the band area
 
   return (
     <text
@@ -65,11 +63,17 @@ const BandLabel: FC<{ viewBox?: { x?: number; y?: number, height?: number }; val
 };
 
 
-const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ alertPrefs, historicalRates: initialHistoricalRates, dynamicBands, selectedHorizon }) => {
+const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ 
+  initialHistoricalRates, 
+  dynamicBands: componentDynamicBands, // Renamed to avoid conflict with state if any
+  selectedHorizon: initialSelectedHorizon 
+}) => {
   const [chartData, setChartData] = useState<FormattedHistoricalRate[]>(initialHistoricalRates);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const [selectedPeriod, setSelectedPeriod] = useState<string>("90"); 
+  const [alertPrefs, setAlertPrefs] = useLocalStorage<AlertPrefs>("alertPrefs", DEFAULT_ALERT_PREFS);
+
 
   const periodInDays = useMemo(() => {
     if (selectedPeriod === "-1") return -1; 
@@ -78,11 +82,10 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ alertPrefs, histori
 
 
   const bandUIDefinitions = useMemo((): BandUIDefinition[] => {
-    if (!dynamicBands || !Array.isArray(dynamicBands) || dynamicBands.length === 0) { 
+    if (!componentDynamicBands || !Array.isArray(componentDynamicBands) || componentDynamicBands.length === 0) { 
       return [];
     }
-    return dynamicBands.map(b => {
-      // b.colorConfig should always exist now on BandDefinition
+    return componentDynamicBands.map(b => {
       return {
         level: b.level,
         displayName: b.displayName,
@@ -94,40 +97,38 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ alertPrefs, histori
         tooltipLabel: b.displayName,
       };
     });
-  }, [dynamicBands]);
+  }, [componentDynamicBands]);
 
-
-  const fetchHistory = useCallback(async () => {
-    if (periodInDays === 0 && initialHistoricalRates.length > 0) {
-      setChartData(initialHistoricalRates);
-      setIsLoading(false);
-      return;
-    }
-    setIsLoading(true);
-    const data = await fetchUsdToThbRateHistory(periodInDays); // periodInDays is number
-    if (data.length > 0) {
-      setChartData(data);
-    } else {
-      setChartData([]); 
-    }
-    setIsLoading(false);
-  }, [toast, periodInDays, initialHistoricalRates]);
 
   useEffect(() => {
+    const fetchData = async () => {
+        setIsLoading(true);
+        const data = await fetchUsdToThbRateHistory(periodInDays);
+        if (data.length > 0) {
+            setChartData(data);
+        } else {
+            setChartData([]); 
+        }
+        setIsLoading(false);
+    };
+
     if (periodInDays === 0) { 
-        setChartData(initialHistoricalRates);
+        setChartData(initialHistoricalRates || []); // Ensure initialHistoricalRates is an array
         setIsLoading(false);
     } else {
-        fetchHistory();
+        fetchData();
     }
-  }, [fetchHistory, periodInDays, initialHistoricalRates]);
+  }, [periodInDays, initialHistoricalRates]);
 
 
   const yAxisDomain = useMemo(() => {
     let minDataRate = 30;
     let maxDataRate = 36;
 
-    const currentChartDataSource = chartData.length > 0 ? chartData : initialHistoricalRates;
+    const effectiveChartData = chartData || [];
+    const effectiveInitialRates = initialHistoricalRates || [];
+    const currentChartDataSource = (effectiveChartData.length > 0) ? effectiveChartData : effectiveInitialRates;
+
 
     if (currentChartDataSource.length > 0) {
       const rates = currentChartDataSource.map(d => d.rate);
@@ -137,7 +138,8 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ alertPrefs, histori
 
     const activeBandNumericBoundaries: number[] = [];
     bandUIDefinitions.forEach(bandDef => {
-      if (alertPrefs[bandDef.level]) {
+      // Assuming alertPrefs is available and correctly typed
+      if (alertPrefs[bandDef.level]) { 
         if (bandDef.y1 !== undefined) activeBandNumericBoundaries.push(bandDef.y1);
         if (bandDef.y2 !== undefined) activeBandNumericBoundaries.push(bandDef.y2);
       }
@@ -161,13 +163,13 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ alertPrefs, histori
 
     return [parseFloat((overallMin - padding).toFixed(2)), parseFloat((overallMax + padding).toFixed(2))] as [number, number];
 
-  }, [chartData, initialHistoricalRates, alertPrefs, bandUIDefinitions]);
+  }, [chartData, initialHistoricalRates, bandUIDefinitions, componentDynamicBands, alertPrefs]);
 
 
   const CustomTooltip: FC<any> = ({ active, payload, label }) => {
-    if (active && payload && payload.length && dynamicBands && dynamicBands.length > 0) {
+    if (active && payload && payload.length && componentDynamicBands && componentDynamicBands.length > 0) {
       const rateValue = payload[0].value;
-      const bandForTooltip = classifyRateToBand(rateValue, dynamicBands);
+      const bandForTooltip = classifyRateDynamic(rateValue, componentDynamicBands);
 
 
       return (
@@ -192,9 +194,11 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ alertPrefs, histori
     if (periodInDays === 365) return "1-Year Trend";
     if (periodInDays === (5 * 365)) return "5-Year Trend";
     if (periodInDays === -1) { 
-        const startYear = initialHistoricalRates.length > 0 ? new Date(initialHistoricalRates[0].date).getFullYear() : "Earliest";
-        const endYear = initialHistoricalRates.length > 0 ? new Date(initialHistoricalRates[initialHistoricalRates.length -1].date).getFullYear() : "Current";
-        if (startYear === "Earliest") return "Historical Trend (Since Inception)"
+        const defaultStartYear = "1999"; // Frankfurter API earliest
+        const ratesForTitle = initialHistoricalRates || [];
+        const startYear = ratesForTitle.length > 0 ? new Date(ratesForTitle[0].date).getFullYear() : defaultStartYear;
+        const endYear = ratesForTitle.length > 0 ? new Date(ratesForTitle[ratesForTitle.length -1].date).getFullYear() : new Date().getFullYear();
+        if (startYear === defaultStartYear && ratesForTitle.length === 0) return "Historical Trend (Since Inception)"
         return `Trend (${startYear} - ${endYear})`;
     }
     return "Historical Trend";
@@ -209,7 +213,7 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ alertPrefs, histori
         <div className="flex items-center space-x-2">
            {isLoading && <Loader2 className="h-5 w-5 animate-spin text-primary" />}
            <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
-            <SelectTrigger id="chart-period-select" className="w-[200px] h-9 text-sm">
+            <SelectTrigger id="chart-period-select" className="w-[250px] h-9 text-sm"> {/* Increased width */}
               <SelectValue placeholder="Select period" />
             </SelectTrigger>
             <SelectContent>
@@ -223,18 +227,18 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ alertPrefs, histori
           </Select>
         </div>
       </CardHeader>
-      <CardContent className="pt-6 pb-2"> {/* Removed bg-background for transparency */}
-        {(isLoading && chartData.length === 0) ? (
+      <CardContent className="pt-6 pb-2">
+        {(isLoading && (!chartData || chartData.length === 0)) ? (
           <div className="h-[350px] flex items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
-        ) : chartData.length === 0 && !isLoading ? (
+        ) : (!chartData || chartData.length === 0) && !isLoading ? (
           <div className="h-[350px] flex items-center justify-center text-muted-foreground">
             No historical data to display for the selected period.
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={350}>
-            <LineChart data={chartData} margin={{ top: 5, right: 20, left: 25, bottom: 5 }}> {/* Adjusted margins */}
+            <LineChart data={chartData} margin={{ top: 5, right: 30, left: 25, bottom: 5 }}> 
               <XAxis
                 dataKey="date"
                 tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
@@ -251,7 +255,7 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ alertPrefs, histori
                 tickLine={{ stroke: 'hsl(var(--border))' }}
                 axisLine={{ strokeWidth: 1, stroke: 'hsl(var(--border))' }}
                 allowDataOverflow={true}
-                width={55} // Increased width for label
+                width={55} 
                 label={{ value: 'THB/USD', angle: -90, position: 'insideLeft', fill: 'hsl(var(--foreground))', fontSize: 12, dy: 40, dx: -20 }} 
               />
               <Tooltip content={<CustomTooltip />} />
@@ -264,12 +268,9 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ alertPrefs, histori
                   const finalY1 = Math.min(y1Actual, y2Actual);
                   const finalY2 = Math.max(y1Actual, y2Actual);
                   
-                  // Skip rendering if y1 is effectively equal or greater than y2, unless it's the RICH band where y2 is open-ended.
-                  // Also, handle case where y1 is above chart domain for RICH band.
                   if (finalY1 >= finalY2 && !(bandDef.level === "RICH" && finalY1 === yAxisDomain[1])) {
-                     if (bandDef.level === "RICH" && finalY1 > yAxisDomain[1]) return null; // Don't render if RICH band starts above chart top
+                     if (bandDef.level === "RICH" && finalY1 > yAxisDomain[1]) return null; 
                   }
-
 
                   return (
                     <ReferenceArea
@@ -278,10 +279,10 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ alertPrefs, histori
                       y2={finalY2}
                       fill={`hsl(${bandDef.fillVar.replace('var(--', '').replace(')', '')})`}
                       stroke={`hsl(${bandDef.strokeVar.replace('var(--', '').replace(')', '')})`}
-                      strokeWidth={0.5}
-                      fillOpacity={0.8} // Adjusted opacity slightly
-                      strokeOpacity={1}
-                      ifOverflow="visible" // Allow labels to be visible even if area is thin
+                      strokeWidth={0} 
+                      fillOpacity={0.8} 
+                      strokeOpacity={0} 
+                      ifOverflow="visible" 
                       label={<BandLabel value={bandDef.displayName} fill={`hsl(${bandDef.labelTextColorVar})`} />}
                     />
                   );
@@ -307,3 +308,36 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ alertPrefs, histori
 };
 
 export default HistoryChartDisplay;
+
+// Helper hook, assuming it's defined in @/hooks/use-local-storage
+// For brevity, using a simplified version here. Replace with your actual hook.
+import { Dispatch, SetStateAction } from 'react';
+
+function useLocalStorage<T>(key: string, defaultValue: T): [T, Dispatch<SetStateAction<T>>] {
+  const [value, setValue] = useState<T>(() => {
+    if (typeof window === 'undefined') return defaultValue;
+    try {
+      const item = window.localStorage.getItem(key);
+      return item ? JSON.parse(item) : defaultValue;
+    } catch (error) {
+      console.error(error);
+      return defaultValue;
+    }
+  });
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(key, JSON.stringify(value));
+    }
+  }, [key, value]);
+
+  return [value, setValue];
+}
+
+const DEFAULT_ALERT_PREFS: AlertPrefs = {
+  EXTREME: true,
+  DEEP: true,
+  OPPORTUNE: true,
+  NEUTRAL: true,
+  RICH: true,
+};
