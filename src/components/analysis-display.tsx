@@ -67,6 +67,12 @@ const formatReason = (reasonKey: string): string => {
     .replace(/ Thb /g, ' THB ');
 };
 
+const formatLevelDisplayName = (levelKey: string): string => {
+  if (levelKey === "USD-RICH") return "Rich";
+  if (!levelKey) return "N/A";
+  return levelKey.charAt(0).toUpperCase() + levelKey.slice(1).toLowerCase();
+};
+
 
 const actionableThresholdsData = threshold_bands.map(band => {
   let rangeDisplay = "";
@@ -75,7 +81,6 @@ const actionableThresholdsData = threshold_bands.map(band => {
   } else if (band.range.min === 0 && band.range.max !== null) {
     rangeDisplay = `≤ ${band.range.max.toFixed(1)}`;
   } else if (band.range.min !== null && band.range.max !== null) {
-    // Adjusted to use the exact values from JSON for DEEP, OPPORTUNE, NEUTRAL
      if (band.level === "DEEP") rangeDisplay = `${band.range.min.toFixed(1)} – ${band.range.max.toFixed(1)}`;
      else if (band.level === "OPPORTUNE") rangeDisplay = `${band.range.min.toFixed(1)} – ${band.range.max.toFixed(1)}`;
      else if (band.level === "NEUTRAL") rangeDisplay = `${band.range.min.toFixed(1)} – ${band.range.max.toFixed(1)}`;
@@ -86,7 +91,7 @@ const actionableThresholdsData = threshold_bands.map(band => {
 
   return {
     range: rangeDisplay,
-    level: band.level,
+    level: formatLevelDisplayName(band.level),
     probability: `≈ ${(band.probability * 100).toFixed(0)} %`,
     action: formatActionBrief(band.action_brief),
     example: formatExampleAction(band.example_action),

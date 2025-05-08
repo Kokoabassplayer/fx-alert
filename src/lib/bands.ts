@@ -51,14 +51,15 @@ export const BANDS: Band[] = FULL_ANALYSIS_DATA.threshold_bands.map(bandData => 
   const name = bandData.level as BandName;
   let conditionFunc: (rate: number) => boolean;
 
-  if (bandData.range.max === null && bandData.range.min !== null) { 
+  // Inclusive min/max based on provided logic, max=null means unbounded upper
+  if (bandData.range.max === null && bandData.range.min !== null) {
     conditionFunc = (rate) => rate >= bandData.range.min!;
-  } else if (bandData.range.min === 0 && bandData.range.max !== null) { 
+  } else if (bandData.range.min === 0 && bandData.range.max !== null) { // Assuming min=0 means unbounded lower up to max
      conditionFunc = (rate) => rate <= bandData.range.max!;
-  } else if (bandData.range.min !== null && bandData.range.max !== null) { 
+  } else if (bandData.range.min !== null && bandData.range.max !== null) {
     conditionFunc = (rate) => rate >= bandData.range.min! && rate <= bandData.range.max!;
   }
-  else { 
+  else { // Should not happen with valid data
     conditionFunc = (_rate) => false;
   }
   
@@ -74,7 +75,7 @@ export const BANDS: Band[] = FULL_ANALYSIS_DATA.threshold_bands.map(bandData => 
     case "EXTREME":
       badgeClass = "bg-red-500 text-white hover:bg-red-600";
       borderColorClass = "border-red-500";
-      switchColorClass = "data-[state=checked]:bg-red-500";
+      switchColorClass = "data-[state=checked]:bg-red-500"; // Tailwind red-500
       toastClass = "bg-red-500 text-white";
       chartFillVar = "var(--band-extreme-area-bg)";
       chartStrokeVar = "var(--band-extreme-area-border)";
@@ -83,7 +84,7 @@ export const BANDS: Band[] = FULL_ANALYSIS_DATA.threshold_bands.map(bandData => 
     case "DEEP":
       badgeClass = "bg-purple-600 text-white hover:bg-purple-700";
       borderColorClass = "border-purple-600";
-      switchColorClass = "data-[state=checked]:bg-purple-600";
+      switchColorClass = "data-[state=checked]:bg-purple-600"; // Tailwind purple-600
       toastClass = "bg-purple-600 text-white";
       chartFillVar = "var(--band-deep-area-bg)";
       chartStrokeVar = "var(--band-deep-area-border)";
@@ -92,7 +93,7 @@ export const BANDS: Band[] = FULL_ANALYSIS_DATA.threshold_bands.map(bandData => 
     case "OPPORTUNE":
       badgeClass = "bg-green-600 text-white hover:bg-green-700";
       borderColorClass = "border-green-600";
-      switchColorClass = "data-[state=checked]:bg-green-600";
+      switchColorClass = "data-[state=checked]:bg-green-600"; // Tailwind green-600
       toastClass = "bg-green-600 text-white";
       chartFillVar = "var(--band-opportune-area-bg)";
       chartStrokeVar = "var(--band-opportune-area-border)";
@@ -101,15 +102,15 @@ export const BANDS: Band[] = FULL_ANALYSIS_DATA.threshold_bands.map(bandData => 
     case "NEUTRAL":
       badgeClass = "bg-slate-500 text-white hover:bg-slate-600";
       borderColorClass = "border-slate-500";
-      switchColorClass = "data-[state=checked]:bg-slate-500";
+      switchColorClass = "data-[state=checked]:bg-slate-500"; // Tailwind slate-500
       chartFillVar = "var(--band-neutral-area-bg)";
       chartStrokeVar = "var(--band-neutral-area-border)";
       chartLabelTextColorVar = "var(--band-neutral-text-color-hsl)";
       break;
     case "USD-RICH":
-      badgeClass = "bg-yellow-400 text-black hover:bg-yellow-500"; // text-black for better contrast on yellow
+      badgeClass = "bg-yellow-400 text-black hover:bg-yellow-500";
       borderColorClass = "border-yellow-400";
-      switchColorClass = "data-[state=checked]:bg-yellow-400";
+      switchColorClass = "data-[state=checked]:bg-yellow-400"; // Tailwind yellow-400
       chartFillVar = "var(--band-rich-area-bg)";
       chartStrokeVar = "var(--band-rich-area-border)";
       chartLabelTextColorVar = "var(--band-rich-text-color-hsl)";
@@ -119,35 +120,32 @@ export const BANDS: Band[] = FULL_ANALYSIS_DATA.threshold_bands.map(bandData => 
   let rangeDisplayVal = "";
   if (bandData.range.max === null && bandData.range.min !== null) {
     rangeDisplayVal = `> ${bandData.range.min.toFixed(1)} THB/USD`; 
-  } else if (bandData.range.min === 0 && bandData.range.max !== null) {
+  } else if (bandData.range.min === 0 && bandData.range.max !== null) { // Assuming min 0 is for EXTREME low band
      rangeDisplayVal = `≤ ${bandData.range.max.toFixed(1)} THB/USD`;
   } else if (bandData.range.min !== null && bandData.range.max !== null) {
-    // Using specific ranges from the full analysis context for DEEP, OPPORTUNE, NEUTRAL
-     if (name === "DEEP") rangeDisplayVal = `${bandData.range.min.toFixed(1)} – ${bandData.range.max.toFixed(1)} THB/USD`;
-     else if (name === "OPPORTUNE") rangeDisplayVal = `${bandData.range.min.toFixed(1)} – ${bandData.range.max.toFixed(1)} THB/USD`;
-     else if (name === "NEUTRAL") rangeDisplayVal = `${bandData.range.min.toFixed(1)} – ${bandData.range.max.toFixed(1)} THB/USD`;
-     else rangeDisplayVal = `${bandData.range.min.toFixed(1)} – ${bandData.range.max.toFixed(1)} THB/USD`;
+     rangeDisplayVal = `${bandData.range.min.toFixed(1)} – ${bandData.range.max.toFixed(1)} THB/USD`;
   } else {
     rangeDisplayVal = "N/A"; 
   }
 
   let actionText = "";
+  // Using direct action descriptions from context
   switch (name) {
-    case "EXTREME": actionText = "Convert as much THB to USD as liquidity allows now"; break;
-    case "DEEP": actionText = "Double this month’s USD purchase"; break;
-    case "OPPORTUNE": actionText = "Add 25–50 % to normal DCA"; break;
-    case "NEUTRAL": actionText = "Stick to standard DCA"; break;
-    case "USD-RICH": actionText = "Pause non-essential USD conversions"; break;
+    case "EXTREME": actionText = "Convert as much THB to USD as liquidity allows now. Exchange 60-80k THB; keep 3-6 mo THB cash buffer."; break;
+    case "DEEP": actionText = "Double this month’s USD purchase. Exchange ≈ 40k THB."; break;
+    case "OPPORTUNE": actionText = "Add 25–50 % to normal DCA. Exchange ≈ 25–30k THB."; break;
+    case "NEUTRAL": actionText = "Stick to standard DCA. Exchange 20k THB."; break;
+    case "USD-RICH": actionText = "Pause non-essential USD conversions. Hold THB; place excess in short-term THB deposits/bonds."; break;
     default: actionText = formatActionBrief(bandData.action_brief); 
   }
 
 
   return {
     name: name,
-    displayName: name === 'USD-RICH' ? 'USD Rich' : name.charAt(0) + name.slice(1).toLowerCase(),
+    displayName: name === 'USD-RICH' ? 'Rich' : name.charAt(0) + name.slice(1).toLowerCase(),
     condition: conditionFunc,
-    action: actionText,
-    reason: formatReason(bandData.reason), 
+    action: actionText, 
+    reason: formatReason(bandData.reason),
     probability: `≈ ${(bandData.probability * 100).toFixed(0)}%`,
     rangeDisplay: rangeDisplayVal,
     badgeClass,
@@ -155,11 +153,11 @@ export const BANDS: Band[] = FULL_ANALYSIS_DATA.threshold_bands.map(bandData => 
     switchColorClass,
     toastClass,
     chartSettings: {
-      y1: bandData.range.min === 0 ? undefined : bandData.range.min,
-      y2: bandData.range.max === null ? undefined : bandData.range.max,
+      y1: bandData.range.min === 0 && name === "EXTREME" ? undefined : bandData.range.min, // EXTREME min can be 0, effectively unbounded low for chart area
+      y2: bandData.range.max === null ? undefined : bandData.range.max, // USD-RICH max can be null, effectively unbounded high
       fillVar: chartFillVar,
       strokeVar: chartStrokeVar,
-      threshold: bandData.range.max === null ? bandData.range.min : bandData.range.max, // Used for reference line if needed
+      threshold: bandData.range.max === null ? bandData.range.min : bandData.range.max, 
       labelTextColorVar: chartLabelTextColorVar,
     }
   };
@@ -167,15 +165,20 @@ export const BANDS: Band[] = FULL_ANALYSIS_DATA.threshold_bands.map(bandData => 
 
 
 export const getBandFromRate = (rate: number): Band | undefined => {
-  if (rate <= 29.5) return BANDS.find(b => b.name === "EXTREME");
-  // Adjusted ranges based on context: 29.6-31.2 for DEEP, 31.3-32.0 for OPPORTUNE, 32.1-34.0 for NEUTRAL, >34.0 for USD-RICH
-  if (rate >= 29.51 && rate <= 31.20) return BANDS.find(b => b.name === "DEEP"); // Corrected from 29.6
-  if (rate >= 31.21 && rate <= 32.00) return BANDS.find(b => b.name === "OPPORTUNE"); // Corrected from 31.3
-  if (rate >= 32.01 && rate <= 34.00) return BANDS.find(b => b.name === "NEUTRAL"); // Corrected from 32.1
-  if (rate >= 34.01) return BANDS.find(b => b.name === "USD-RICH"); // Corrected from >34.0
-  
+  // Iterate through BANDS as they are now sorted by their min/max ranges implicitly by the JSON order
+  // and the way conditions are constructed.
+  for (const band of BANDS) {
+    if (band.condition(rate)) {
+      return band;
+    }
+  }  
+  // Fallback if no band matches, though with current setup one should always match.
+  // This might indicate an issue with band definitions or the rate itself.
+  // For safety, one might return NEUTRAL or undefined.
+  console.warn(`Rate ${rate} did not fall into any defined band.`);
   return undefined; 
 };
+
 
 export interface AlertPrefs {
   EXTREME: boolean;
