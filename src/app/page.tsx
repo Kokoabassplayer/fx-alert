@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { FC } from 'react';
@@ -14,13 +15,13 @@ const UsdThbMonitorPage: FC = () => {
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col items-center p-4 sm:p-6">
-      <header className="w-full max-w-xl mb-6 sm:mb-8">
+      <header className="w-full max-w-4xl mb-6 sm:mb-8">
         <h1 className="text-3xl sm:text-4xl font-bold text-center text-primary">
           FX Alert
         </h1>
       </header>
       
-      <main className="w-full max-w-xl space-y-6">
+      <main className="w-full max-w-4xl space-y-6">
         <CurrentRateDisplay
           alertPrefs={alertPrefs}
           onAlertPrefsChange={setAlertPrefs}
@@ -30,7 +31,7 @@ const UsdThbMonitorPage: FC = () => {
         />
         <AnalysisDisplay />
       </main>
-      <footer className="w-full max-w-xl mt-8 pt-6 border-t border-border text-left">
+      <footer className="w-full max-w-4xl mt-8 pt-6 border-t border-border text-left">
         <div className="mb-4">
           <h2 className="text-sm font-semibold text-foreground mb-1">Data Source & Analysis</h2>
           <p className="text-xs text-muted-foreground">
@@ -58,3 +59,4 @@ const UsdThbMonitorPage: FC = () => {
 }
 
 export default UsdThbMonitorPage;
+
