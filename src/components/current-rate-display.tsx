@@ -38,7 +38,7 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
     const data = await fetchCurrentUsdToThbRate();
     if (data && data.rates && typeof data.rates.THB === 'number') {
       setCurrentRateData(data);
-      setLastUpdated(new Date());
+      setLastUpdated(new Date(data.date)); // Use date from API response for accuracy
       const newBand = getBandFromRate(data.rates.THB);
       setCurrentBand(newBand);
     } else {
@@ -59,7 +59,7 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
   useEffect(() => {
     const intervalId = setInterval(() => {
       fetchRate();
-    }, 3600000); // Changed from 10000 (10 seconds) to 3600000 (1 hour)
+    }, 3600000); // Refresh every 1 hour
 
     return () => clearInterval(intervalId);
   }, [fetchRate]);
@@ -102,7 +102,7 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
           </div>
           {lastUpdated && (
             <p className="text-xs text-muted-foreground mt-1">
-              Last updated: {lastUpdated.toLocaleTimeString()}
+              As of: {lastUpdated.toLocaleDateString()}
             </p>
           )}
         </div>
@@ -184,3 +184,4 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
 };
 
 export default CurrentRateDisplay;
+
