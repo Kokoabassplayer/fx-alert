@@ -197,7 +197,7 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
                 <div className="flex justify-between items-center space-x-2 mt-2 pl-2 p-2 rounded-md hover:bg-muted/50 transition-colors">
                   <Label htmlFor="chart-period-select" className="text-sm font-medium text-foreground">Period:</Label>
                   <Select value={chartPeriod} onValueChange={onChartPeriodChange}>
-                    <SelectTrigger id="chart-period-select" className="w-[150px] h-9">
+                    <SelectTrigger id="chart-period-select" className="w-[180px] h-9">
                       <SelectValue placeholder="Select period" />
                     </SelectTrigger>
                     <SelectContent>
@@ -205,7 +205,7 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
                       <SelectItem value="90">90 Days</SelectItem>
                       <SelectItem value="180">180 Days</SelectItem>
                       <SelectItem value="365">1 Year</SelectItem>
-                      <SelectItem value="-1">Since Inception (2000)</SelectItem>
+                      <SelectItem value="-1">Since Inception (2005)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -218,3 +218,4 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
 };
 
 export default CurrentRateDisplay;
+
