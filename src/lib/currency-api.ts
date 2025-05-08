@@ -29,7 +29,8 @@ export interface FormattedHistoricalRate {
 
 export async function fetchCurrentUsdToThbRate(): Promise<CurrentRateResponse | null> {
   try {
-    const response = await fetch(`${API_BASE_URL}/latest?from=USD&to=THB`, { cache: 'no-store' });
+    const timestamp = Date.now();
+    const response = await fetch(`${API_BASE_URL}/latest?from=USD&to=THB&t=${timestamp}`, { cache: 'no-store' });
     if (!response.ok) {
       console.error(
         "Failed to fetch current rate (HTTP status):",
@@ -77,10 +78,11 @@ export async function fetchUsdToThbRateHistory(): Promise<FormattedHistoricalRat
   const today = new Date();
   const endDate = formatDateForApi(today);
   const startDate = formatDateForApi(new Date(new Date().setDate(today.getDate() - 90)));
+  const timestamp = Date.now();
 
   try {
     const response = await fetch(
-      `${API_BASE_URL}/${startDate}..${endDate}?from=USD&to=THB`,
+      `${API_BASE_URL}/${startDate}..${endDate}?from=USD&to=THB&t=${timestamp}`,
       { cache: 'no-store' }
     );
     if (!response.ok) {
@@ -116,7 +118,6 @@ export async function fetchUsdToThbRateHistory(): Promise<FormattedHistoricalRat
     
     const historicalData = data as HistoricalRateResponse;
 
-    // Check if historicalData.rates is empty
     if (Object.keys(historicalData.rates).length === 0) {
       console.warn("Historical rate data is empty.");
       return [];
@@ -125,11 +126,8 @@ export async function fetchUsdToThbRateHistory(): Promise<FormattedHistoricalRat
     const formattedData = Object.entries(historicalData.rates)
       .map(([date, rateData]) => ({
         date,
-        // Ensure rateData and rateData.THB exist and THB is a number, otherwise default to 0 or skip
         rate: (rateData && typeof rateData.THB === 'number') ? rateData.THB : 0, 
       }))
-      // Filter out entries where rate might have defaulted to 0 due to missing THB data, if desired
-      // .filter(item => item.rate !== 0) // Optional: if you don't want to plot 0s for missing data
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
       
     return formattedData;
@@ -138,4 +136,3 @@ export async function fetchUsdToThbRateHistory(): Promise<FormattedHistoricalRat
     return [];
   }
 }
-
