@@ -1,4 +1,3 @@
-
 const API_BASE_URL = "https://api.frankfurter.app";
 
 export interface CurrentRateResponse {
@@ -23,13 +22,19 @@ export interface HistoricalRateResponse {
 }
 
 export interface FormattedHistoricalRate {
-  date: string;
+  date: string; // "YYYY-MM-DD"
   rate: number;
 }
 
+export interface MonthlyAggregatedRate {
+  yearMonth: string; // "YYYY-MM"
+  averageRate: number;
+  monthRates: number[]; // Store all rates for the month for potential median/other aggregations
+}
+
+
 export async function fetchCurrentUsdToThbRate(): Promise<CurrentRateResponse | null> {
   try {
-    // Use a cache-busting query parameter to ensure fresh data
     const timestamp = Date.now();
     const response = await fetch(`${API_BASE_URL}/latest?from=USD&to=THB&t=${timestamp}`, { cache: 'no-store' });
 
@@ -49,13 +54,11 @@ export async function fetchCurrentUsdToThbRate(): Promise<CurrentRateResponse | 
       console.error(
         "Failed to parse JSON response for current rate:",
         jsonError,
-        // Log the response text if JSON parsing fails
         await response.text().catch(() => "Could not read response text (after JSON parse failure)")
       );
       return null;
     }
     
-    // Validate the structure of the response data
     if (typeof data !== 'object' || data === null) {
         console.warn("API response for current rate was not a non-null object:", data);
         return null;
@@ -69,7 +72,6 @@ export async function fetchCurrentUsdToThbRate(): Promise<CurrentRateResponse | 
     return data as CurrentRateResponse;
 
   } catch (error) { 
-    // Catch any other errors during the fetch operation
     console.error("Generic error fetching current rate:", error);
     return null;
   }
@@ -81,19 +83,23 @@ function formatDateForApi(date: Date): string {
 
 export async function fetchUsdToThbRateHistory(days: number = 90): Promise<FormattedHistoricalRate[]> {
   const today = new Date();
+  let startDate: string;
+
+  if (days === -1) { // "Since Inception"
+    startDate = "1999-01-01"; // Frankfurter API earliest date
+  } else {
+    const pastDate = new Date();
+    pastDate.setDate(today.getDate() - days);
+    startDate = formatDateForApi(pastDate);
+  }
   const endDate = formatDateForApi(today);
-  // If days is -1, set startDate to the earliest known date for Frankfurter API or user specified.
-  // User requested "Since Inception (2005)"
-  const startDate = days === -1 ? "2005-01-01" : formatDateForApi(new Date(new Date().setDate(today.getDate() - days)));
   
-  // Construct the API URL without the timestamp query parameter
   const apiUrl = `${API_BASE_URL}/${startDate}..${endDate}?from=USD&to=THB`;
-  // console.log("Fetching historical rates from URL:", apiUrl); // Optional: for debugging
 
   try {
     const response = await fetch(
       apiUrl,
-      { cache: 'no-store' } // Ensure fresh data
+      { cache: 'no-store' } 
     );
     if (!response.ok) {
       console.error(
@@ -129,17 +135,16 @@ export async function fetchUsdToThbRateHistory(days: number = 90): Promise<Forma
     const historicalData = data as HistoricalRateResponse;
 
     if (Object.keys(historicalData.rates).length === 0) {
-      console.warn("Historical rate data is empty.");
+      // console.warn("Historical rate data is empty."); // Can be too noisy if API returns no data for short recent periods
       return [];
     }
 
     const formattedData = Object.entries(historicalData.rates)
       .map(([date, rateData]) => ({
         date,
-        // Ensure rateData and rateData.THB exist and THB is a number, otherwise default to 0
         rate: (rateData && typeof rateData.THB === 'number') ? rateData.THB : 0, 
       }))
-      // Sort data by date in ascending order
+      .filter(item => item.rate > 0) // Filter out entries with rate 0
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
       
     return formattedData;
@@ -149,3 +154,35 @@ export async function fetchUsdToThbRateHistory(days: number = 90): Promise<Forma
   }
 }
 
+
+export function aggregateMonthlyRates(dailyRates: FormattedHistoricalRate[]): MonthlyAggregatedRate[] {
+  if (!dailyRates || dailyRates.length === 0) {
+    return [];
+  }
+
+  const monthlyData: { [key: string]: { sum: number; count: number; rates: number[] } } = {};
+
+  for (const dailyRate of dailyRates) {
+    const dateParts = dailyRate.date.split('-'); // "YYYY-MM-DD"
+    if (dateParts.length < 2) continue; // Skip malformed dates
+
+    const yearMonth = `${dateParts[0]}-${dateParts[1]}`; // "YYYY-MM"
+
+    if (!monthlyData[yearMonth]) {
+      monthlyData[yearMonth] = { sum: 0, count: 0, rates: [] };
+    }
+    monthlyData[yearMonth].sum += dailyRate.rate;
+    monthlyData[yearMonth].count += 1;
+    monthlyData[yearMonth].rates.push(dailyRate.rate);
+  }
+
+  const aggregatedRates: MonthlyAggregatedRate[] = Object.entries(monthlyData)
+    .map(([yearMonth, data]) => ({
+      yearMonth,
+      averageRate: data.count > 0 ? data.sum / data.count : 0,
+      monthRates: data.rates,
+    }))
+    .sort((a, b) => a.yearMonth.localeCompare(b.yearMonth)); // Sort by YYYY-MM
+
+  return aggregatedRates;
+}
