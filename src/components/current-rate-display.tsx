@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 
-import { getBandFromRate, BANDS, type Band, type AlertPrefs, type BandName } from "@/lib/bands";
+import { getBandFromRate, BANDS, type Band, type AlertPrefs, type BandName, FULL_ANALYSIS_DATA } from "@/lib/bands";
 
 interface CurrentRateDisplayProps {
   alertPrefs: AlertPrefs;
@@ -38,7 +38,7 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
     const data = await fetchCurrentUsdToThbRate();
     if (data && data.rates && typeof data.rates.THB === 'number') {
       setCurrentRateData(data);
-      setLastUpdated(new Date(data.date)); // Use date from API response for accuracy
+      setLastUpdated(new Date(data.date)); 
       const newBand = getBandFromRate(data.rates.THB);
       setCurrentBand(newBand);
     } else {
@@ -47,7 +47,6 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
         title: "Error",
         description: "Failed to fetch current exchange rate.",
       });
-      // Do not clear currentBand if API fails, retain last known good band
     }
     setIsLoading(false);
   }, [toast]);
@@ -59,12 +58,11 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
   useEffect(() => {
     const intervalId = setInterval(() => {
       fetchRate();
-    }, 3600000); // Refresh every 1 hour
+    }, 3600000); 
 
     return () => clearInterval(intervalId);
   }, [fetchRate]);
 
-  // Notification Hook
   useEffect(() => {
     if (currentBand && rate !== undefined && alertPrefs[currentBand.name]) {
       if (currentBand.name !== prevBandRef.current && ['EXTREME', 'DEEP', 'OPPORTUNE'].includes(currentBand.name)) {
@@ -91,7 +89,7 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
     const year = date.getFullYear();
     const month = (date.getMonth() + 1).toString().padStart(2, '0');
     const day = date.getDate().toString().padStart(2, '0');
-    return `${year}${month}${day}`;
+    return `${year}-${month}-${day}`;
   };
 
 
@@ -193,5 +191,6 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
 };
 
 export default CurrentRateDisplay;
+
 
 
