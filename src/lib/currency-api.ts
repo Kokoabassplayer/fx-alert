@@ -1,4 +1,3 @@
-
 const API_BASE_URL = "https://api.frankfurter.app";
 
 export interface CurrentRateResponse {
@@ -82,13 +81,17 @@ function formatDateForApi(date: Date): string {
 export async function fetchUsdToThbRateHistory(days: number = 90): Promise<FormattedHistoricalRate[]> {
   const today = new Date();
   const endDate = formatDateForApi(today);
-  const startDate = formatDateForApi(new Date(new Date().setDate(today.getDate() - days)));
-  const timestamp = Date.now(); // Add timestamp to ensure fresh data
+  // If days is -1, set startDate to the earliest known date for Frankfurter API
+  const startDate = days === -1 ? "1999-01-04" : formatDateForApi(new Date(new Date().setDate(today.getDate() - days)));
+  
+  // Construct the API URL without the timestamp query parameter
+  const apiUrl = `${API_BASE_URL}/${startDate}..${endDate}?from=USD&to=THB`;
+  // console.log("Fetching historical rates from URL:", apiUrl); // Optional: for debugging
 
   try {
     const response = await fetch(
-      `${API_BASE_URL}/${startDate}..${endDate}?from=USD&to=THB&t=${timestamp}`,
-      { cache: 'no-store' }
+      apiUrl,
+      { cache: 'no-store' } // Ensure fresh data
     );
     if (!response.ok) {
       console.error(
@@ -143,3 +146,4 @@ export async function fetchUsdToThbRateHistory(days: number = 90): Promise<Forma
     return [];
   }
 }
+
