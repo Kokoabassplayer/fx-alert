@@ -35,6 +35,7 @@ export interface MonthlyAggregatedRate {
 
 export async function fetchCurrentUsdToThbRate(): Promise<CurrentRateResponse | null> {
   try {
+    // Add a cache-busting query parameter
     const timestamp = Date.now();
     const response = await fetch(`${API_BASE_URL}/latest?from=USD&to=THB&t=${timestamp}`, { cache: 'no-store' });
 
@@ -59,11 +60,13 @@ export async function fetchCurrentUsdToThbRate(): Promise<CurrentRateResponse | 
       return null;
     }
     
+    // More robust check for Frankfurter API's actual success/error structure
     if (typeof data !== 'object' || data === null) {
         console.warn("API response for current rate was not a non-null object:", data);
         return null;
     }
     
+    // Frankfurter API returns the data directly, not nested under 'success'
     if (!data.rates || typeof data.rates.THB !== 'number') {
       console.error("Invalid data format or structure for current rate:", data);
       return null;
@@ -72,6 +75,7 @@ export async function fetchCurrentUsdToThbRate(): Promise<CurrentRateResponse | 
     return data as CurrentRateResponse;
 
   } catch (error) { 
+    // Catching network errors or other issues during fetch
     console.error("Generic error fetching current rate:", error);
     return null;
   }
@@ -94,11 +98,19 @@ export async function fetchUsdToThbRateHistory(days: number = 90): Promise<Forma
   }
   const endDate = formatDateForApi(today);
   
+  // Ensure start_date is not after end_date, which can happen if 'days' is very small or 0
+  if (new Date(startDate) > new Date(endDate)) {
+    console.warn(`Start date ${startDate} is after end date ${endDate}. Returning empty history.`);
+    return [];
+  }
+  
   const apiUrl = `${API_BASE_URL}/${startDate}..${endDate}?from=USD&to=THB`;
 
   try {
     const response = await fetch(
       apiUrl,
+      // Consider 'no-store' if fresh data is always critical, or 'force-cache'/'default' if staleness is acceptable.
+      // For historical data that doesn't change, default caching is fine.
       { cache: 'no-store' } 
     );
     if (!response.ok) {
@@ -110,7 +122,7 @@ export async function fetchUsdToThbRateHistory(days: number = 90): Promise<Forma
       return [];
     }
     
-    let data: any; 
+    let data: any; // Use 'any' temporarily to inspect the structure before casting
     try {
       data = await response.json();
     } catch (jsonError) {
@@ -122,11 +134,13 @@ export async function fetchUsdToThbRateHistory(days: number = 90): Promise<Forma
       return [];
     }
 
+    // More robust check for Frankfurter API's actual success/error structure
     if (typeof data !== 'object' || data === null) {
         console.warn("API response for rate history was not a non-null object:", data);
         return [];
     }
     
+    // Frankfurter API returns the data directly, not nested under 'success'
     if (!data.rates || typeof data.rates !== 'object') {
       console.error("Invalid data format or structure for rate history (e.g. missing rates object):", data);
       return [];
@@ -142,9 +156,10 @@ export async function fetchUsdToThbRateHistory(days: number = 90): Promise<Forma
     const formattedData = Object.entries(historicalData.rates)
       .map(([date, rateData]) => ({
         date,
+        // Ensure rateData and rateData.THB exist and are numbers
         rate: (rateData && typeof rateData.THB === 'number') ? rateData.THB : 0, 
       }))
-      .filter(item => item.rate > 0) // Filter out entries with rate 0
+      .filter(item => item.rate > 0) // Filter out entries with rate 0 or if THB was missing
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
       
     return formattedData;
