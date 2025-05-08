@@ -1,15 +1,24 @@
 "use client";
 
 import type { FC } from 'react';
+import { useState } from 'react';
 import CurrentRateDisplay from '@/components/current-rate-display';
 import HistoryChartDisplay from '@/components/history-chart-display';
 import AnalysisDisplay from '@/components/analysis-display';
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import type { AlertPrefs } from '@/lib/bands';
 import { DEFAULT_ALERT_PREFS } from '@/lib/bands';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+
 
 const UsdThbMonitorPage: FC = () => {
   const [alertPrefs, setAlertPrefs] = useLocalStorage<AlertPrefs>("alertPrefs", DEFAULT_ALERT_PREFS);
+  const [chartPeriod, setChartPeriod] = useState<string>("90"); // Default to 90 days, stored as string for Select
+
+  const handlePeriodChange = (value: string) => {
+    setChartPeriod(value);
+  };
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col items-center p-4 sm:p-6">
@@ -24,8 +33,23 @@ const UsdThbMonitorPage: FC = () => {
           alertPrefs={alertPrefs}
           onAlertPrefsChange={setAlertPrefs}
         />
+        <div className="flex justify-end items-center space-x-2 mt-4">
+          <Label htmlFor="chart-period-select" className="text-sm text-muted-foreground">Chart Period:</Label>
+          <Select value={chartPeriod} onValueChange={handlePeriodChange}>
+            <SelectTrigger id="chart-period-select" className="w-[130px] h-9">
+              <SelectValue placeholder="Select period" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="30">30 Days</SelectItem>
+              <SelectItem value="90">90 Days</SelectItem>
+              <SelectItem value="180">180 Days</SelectItem>
+              <SelectItem value="365">1 Year</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
         <HistoryChartDisplay
           alertPrefs={alertPrefs}
+          periodInDays={parseInt(chartPeriod, 10)} // Convert string to number
         />
         <AnalysisDisplay />
       </main>

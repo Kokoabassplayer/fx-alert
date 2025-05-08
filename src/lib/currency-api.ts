@@ -29,8 +29,10 @@ export interface FormattedHistoricalRate {
 
 export async function fetchCurrentUsdToThbRate(): Promise<CurrentRateResponse | null> {
   try {
-    const timestamp = Date.now(); // Add timestamp to ensure fresh data
+    // Use a cache-busting query parameter to ensure fresh data
+    const timestamp = Date.now();
     const response = await fetch(`${API_BASE_URL}/latest?from=USD&to=THB&t=${timestamp}`, { cache: 'no-store' });
+
     if (!response.ok) {
       console.error(
         "Failed to fetch current rate (HTTP status):",
@@ -47,11 +49,13 @@ export async function fetchCurrentUsdToThbRate(): Promise<CurrentRateResponse | 
       console.error(
         "Failed to parse JSON response for current rate:",
         jsonError,
+        // Log the response text if JSON parsing fails
         await response.text().catch(() => "Could not read response text (after JSON parse failure)")
       );
       return null;
     }
-
+    
+    // Validate the structure of the response data
     if (typeof data !== 'object' || data === null) {
         console.warn("API response for current rate was not a non-null object:", data);
         return null;
@@ -65,6 +69,7 @@ export async function fetchCurrentUsdToThbRate(): Promise<CurrentRateResponse | 
     return data as CurrentRateResponse;
 
   } catch (error) { 
+    // Catch any other errors during the fetch operation
     console.error("Generic error fetching current rate:", error);
     return null;
   }
@@ -74,10 +79,10 @@ function formatDateForApi(date: Date): string {
   return date.toISOString().split("T")[0];
 }
 
-export async function fetchUsdToThbRateHistory(): Promise<FormattedHistoricalRate[]> {
+export async function fetchUsdToThbRateHistory(days: number = 90): Promise<FormattedHistoricalRate[]> {
   const today = new Date();
   const endDate = formatDateForApi(today);
-  const startDate = formatDateForApi(new Date(new Date().setDate(today.getDate() - 90)));
+  const startDate = formatDateForApi(new Date(new Date().setDate(today.getDate() - days)));
   const timestamp = Date.now(); // Add timestamp to ensure fresh data
 
   try {
@@ -126,8 +131,10 @@ export async function fetchUsdToThbRateHistory(): Promise<FormattedHistoricalRat
     const formattedData = Object.entries(historicalData.rates)
       .map(([date, rateData]) => ({
         date,
+        // Ensure rateData and rateData.THB exist and THB is a number, otherwise default to 0
         rate: (rateData && typeof rateData.THB === 'number') ? rateData.THB : 0, 
       }))
+      // Sort data by date in ascending order
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
       
     return formattedData;
@@ -136,4 +143,3 @@ export async function fetchUsdToThbRateHistory(): Promise<FormattedHistoricalRat
     return [];
   }
 }
-

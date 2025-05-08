@@ -9,13 +9,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { fetchUsdToThbRateHistory, type FormattedHistoricalRate } from "@/lib/currency-api";
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceArea } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceArea, CartesianGrid } from 'recharts';
 import { Badge } from '@/components/ui/badge';
 import { BANDS, type AlertPrefs, type BandName, getBandFromRate, type Band } from "@/lib/bands";
 
 
 interface HistoryChartDisplayProps {
   alertPrefs: AlertPrefs;
+  periodInDays: number;
 }
 
 interface BandUIDefinition {
@@ -32,12 +33,11 @@ interface BandUIDefinition {
 // Custom Label component for ReferenceArea
 const BandLabel: FC<{ viewBox?: { x?: number; y?: number }; value: string; fill: string }> = ({ viewBox, value, fill }) => {
   if (!viewBox || typeof viewBox.x === 'undefined' || typeof viewBox.y === 'undefined') {
-    return null; // Or some default positioning if viewBox is not fully defined
+    return null; 
   }
   const { x, y } = viewBox;
-  // Offset the label slightly from the top-left corner of the ReferenceArea
-  const dx = 8;
-  const dy = 13; // Adjusted for better vertical alignment based on font size
+  const dx = 8; 
+  const dy = 13; 
 
   return (
     <text
@@ -54,7 +54,7 @@ const BandLabel: FC<{ viewBox?: { x?: number; y?: number }; value: string; fill:
 };
 
 
-const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ alertPrefs }) => {
+const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ alertPrefs, periodInDays }) => {
   const [chartData, setChartData] = useState<FormattedHistoricalRate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
@@ -75,13 +75,12 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ alertPrefs }) => {
 
   const fetchHistory = useCallback(async () => {
     setIsLoading(true);
-    const data = await fetchUsdToThbRateHistory();
+    const data = await fetchUsdToThbRateHistory(periodInDays);
     if (data.length > 0) {
       setChartData(data);
     } else {
       setChartData([]);
-      // Avoid toast on initial load if data is empty then, only if subsequent fetches fail
-      if(!isLoading && chartData.length > 0) { // Check if it was previously loading or had data
+      if(!isLoading && chartData.length > 0) { 
         toast({
           variant: "destructive",
           title: "Chart Error",
@@ -90,12 +89,12 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ alertPrefs }) => {
       }
     }
     setIsLoading(false);
-  }, [toast, isLoading, chartData.length ]); // Added chartData.length to dependencies
+  }, [toast, isLoading, chartData.length, periodInDays ]); 
 
   useEffect(() => {
     fetchHistory();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Fetch only once on mount, or manage refresh differently if needed
+  }, [periodInDays]); 
 
 
   const yAxisDomain = useMemo(() => {
@@ -161,11 +160,16 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ alertPrefs }) => {
     return null;
   };
 
+  const chartTitle = useMemo(() => {
+    if (periodInDays === 365) return "1-Year Trend";
+    return `${periodInDays}-Day Trend`;
+  }, [periodInDays]);
+
   return (
     <Card className="overflow-hidden shadow-lg rounded-xl">
       <CardHeader className="bg-card/50">
         <CardTitle className="flex items-center justify-between text-primary">
-          <span>90-Day Trend</span>
+          <span>{chartTitle}</span>
           <div className="flex items-center space-x-2">
             {isLoading && <Loader2 className="h-5 w-5 animate-spin text-primary" />}
           </div>
@@ -182,7 +186,8 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ alertPrefs }) => {
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={chartData} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
+            <LineChart data={chartData} margin={{ top: 5, right: 35, left: 0, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
               <XAxis
                 dataKey="date"
                 tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
