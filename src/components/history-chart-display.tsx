@@ -80,11 +80,12 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ alertPrefs, periodI
       setChartData(data);
     } else {
       setChartData([]);
+      // Only toast if it wasn't loading and there was data before, to avoid spamming on initial load or if no data exists for a period
       if(!isLoading && chartData.length > 0) { 
         toast({
           variant: "destructive",
           title: "Chart Error",
-          description: "Failed to fetch rate history or no data available.",
+          description: "Failed to fetch rate history or no data available for the selected period.",
         });
       }
     }
@@ -123,18 +124,22 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ alertPrefs, periodI
       overallMax = Math.max(maxDataRate, ...activeBandNumericBoundaries);
     }
 
+    // Handle cases where there's no data or no active bands
     if (chartData.length === 0 && activeBandNumericBoundaries.length === 0) {
+        // Default domain if nothing else to base it on
         overallMin = 28;
         overallMax = 38;
     } else if (chartData.length > 0 && activeBandNumericBoundaries.length === 0) {
         // Domain from data only
     } else if (chartData.length === 0 && activeBandNumericBoundaries.length > 0) {
+        // Domain from bands only
         overallMin = Math.min(...activeBandNumericBoundaries);
         overallMax = Math.max(...activeBandNumericBoundaries);
     }
 
+    // Add padding to the domain
     const range = overallMax - overallMin;
-    const padding = range === 0 ? 1 : range * 0.05;
+    const padding = range === 0 ? 1 : range * 0.05; // 5% padding, or 1 if range is 0
 
     return [parseFloat((overallMin - padding).toFixed(2)), parseFloat((overallMax + padding).toFixed(2))] as [number, number];
 
@@ -161,8 +166,14 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ alertPrefs, periodI
   };
 
   const chartTitle = useMemo(() => {
-    if (periodInDays === 365) return "1-Year Trend";
-    return `${periodInDays}-Day Trend`;
+    switch (periodInDays) {
+      case 30: return "30-Day Trend";
+      case 90: return "90-Day Trend";
+      case 180: return "180-Day Trend";
+      case 365: return "1-Year Trend";
+      case -1: return "Trend Since Inception (2005)";
+      default: return "Historical Trend";
+    }
   }, [periodInDays]);
 
   return (
@@ -175,14 +186,14 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ alertPrefs, periodI
           </div>
         </CardTitle>
       </CardHeader>
-      <CardContent className="pt-6 pb-2">
+      <CardContent className="pt-6 pb-2 bg-background"> {/* Ensure background is not card for contrast */}
         {isLoading && chartData.length === 0 ? (
           <div className="h-[300px] flex items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : chartData.length === 0 && !isLoading ? (
           <div className="h-[300px] flex items-center justify-center text-muted-foreground">
-            No historical data to display.
+            No historical data to display for the selected period.
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={300}>
@@ -195,36 +206,41 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ alertPrefs, periodI
                 tickLine={false}
                 axisLine={{ stroke: 'hsl(var(--border))' }}
                 interval="preserveStartEnd"
-                minTickGap={30}
+                minTickGap={30} // Adjust for better label spacing
               />
               <YAxis
                 domain={yAxisDomain}
                 tickFormatter={(value) => typeof value === 'number' ? value.toFixed(2) : ''}
                 tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
                 tickLine={false}
-                axisLine={{ strokeWidth: 0 }}
+                axisLine={{ strokeWidth: 0 }} // Hide Y-axis line itself
                 allowDataOverflow={true}
-                width={50}
+                width={50} // Increased width for label
                 label={{ value: 'THB/USD', angle: -90, position: 'insideLeft', fill: 'hsl(var(--muted-foreground))', fontSize: 12, dy: 40, dx: -10 }}
               />
               <Tooltip content={<CustomTooltip />} />
 
+              {/* Reference Areas for Bands */}
               {bandUIDefinitions.map((bandDef) => {
                 if (alertPrefs[bandDef.name]) {
                   const y1Actual = bandDef.y1 ?? yAxisDomain[0];
                   const y2Actual = bandDef.y2 ?? yAxisDomain[1];
 
+                  // Ensure y1 is less than y2 for ReferenceArea
+                  const finalY1 = Math.min(y1Actual, y2Actual);
+                  const finalY2 = Math.max(y1Actual, y2Actual);
+                  
                   return (
                     <ReferenceArea
                       key={bandDef.name}
-                      y1={y1Actual}
-                      y2={y2Actual}
+                      y1={finalY1}
+                      y2={finalY2}
                       fill={bandDef.fillVar}
                       stroke={bandDef.strokeVar}
-                      strokeWidth={0.5}
-                      fillOpacity={1}
+                      strokeWidth={0.5} // Reduced for subtlety
+                      fillOpacity={1} 
                       strokeOpacity={1}
-                      ifOverflow="visible"
+                      ifOverflow="visible" // Allows label to be drawn outside
                       label={<BandLabel value={bandDef.displayName} fill={`hsl(${bandDef.labelTextColorVar})`} />}
                     />
                   );
@@ -237,7 +253,7 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ alertPrefs, periodI
                 dataKey="rate"
                 stroke="hsl(var(--primary))"
                 strokeWidth={2}
-                dot={{ r: 0 }}
+                dot={{ r: 0 }} // Hide dots for a cleaner line
                 activeDot={{ r: 5, stroke: 'hsl(var(--background))', strokeWidth: 2, fill: 'hsl(var(--primary))' }}
                 name="USD/THB Rate"
               />
@@ -250,3 +266,4 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ alertPrefs, periodI
 };
 
 export default HistoryChartDisplay;
+
