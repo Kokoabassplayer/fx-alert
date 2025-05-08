@@ -1,20 +1,19 @@
 "use client";
 
 import type { FC } from 'react';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Loader2, Settings, Bell } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import type { CurrentRateResponse } from "@/lib/currency-api";
+import { fetchCurrentUsdToThbRate, type CurrentRateResponse } from "@/lib/currency-api";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
-import { Separator } from "@/components/ui/separator";
 
 import { 
-    BANDS, // Static BANDS for Popover details
+    BANDS, 
     type AlertPrefs, 
     type BandName, 
     classifyRateToBand, 
@@ -24,37 +23,57 @@ import {
 interface CurrentRateDisplayProps {
   alertPrefs: AlertPrefs;
   onAlertPrefsChange: (newPrefs: AlertPrefs) => void;
-  currentRateData: CurrentRateResponse | null;
-  dynamicBands: BandDefinition[];
 }
+
+const REFRESH_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
 
 const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
   alertPrefs,
   onAlertPrefsChange,
-  currentRateData,
-  dynamicBands,
 }) => {
+  const [currentRateData, setCurrentRateData] = useState<CurrentRateResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
-  const [currentBand, setCurrentBand] = useState<BandDefinition | undefined | null>(undefined);
+  const [currentBand, setCurrentBand] = useState<BandDefinition | null>(null);
   const prevBandRef = useRef<BandName | undefined>(undefined);
   
   const rate = currentRateData?.rates?.THB;
   const lastUpdated = currentRateData?.date ? new Date(currentRateData.date) : null;
-  const isLoading = currentRateData === null; // Determine loading state from prop
+
+  const fetchRate = useCallback(async () => {
+    setIsLoading(true);
+    const data = await fetchCurrentUsdToThbRate();
+    if (data) {
+      setCurrentRateData(data);
+    } else {
+      toast({
+        title: "Error Fetching Rate",
+        description: "Could not fetch the current exchange rate. Please try again later.",
+        variant: "destructive",
+      });
+    }
+    setIsLoading(false);
+  }, [toast]);
 
   useEffect(() => {
-    if (rate !== undefined && dynamicBands && dynamicBands.length > 0) {
-      const newBand = classifyRateToBand(rate, dynamicBands);
+    fetchRate(); // Initial fetch
+    const intervalId = setInterval(fetchRate, REFRESH_INTERVAL_MS);
+    return () => clearInterval(intervalId);
+  }, [fetchRate]);
+
+  useEffect(() => {
+    if (rate !== undefined) {
+      const newBand = classifyRateToBand(rate);
       setCurrentBand(newBand);
     } else {
-      setCurrentBand(undefined);
+      setCurrentBand(null);
     }
-  }, [rate, dynamicBands]);
+  }, [rate]);
 
 
   useEffect(() => {
-    if (currentBand && currentBand.level && rate !== undefined && alertPrefs[currentBand.level]) {
-      const currentBandName = currentBand.level as BandName;
+    if (currentBand && currentBand.name && rate !== undefined && alertPrefs[currentBand.name]) {
+      const currentBandName = currentBand.name;
       if (currentBandName !== prevBandRef.current && ['EXTREME', 'DEEP', 'OPPORTUNE'].includes(currentBandName)) {
          toast({
             title: `Rate Alert: ${currentBand.displayName} Zone!`,
@@ -78,7 +97,10 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
 
   const formatLastUpdatedDate = (date: Date | null): string => {
     if (!date) return "N/A";
-    const d = new Date(date); // Ensure it's a Date object
+    // Date from API is already YYYY-MM-DD
+    if (currentRateData?.date) return currentRateData.date;
+    // Fallback if direct date string is not available
+    const d = new Date(date); 
     const year = d.getFullYear();
     const month = (d.getMonth() + 1).toString().padStart(2, '0');
     const day = d.getDate().toString().padStart(2, '0');
@@ -121,13 +143,18 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
                       <p>Rate Range: {currentBand.rangeDisplay}</p>
                     )}
                     {currentBand.probability !== undefined && (
-                      <p className="font-medium">Historical Odds: ≈ {(currentBand.probability * 100).toFixed(0)}%</p>
+                      <p className="font-medium">Historical Odds: {currentBand.probability}</p>
                     )}
                   </div>
                 )}
               </div>
               
               <p className="text-sm text-foreground/90 pt-1">{currentBand.action}</p>
+               {currentBand.exampleAction && (
+                <p className="text-xs text-muted-foreground/90 pt-1">
+                  <span className="font-semibold">Example:</span> {currentBand.exampleAction} (if normal DCA = 20k THB)
+                </p>
+              )}
               {currentBand.reason && (
                 <p className="text-xs text-muted-foreground/80 pt-1 italic">
                   <span className="font-semibold">Reason:</span> {currentBand.reason}
@@ -142,7 +169,7 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
           <PopoverTrigger asChild>
             <Button variant="ghost" className="w-full justify-start text-muted-foreground hover:text-primary hover:bg-primary/5">
               <Settings className="mr-2 h-4 w-4" />
-              Alert Preferences
+              Alert & Chart Band Preferences
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-80 sm:w-96 shadow-xl rounded-lg p-4 space-y-4">
@@ -156,8 +183,7 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
                 <div className="grid gap-3 pl-2">
                 {(Object.keys(alertPrefs) as BandName[]).map((bandKey) => {
                     const staticBandDetails = BANDS.find(b => b.name === bandKey);
-                    if (!staticBandDetails) return null; // Should not happen if BandName is correct
-                    // For display in popover, using static band details for consistency in label naming
+                    if (!staticBandDetails) return null; 
                     const bandLabel = `${staticBandDetails.displayName} Band`;
                     return (
                     <div key={`alert-${bandKey}`} className="flex items-center justify-between p-2 rounded-md hover:bg-muted/50 transition-colors">
