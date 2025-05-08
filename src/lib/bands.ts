@@ -1,13 +1,27 @@
 
 import type { default as FullAnalysisType } from './full_analysis.json';
-import analysisData from './full_analysis.json';
-import type { MonthlyAggregatedRate } from './currency-api';
+import analysisDataJson from './full_analysis.json'; // Renamed to avoid conflict
+import type { FormattedHistoricalRate, MonthlyAggregatedRate } from './currency-api';
 
-export const FULL_ANALYSIS_DATA: typeof FullAnalysisType = analysisData;
+const fullAnalysisData: typeof FullAnalysisType = analysisDataJson;
 
-export type BandName = "EXTREME" | "DEEP" | "OPPORTUNE" | "NEUTRAL" | "RICH"; // Changed USD-RICH to RICH
+export type BandName = "EXTREME" | "DEEP" | "OPPORTUNE" | "NEUTRAL" | "RICH";
 
-export interface Band {
+// Color Configuration Interface
+export interface BandColorConfig {
+  badgeClass: string;
+  borderColorClass: string;
+  switchColorClass: string;
+  toastClass?: string;
+  chartSettings: {
+    fillVar: string;
+    strokeVar: string;
+    labelTextColorVar: string;
+  };
+}
+
+// Static Band definition (used for color reference and fallback)
+export interface StaticBand {
   name: BandName;
   displayName: string;
   condition: (rate: number) => boolean;
@@ -15,41 +29,90 @@ export interface Band {
   reason: string;
   probability?: string;
   rangeDisplay: string;
-  badgeClass: string;
-  borderColorClass: string;
-  switchColorClass: string;
-  toastClass?: string;
-  chartSettings: {
-    y1?: number;
-    y2?: number;
-    fillVar: string;
-    strokeVar: string;
-    threshold?: number;
-    labelTextColorVar: string;
-  };
+  colorConfig: BandColorConfig; // Embedded color config
+  // Chart settings are now part of colorConfig
 }
 
-// Static data formatting functions (used by current UI)
-const formatActionBrief = (actionBriefKey: string): string => {
-  if (!actionBriefKey) return "N/A";
-  return actionBriefKey
-    .split('_')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
-};
 
-const formatReason = (reasonKey: string): string => {
-  if (!reasonKey) return "No specific reason provided.";
-  return reasonKey
-    .split('_')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ')
-    .replace(/ Usd /g, ' USD ')
-    .replace(/ Thb /g, ' THB ');
-};
+// Helper to get color config from static BANDS definition
+export function getStaticBandColorConfig(bandName: BandName): BandColorConfig {
+  // Temporarily define static band colors here to avoid circular dependency or premature refactor of BANDS constant
+  // This should ideally come from a single source of truth for band styling
+  switch (bandName) {
+    case "EXTREME":
+      return {
+        badgeClass: "bg-red-500 text-white hover:bg-red-600",
+        borderColorClass: "border-red-500",
+        switchColorClass: "data-[state=checked]:bg-red-500",
+        toastClass: "bg-red-500 text-white",
+        chartSettings: {
+          fillVar: "var(--band-extreme-area-bg)",
+          strokeVar: "var(--band-extreme-area-border)",
+          labelTextColorVar: "var(--band-extreme-text-color-hsl)",
+        }
+      };
+    case "DEEP":
+      return {
+        badgeClass: "bg-purple-600 text-white hover:bg-purple-700",
+        borderColorClass: "border-purple-600",
+        switchColorClass: "data-[state=checked]:bg-purple-600",
+        toastClass: "bg-purple-600 text-white",
+        chartSettings: {
+          fillVar: "var(--band-deep-area-bg)",
+          strokeVar: "var(--band-deep-area-border)",
+          labelTextColorVar: "var(--band-deep-text-color-hsl)",
+        }
+      };
+    case "OPPORTUNE":
+      return {
+        badgeClass: "bg-green-600 text-white hover:bg-green-700",
+        borderColorClass: "border-green-600",
+        switchColorClass: "data-[state=checked]:bg-green-600",
+        toastClass: "bg-green-600 text-white",
+        chartSettings: {
+          fillVar: "var(--band-opportune-area-bg)",
+          strokeVar: "var(--band-opportune-area-border)",
+          labelTextColorVar: "var(--band-opportune-text-color-hsl)",
+        }
+      };
+    case "NEUTRAL":
+      return {
+        badgeClass: "bg-slate-500 text-white hover:bg-slate-600",
+        borderColorClass: "border-slate-500",
+        switchColorClass: "data-[state=checked]:bg-slate-500",
+        chartSettings: {
+          fillVar: "var(--band-neutral-area-bg)",
+          strokeVar: "var(--band-neutral-area-border)",
+          labelTextColorVar: "var(--band-neutral-text-color-hsl)",
+        }
+      };
+    case "RICH":
+      return {
+        badgeClass: "bg-yellow-400 text-black hover:bg-yellow-500",
+        borderColorClass: "border-yellow-400",
+        switchColorClass: "data-[state=checked]:bg-yellow-400",
+        chartSettings: {
+          fillVar: "var(--band-rich-area-bg)",
+          strokeVar: "var(--band-rich-area-border)",
+          labelTextColorVar: "var(--band-rich-text-color-hsl)",
+        }
+      };
+    default: // Fallback
+      return {
+        badgeClass: 'bg-gray-400 text-white',
+        borderColorClass: 'border-gray-400',
+        switchColorClass: 'data-[state=checked]:bg-gray-400',
+        chartSettings: {
+          fillVar: 'hsla(0, 0%, 50%, 0.1)',
+          strokeVar: 'hsla(0, 0%, 50%, 0.2)',
+          labelTextColorVar: 'hsl(0, 0%, 50%)',
+        }
+      };
+  }
+}
 
-// BANDS constant (drives current UI, based on static full_analysis.json)
-export const BANDS: Band[] = FULL_ANALYSIS_DATA.threshold_bands.map(bandData => {
+
+export const BANDS: StaticBand[] = fullAnalysisData.threshold_bands.map(bandData => {
   const name = bandData.level === "USD-RICH" ? "RICH" : bandData.level as BandName;
   let conditionFunc: (rate: number) => boolean;
 
@@ -59,64 +122,11 @@ export const BANDS: Band[] = FULL_ANALYSIS_DATA.threshold_bands.map(bandData => 
      conditionFunc = (rate) => rate <= bandData.range.max!;
   } else if (bandData.range.min !== null && bandData.range.max !== null) {
     conditionFunc = (rate) => rate >= bandData.range.min! && rate <= bandData.range.max!;
-  }
-  else { 
+  } else { 
     conditionFunc = (_rate) => false;
   }
   
-  let badgeClass = "";
-  let borderColorClass = "";
-  let switchColorClass = "";
-  let toastClass = "";
-  let chartFillVar = "";
-  let chartStrokeVar = "";
-  let chartLabelTextColorVar = "";
-
-  switch (name) {
-    case "EXTREME":
-      badgeClass = "bg-red-500 text-white hover:bg-red-600";
-      borderColorClass = "border-red-500";
-      switchColorClass = "data-[state=checked]:bg-red-500";
-      toastClass = "bg-red-500 text-white";
-      chartFillVar = "var(--band-extreme-area-bg)";
-      chartStrokeVar = "var(--band-extreme-area-border)";
-      chartLabelTextColorVar = "var(--band-extreme-text-color-hsl)";
-      break;
-    case "DEEP":
-      badgeClass = "bg-purple-600 text-white hover:bg-purple-700";
-      borderColorClass = "border-purple-600";
-      switchColorClass = "data-[state=checked]:bg-purple-600";
-      toastClass = "bg-purple-600 text-white";
-      chartFillVar = "var(--band-deep-area-bg)";
-      chartStrokeVar = "var(--band-deep-area-border)";
-      chartLabelTextColorVar = "var(--band-deep-text-color-hsl)";
-      break;
-    case "OPPORTUNE":
-      badgeClass = "bg-green-600 text-white hover:bg-green-700";
-      borderColorClass = "border-green-600";
-      switchColorClass = "data-[state=checked]:bg-green-600";
-      toastClass = "bg-green-600 text-white";
-      chartFillVar = "var(--band-opportune-area-bg)";
-      chartStrokeVar = "var(--band-opportune-area-border)";
-      chartLabelTextColorVar = "var(--band-opportune-text-color-hsl)";
-      break;
-    case "NEUTRAL":
-      badgeClass = "bg-slate-500 text-white hover:bg-slate-600";
-      borderColorClass = "border-slate-500";
-      switchColorClass = "data-[state=checked]:bg-slate-500";
-      chartFillVar = "var(--band-neutral-area-bg)";
-      chartStrokeVar = "var(--band-neutral-area-border)";
-      chartLabelTextColorVar = "var(--band-neutral-text-color-hsl)";
-      break;
-    case "RICH": // Changed from "USD-RICH"
-      badgeClass = "bg-yellow-400 text-black hover:bg-yellow-500";
-      borderColorClass = "border-yellow-400";
-      switchColorClass = "data-[state=checked]:bg-yellow-400";
-      chartFillVar = "var(--band-rich-area-bg)";
-      chartStrokeVar = "var(--band-rich-area-border)";
-      chartLabelTextColorVar = "var(--band-rich-text-color-hsl)";
-      break;
-  }
+  const colorConfig = getStaticBandColorConfig(name);
   
   let rangeDisplayVal = "";
   if (bandData.range.max === null && bandData.range.min !== null) {
@@ -129,190 +139,122 @@ export const BANDS: Band[] = FULL_ANALYSIS_DATA.threshold_bands.map(bandData => 
     rangeDisplayVal = "N/A"; 
   }
 
-  let actionText = "";
-  switch (name) {
-    case "EXTREME": actionText = "Convert as much THB to USD as liquidity allows now. Exchange 60-80k THB; keep 3-6 mo THB cash buffer."; break;
-    case "DEEP": actionText = "Double this month’s USD purchase. Exchange ≈ 40k THB."; break;
-    case "OPPORTUNE": actionText = "Add 25–50 % to normal DCA. Exchange ≈ 25–30k THB."; break;
-    case "NEUTRAL": actionText = "Stick to standard DCA. Exchange 20k THB."; break;
-    case "RICH": actionText = "Pause non-essential USD conversions. Hold THB; place excess in short-term THB deposits/bonds."; break; // Changed from "USD-RICH"
-    default: actionText = formatActionBrief(bandData.action_brief); 
-  }
-
+  const actionText = bandData.action_brief.split('_').map(w=>w[0].toUpperCase()+w.slice(1)).join(' ').replace("Usd", "USD");
+  const reasonText = bandData.reason.split('_').map(w=>w[0].toUpperCase()+w.slice(1)).join(' ').replace("Usd", "USD");
+  
   return {
     name: name,
-    displayName: name === 'RICH' ? 'Rich' : name.charAt(0) + name.slice(1).toLowerCase(), // Changed from "USD-RICH"
+    displayName: name === 'RICH' ? 'Rich' : name.charAt(0) + name.slice(1).toLowerCase(),
     condition: conditionFunc,
     action: actionText, 
-    reason: formatReason(bandData.reason),
+    reason: reasonText,
     probability: `≈ ${(bandData.probability * 100).toFixed(0)}%`,
     rangeDisplay: rangeDisplayVal,
-    badgeClass,
-    borderColorClass,
-    switchColorClass,
-    toastClass,
-    chartSettings: {
-      y1: bandData.range.min === 0 && name === "EXTREME" ? undefined : bandData.range.min,
-      y2: bandData.range.max === null ? undefined : bandData.range.max,
-      fillVar: chartFillVar,
-      strokeVar: chartStrokeVar,
-      threshold: bandData.range.max === null ? bandData.range.min : bandData.range.max, 
-      labelTextColorVar: chartLabelTextColorVar,
-    }
+    colorConfig: colorConfig,
   };
+}).sort((a, b) => {
+  const order: BandName[] = ["EXTREME", "DEEP", "OPPORTUNE", "NEUTRAL", "RICH"];
+  return order.indexOf(a.name) - order.indexOf(b.name);
 });
 
-export const getBandFromRate = (rate: number): Band | undefined => {
-  for (const band of BANDS) {
-    if (band.condition(rate)) {
-      return band;
-    }
-  }  
-  console.warn(`Rate ${rate} did not fall into any defined band.`);
-  return undefined; 
-};
 
-export interface AlertPrefs {
-  EXTREME: boolean;
-  DEEP: boolean;
-  OPPORTUNE: boolean;
-  NEUTRAL: boolean;
-  RICH: boolean; // Changed from "USD-RICH"
+// Dynamic Band Logic
+
+// Defines the structure for dynamically computed bands, including display properties
+export interface BandDefinition {
+    level: BandName;
+    displayName: string;
+    minRate: number | null;
+    maxRate: number | null;
+    probability: number;
+    action: string;
+    reason?: string;
+    exampleAction?: string; // This could be scaled if needed
+    rangeDisplay: string;
+    colorConfig: BandColorConfig; // Added for UI consistency
 }
 
-export const DEFAULT_ALERT_PREFS: AlertPrefs = {
-  EXTREME: true,
-  DEEP: true,
-  OPPORTUNE: true,
-  NEUTRAL: true, 
-  RICH: true, // Changed from "USD-RICH"
+export const HORIZON_MONTHS: Record<string, number> = { // string key for 'selectedHorizon'
+  short: 60,
+  medium: 120,
+  long: 180
 };
+export const DEFAULT_DYNAMIC_HORIZON_KEY = "long"; // Key for HORIZON_MONTHS
 
-// --- Core Logic for Dynamic Bands ---
-
-export type Horizon = 'short' | 'medium' | 'long';
-export const HORIZON_MONTHS: Record<Horizon, number> = {
-  short: 60,  // ~5 years
-  medium: 120, // ~10 years
-  long: 180   // ~15 years
-};
-export const DEFAULT_DYNAMIC_HORIZON: Horizon = 'long';
-
-// Band names without RICH, as RICH is defined as > NEUTRAL's upper edge
-export type BandNameWithoutRich = Exclude<BandName, 'RICH'>;
-
-// Percentile edges for bands (upper bounds)
-// EXTREME: <= 10th pct
-// DEEP:    > 10th pct AND <= 25th pct
-// OPPORTUNE: > 25th pct AND <= 40th pct
-// NEUTRAL: > 40th pct AND <= 75th pct
-// RICH:    > 75th pct
-export const QUANTILE_EDGES_PERCENT: Record<BandNameWithoutRich, number> = {
+const QUANTILE_EDGES_PERCENT: Record<Exclude<BandName, "RICH">, number> = {
   EXTREME: 10,
   DEEP: 25,
   OPPORTUNE: 40,
   NEUTRAL: 75,
 };
 
-export const DYNAMIC_BAND_ORDER: BandName[] = ["EXTREME", "DEEP", "OPPORTUNE", "NEUTRAL", "RICH"];
+const DYNAMIC_BAND_ORDER: BandName[] = ["EXTREME", "DEEP", "OPPORTUNE", "NEUTRAL", "RICH"];
 
-export interface CalculatedThresholds {
-  p10: number;  // Corresponds to EXTREME upper edge
-  p25: number;  // Corresponds to DEEP upper edge
-  p40: number;  // Corresponds to OPPORTUNE upper edge
-  p75: number;  // Corresponds to NEUTRAL upper edge
-}
-
-export interface DynamicBandDefinition {
-  level: BandName;
-  minRate: number | null; // null for EXTREME if we consider 0 as implicit min
-  maxRate: number | null; // null for RICH
-  probability: number;
-  actionBrief: string;
-  exampleAction: string;
-  // reason could be added if it can be dynamically determined or mapped
-}
-
-// Action mapping based on the Python logic
-const DYNAMIC_ACTION_MAP: Record<BandName, { brief: string; example: string }> = {
-  EXTREME:   { brief: "Convert as much THB to USD as liquidity allows now", example: "Exchange 60-80k THB; keep 3-6 mo THB cash buffer" },
-  DEEP:      { brief: "Double this month’s USD purchase", example: "Exchange ≈ 40k THB" },
-  OPPORTUNE: { brief: "Add 25–50 % to normal DCA", example: "Exchange ≈ 25–30k THB" },
-  NEUTRAL:   { brief: "Stick to standard DCA", example: "Exchange 20k THB" },
-  RICH:      { brief: "Pause non-essential USD conversions", example: "Hold THB; place excess in short-term THB deposits/bonds" },
+const DYNAMIC_ACTION_MAP: Record<BandName, { action: string; example: string; reason: string, displayName: string }> = {
+  EXTREME:   { action: "Convert as much THB to USD as liquidity allows now.", example: "Exchange 60–80 k THB; keep 3–6 mo THB buffer", reason: "Such a strong baht is very rare—best time to lock in cheap USD", displayName: "Extreme" },
+  DEEP:      { action: "Double this month’s USD purchase.", example: "Exchange ≈ 40 k THB", reason: "Still well below long-term average; capitalize without draining reserves", displayName: "Deep" },
+  OPPORTUNE: { action: "Add 25–50 % to normal DCA.", example: "Exchange ≈ 25–30 k THB", reason: "Slightly under average—worth topping up but not over-committing", displayName: "Opportune" },
+  NEUTRAL:   { action: "Stick to standard DCA.", example: "Exchange 20 k THB", reason: "Typical price zone; maintain discipline", displayName: "Neutral" },
+  RICH:      { action: "Pause non-essential USD conversions.", example: "Hold THB; place excess in short-term THB deposits/bonds", reason: "USD expensive vs. baht—wait for better levels", displayName: "Rich" },
 };
 
-/**
- * Calculates the Nth percentile of a sorted array of numbers using linear interpolation.
- */
+
 export function getNthPercentile(sortedData: number[], percentile: number): number {
   if (sortedData.length === 0) return 0;
   if (percentile <= 0) return sortedData[0];
   if (percentile >= 100) return sortedData[sortedData.length - 1];
-
-  // Calculate rank k = p * (N-1) / 100 for 0-based indexing
   const k = (percentile / 100) * (sortedData.length - 1);
   const floorK = Math.floor(k);
   const ceilK = Math.ceil(k);
-
-  if (floorK === ceilK) {
-    return sortedData[floorK]; // k is an integer
-  }
-
-  // Linear interpolation: y = y1 + (x - x1) * (y2 - y1) / (x2 - x1)
-  // Here, x is k, x1 is floorK, x2 is ceilK
-  // y1 is sortedData[floorK], y2 is sortedData[ceilK]
+  if (floorK === ceilK) return sortedData[floorK];
   const y1 = sortedData[floorK];
   const y2 = sortedData[ceilK];
-  return y1 + (k - floorK) * (y2 - y1); // (ceilK - floorK) is always 1 here
+  return y1 + (k - floorK) * (y2 - y1);
 }
 
-/**
- * Calculates percentile thresholds for bands based on historical monthly rates.
- */
+export interface CalculatedThresholds {
+  EXTREME: number;
+  DEEP: number;
+  OPPORTUNE: number;
+  NEUTRAL: number;
+}
+
 export function calculatePercentileThresholds(
   monthlyRates: MonthlyAggregatedRate[],
-  horizon: Horizon = DEFAULT_DYNAMIC_HORIZON
+  horizonKey: string = DEFAULT_DYNAMIC_HORIZON_KEY
 ): CalculatedThresholds {
-  const windowSize = HORIZON_MONTHS[horizon];
+  const windowSize = HORIZON_MONTHS[horizonKey] || HORIZON_MONTHS[DEFAULT_DYNAMIC_HORIZON_KEY];
   const recentMonthlyRatesData = monthlyRates.slice(-windowSize);
   
   if (recentMonthlyRatesData.length === 0) {
-    // Return default/fallback thresholds or handle error
-    console.warn("Not enough data to calculate percentile thresholds for horizon:", horizon);
-    return { p10: 0, p25: 0, p40: 0, p75: 0 };
+    console.warn("Not enough data to calculate percentile thresholds for horizon:", horizonKey);
+    return { EXTREME: 0, DEEP: 0, OPPORTUNE: 0, NEUTRAL: 0 };
   }
 
   const ratesInWindow = recentMonthlyRatesData.map(m => m.averageRate).sort((a, b) => a - b);
 
   return {
-    p10: getNthPercentile(ratesInWindow, QUANTILE_EDGES_PERCENT.EXTREME),
-    p25: getNthPercentile(ratesInWindow, QUANTILE_EDGES_PERCENT.DEEP),
-    p40: getNthPercentile(ratesInWindow, QUANTILE_EDGES_PERCENT.OPPORTUNE),
-    p75: getNthPercentile(ratesInWindow, QUANTILE_EDGES_PERCENT.NEUTRAL),
+    EXTREME: getNthPercentile(ratesInWindow, QUANTILE_EDGES_PERCENT.EXTREME),
+    DEEP: getNthPercentile(ratesInWindow, QUANTILE_EDGES_PERCENT.DEEP),
+    OPPORTUNE: getNthPercentile(ratesInWindow, QUANTILE_EDGES_PERCENT.OPPORTUNE),
+    NEUTRAL: getNthPercentile(ratesInWindow, QUANTILE_EDGES_PERCENT.NEUTRAL),
   };
 }
 
-/**
- * Classifies a given rate into a dynamic band based on calculated thresholds.
- */
 export function classifyRateDynamic(rate: number, thresholds: CalculatedThresholds): BandName {
-  if (rate <= thresholds.p10) return "EXTREME";
-  if (rate <= thresholds.p25) return "DEEP";
-  if (rate <= thresholds.p40) return "OPPORTUNE";
-  if (rate <= thresholds.p75) return "NEUTRAL";
-  return "RICH";
-}
+    if (thresholds.EXTREME !== undefined && rate <= thresholds.EXTREME) return "EXTREME";
+    if (thresholds.DEEP !== undefined && rate <= thresholds.DEEP) return "DEEP";
+    if (thresholds.OPPORTUNE !== undefined && rate <= thresholds.OPPORTUNE) return "OPPORTUNE";
+    if (thresholds.NEUTRAL !== undefined && rate <= thresholds.NEUTRAL) return "NEUTRAL";
+    return "RICH";
+  }
 
-/**
- * Computes the probability of each band based on historical rates within the horizon.
- */
 export function computeBandProbabilitiesDynamic(
   monthlyRates: MonthlyAggregatedRate[],
   thresholds: CalculatedThresholds,
-  horizon: Horizon = DEFAULT_DYNAMIC_HORIZON
+  horizonKey: string = DEFAULT_DYNAMIC_HORIZON_KEY
 ): Record<BandName, number> {
-  const windowSize = HORIZON_MONTHS[horizon];
+  const windowSize = HORIZON_MONTHS[horizonKey] || HORIZON_MONTHS[DEFAULT_DYNAMIC_HORIZON_KEY];
   const ratesInWindow = monthlyRates.slice(-windowSize);
 
   if (ratesInWindow.length === 0) {
@@ -335,78 +277,111 @@ export function computeBandProbabilitiesDynamic(
   return probabilities;
 }
 
-/**
- * Constructs the full dynamic band definitions.
- */
 export function computeDynamicBandDefinitions(
   monthlyRates: MonthlyAggregatedRate[],
-  horizon: Horizon = DEFAULT_DYNAMIC_HORIZON
-): DynamicBandDefinition[] {
-  const thresholds = calculatePercentileThresholds(monthlyRates, horizon);
-  const probabilities = computeBandProbabilitiesDynamic(monthlyRates, thresholds, horizon);
+  horizonKey: string = DEFAULT_DYNAMIC_HORIZON_KEY
+): BandDefinition[] {
+  const thresholds = calculatePercentileThresholds(monthlyRates, horizonKey);
+  const probabilities = computeBandProbabilitiesDynamic(monthlyRates, thresholds, horizonKey);
 
-  const dynamicBands: DynamicBandDefinition[] = [];
-  let prevMaxRate = 0.0; // Assuming rates are positive
+  const dynamicBands: BandDefinition[] = [];
 
   for (const bandName of DYNAMIC_BAND_ORDER) {
     const actionMapEntry = DYNAMIC_ACTION_MAP[bandName];
     let minRate: number | null;
     let maxRate: number | null;
+    let rangeDisplayVal = "";
 
     switch (bandName) {
       case "EXTREME":
-        minRate = 0.0; // Or null if truly unbounded below
-        maxRate = thresholds.p10;
+        minRate = 0.0; 
+        maxRate = thresholds.EXTREME;
+        rangeDisplayVal = `≤ ${maxRate.toFixed(1)} THB/USD`;
         break;
       case "DEEP":
-        minRate = thresholds.p10;
-        maxRate = thresholds.p25;
+        minRate = thresholds.EXTREME;
+        maxRate = thresholds.DEEP;
+        rangeDisplayVal = `${minRate.toFixed(1)} – ${maxRate.toFixed(1)} THB/USD`;
         break;
       case "OPPORTUNE":
-        minRate = thresholds.p25;
-        maxRate = thresholds.p40;
+        minRate = thresholds.DEEP;
+        maxRate = thresholds.OPPORTUNE;
+        rangeDisplayVal = `${minRate.toFixed(1)} – ${maxRate.toFixed(1)} THB/USD`;
         break;
       case "NEUTRAL":
-        minRate = thresholds.p40;
-        maxRate = thresholds.p75;
+        minRate = thresholds.OPPORTUNE;
+        maxRate = thresholds.NEUTRAL;
+        rangeDisplayVal = `${minRate.toFixed(1)} – ${maxRate.toFixed(1)} THB/USD`;
         break;
       case "RICH":
-        minRate = thresholds.p75;
-        maxRate = null; // Unbounded above
+        minRate = thresholds.NEUTRAL;
+        maxRate = null; 
+        rangeDisplayVal = `> ${minRate.toFixed(1)} THB/USD`;
         break;
-      default: // Should not happen
-        minRate = null; maxRate = null;
+      default: 
+        minRate = null; maxRate = null; rangeDisplayVal = "N/A";
     }
     
-    // Ensure minRate is not greater than maxRate for edge cases with sparse data
-    if (maxRate !== null && minRate !== null && minRate > maxRate && bandName !== "EXTREME") { // Allow EXTREME min=0, max=p10 even if p10 is low
-        // This can happen if pX = pY for X < Y.
-        // Example: p10 = p25. Then DEEP band would have min=p10, max=p10.
-        // We can adjust by making the previous band's max slightly less, or current band's min slightly more if distinct bands are needed.
-        // For now, allow min=max.
-    }
-
-
     dynamicBands.push({
       level: bandName,
+      displayName: actionMapEntry.displayName,
       minRate: minRate !== null ? parseFloat(minRate.toFixed(4)) : null,
       maxRate: maxRate !== null ? parseFloat(maxRate.toFixed(4)) : null,
-      probability: parseFloat(probabilities[bandName].toFixed(4)),
-      actionBrief: actionMapEntry.brief,
+      probability: parseFloat(probabilities[bandName].toFixed(2)), // Probabilities usually to 2 decimal places
+      action: actionMapEntry.action,
+      reason: actionMapEntry.reason,
       exampleAction: actionMapEntry.example,
+      rangeDisplay: rangeDisplayVal,
+      colorConfig: getStaticBandColorConfig(bandName),
     });
-    
-    // This logic for prevMaxRate is more for fixed thresholds.
-    // With percentile edges, the next band's min is the current band's max.
-    // prevMaxRate = maxRate !== null ? maxRate : prevMaxRate; // Update for next iteration if needed for a different logic
   }
   return dynamicBands;
 }
 
-// Example of how you might use this:
-// async function getDynamicBandsForUI() {
-//   const allDailyRates = await fetchUsdToThbRateHistory(-1); // Fetch all history
-//   const monthlyAggregated = aggregateMonthlyRates(allDailyRates);
-//   const dynamicBandData = computeDynamicBandDefinitions(monthlyAggregated, 'long');
-//   // Now use dynamicBandData to update UI state
-// }
+export const classifyRateToBand = (rate: number, bands: BandDefinition[]): BandDefinition | null => {
+  if (rate === null || rate === undefined || isNaN(rate)) return null;
+  // Ensure bands are sorted by minRate ascending for correct classification
+  const sortedBands = [...bands].sort((a,b) => (a.minRate ?? -Infinity) - (b.minRate ?? -Infinity));
+
+  for (const band of sortedBands) {
+    // For the highest band (maxRate is null), if rate is greater than its minRate
+    if (band.maxRate === null) {
+      if (band.minRate !== null && rate > band.minRate) return band;
+    } 
+    // For other bands, if rate is within [minRate, maxRate]
+    // Using >= minRate and <= maxRate for inclusive ranges as per typical band definitions
+    else if (band.minRate !== null && band.maxRate !== null && rate >= band.minRate && rate <= band.maxRate) {
+      return band;
+    }
+  }
+  
+  // Fallback for rates lower than the lowest band's minRate (e.g., if EXTREME doesn't start at 0)
+  // or if rate is exactly 0.
+  if (sortedBands.length > 0 && sortedBands[0].minRate !== null && rate < sortedBands[0].minRate!) {
+    return sortedBands[0]; // Classify as the lowest band
+  }
+  if (rate === 0 && sortedBands.length > 0 && sortedBands[0].minRate === 0) {
+     return sortedBands[0]; // Classify as EXTREME if it starts at 0
+  }
+
+  console.warn(`Rate ${rate} could not be classified into any band. Bands:`, bands);
+  return null;
+};
+
+export { fullAnalysisData as FULL_ANALYSIS_DATA };
+
+export interface AlertPrefs {
+  EXTREME: boolean;
+  DEEP: boolean;
+  OPPORTUNE: boolean;
+  NEUTRAL: boolean;
+  RICH: boolean;
+}
+
+export const DEFAULT_ALERT_PREFS: AlertPrefs = {
+  EXTREME: true,
+  DEEP: true,
+  OPPORTUNE: true,
+  NEUTRAL: true, 
+  RICH: true,
+};

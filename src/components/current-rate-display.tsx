@@ -1,75 +1,72 @@
 "use client";
 
 import type { FC } from 'react';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Loader2, Settings, Bell } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { fetchCurrentUsdToThbRate, type CurrentRateResponse } from "@/lib/currency-api";
+import type { CurrentRateResponse } from "@/lib/currency-api";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
 
-import { getBandFromRate, BANDS, type Band, type AlertPrefs, type BandName, FULL_ANALYSIS_DATA } from "@/lib/bands";
+import { 
+    BANDS, // Static BANDS for Popover details
+    type AlertPrefs, 
+    type BandName, 
+    classifyRateToBand, 
+    type BandDefinition 
+} from "@/lib/bands";
 
 interface CurrentRateDisplayProps {
   alertPrefs: AlertPrefs;
   onAlertPrefsChange: (newPrefs: AlertPrefs) => void;
+  currentRateData: CurrentRateResponse | null;
+  dynamicBands: BandDefinition[];
 }
 
 const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
   alertPrefs,
   onAlertPrefsChange,
+  currentRateData,
+  dynamicBands,
 }) => {
-  const [currentRateData, setCurrentRateData] = useState<CurrentRateResponse | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const { toast } = useToast();
-  const [currentBand, setCurrentBand] = useState<Band | undefined>(undefined);
+  const [currentBand, setCurrentBand] = useState<BandDefinition | undefined | null>(undefined);
   const prevBandRef = useRef<BandName | undefined>(undefined);
   
   const rate = currentRateData?.rates?.THB;
+  const lastUpdated = currentRateData?.date ? new Date(currentRateData.date) : null;
+  const isLoading = currentRateData === null; // Determine loading state from prop
 
-  const fetchRate = useCallback(async () => {
-    setIsLoading(true);
-    const data = await fetchCurrentUsdToThbRate();
-    if (data && data.rates && typeof data.rates.THB === 'number') {
-      setCurrentRateData(data);
-      setLastUpdated(new Date(data.date)); 
-      const newBand = getBandFromRate(data.rates.THB);
+  useEffect(() => {
+    if (rate !== undefined && dynamicBands && dynamicBands.length > 0) {
+      const newBand = classifyRateToBand(rate, dynamicBands);
       setCurrentBand(newBand);
     } else {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to fetch current exchange rate.",
-      });
+      setCurrentBand(undefined);
     }
-    setIsLoading(false);
-  }, [toast]);
-
-  useEffect(() => {
-    fetchRate();
-    const intervalId = setInterval(fetchRate, 3600000); // Refresh every hour
-    return () => clearInterval(intervalId);
-  }, [fetchRate]);
+  }, [rate, dynamicBands]);
 
 
   useEffect(() => {
-    if (currentBand && rate !== undefined && alertPrefs[currentBand.name]) {
-      if (currentBand.name !== prevBandRef.current && ['EXTREME', 'DEEP', 'OPPORTUNE'].includes(currentBand.name)) {
+    if (currentBand && currentBand.level && rate !== undefined && alertPrefs[currentBand.level]) {
+      const currentBandName = currentBand.level as BandName;
+      if (currentBandName !== prevBandRef.current && ['EXTREME', 'DEEP', 'OPPORTUNE'].includes(currentBandName)) {
          toast({
             title: `Rate Alert: ${currentBand.displayName} Zone!`,
             description: `USD/THB at ${rate.toFixed(4)}. Suggestion: ${currentBand.action}`,
-            variant: currentBand.name === 'EXTREME' ? 'destructive' : 'default',
-            className: currentBand.toastClass
+            variant: currentBandName === 'EXTREME' ? 'destructive' : 'default',
+            className: currentBand.colorConfig.toastClass
          });
       }
+      prevBandRef.current = currentBandName;
+    } else {
+      prevBandRef.current = undefined;
     }
-    prevBandRef.current = currentBand?.name;
   }, [currentBand, rate, alertPrefs, toast]);
 
   const handleAlertPrefChange = (bandName: BandName, checked: boolean) => {
@@ -81,7 +78,7 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
 
   const formatLastUpdatedDate = (date: Date | null): string => {
     if (!date) return "N/A";
-    const d = new Date(date);
+    const d = new Date(date); // Ensure it's a Date object
     const year = d.getFullYear();
     const month = (d.getMonth() + 1).toString().padStart(2, '0');
     const day = d.getDate().toString().padStart(2, '0');
@@ -111,20 +108,20 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
         </div>
 
         {currentBand && !isLoading && rate !== undefined && (
-          <Card className={`shadow-md border-t-4 ${currentBand.borderColorClass} rounded-lg`}>
+          <Card className={`shadow-md border-t-4 ${currentBand.colorConfig.borderColorClass} rounded-lg`}>
             <CardContent className="p-4 space-y-2">
               <div className="flex items-start justify-between">
-                <Badge className={`${currentBand.badgeClass} text-sm px-3 py-1 shrink-0`}>
+                <Badge className={`${currentBand.colorConfig.badgeClass} text-sm px-3 py-1 shrink-0`}>
                   {currentBand.displayName}
                 </Badge>
                 
-                {(currentBand.rangeDisplay || currentBand.probability) && (
+                {(currentBand.rangeDisplay || currentBand.probability !== undefined) && (
                   <div className="text-xs text-muted-foreground text-right space-y-0.5 pl-2">
                     {currentBand.rangeDisplay && (
                       <p>Rate Range: {currentBand.rangeDisplay}</p>
                     )}
-                    {currentBand.probability && (
-                      <p className="font-medium">Historical Odds: {currentBand.probability}</p>
+                    {currentBand.probability !== undefined && (
+                      <p className="font-medium">Historical Odds: ≈ {(currentBand.probability * 100).toFixed(0)}%</p>
                     )}
                   </div>
                 )}
@@ -158,13 +155,14 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
                 </div>
                 <div className="grid gap-3 pl-2">
                 {(Object.keys(alertPrefs) as BandName[]).map((bandKey) => {
-                    const band = BANDS.find(b => b.name === bandKey);
-                    if (!band) return null;
-                    const bandLabel = `${band.displayName} Band`;
+                    const staticBandDetails = BANDS.find(b => b.name === bandKey);
+                    if (!staticBandDetails) return null; // Should not happen if BandName is correct
+                    // For display in popover, using static band details for consistency in label naming
+                    const bandLabel = `${staticBandDetails.displayName} Band`;
                     return (
                     <div key={`alert-${bandKey}`} className="flex items-center justify-between p-2 rounded-md hover:bg-muted/50 transition-colors">
                         <Label htmlFor={`alert-${bandKey.toLowerCase()}`} className="flex items-center space-x-3 cursor-pointer">
-                        <span className={`w-3 h-3 rounded-full ${band.badgeClass.split(' ')[0]}`}></span>
+                        <span className={`w-3 h-3 rounded-full ${staticBandDetails.colorConfig.badgeClass.split(' ')[0]}`}></span>
                         <span className="text-sm font-medium text-foreground">{bandLabel}</span>
                         </Label>
                         <Switch
@@ -172,14 +170,13 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
                         checked={alertPrefs[bandKey]}
                         onCheckedChange={(checked) => handleAlertPrefChange(bandKey, checked)}
                         aria-label={`Toggle alerts for ${bandLabel}`}
-                        className={`${band.switchColorClass} data-[state=unchecked]:bg-input`}
+                        className={`${staticBandDetails.colorConfig.switchColorClass} data-[state=unchecked]:bg-input`}
                         />
                     </div>
                     );
                 })}
                 </div>
             </div>
-            {/* Chart preferences removed from here */}
           </PopoverContent>
         </Popover>
       </CardFooter>
