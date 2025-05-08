@@ -59,7 +59,7 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
   useEffect(() => {
     const intervalId = setInterval(() => {
       fetchRate();
-    }, 10000); // Changed from 60000 (60 seconds) to 10000 (10 seconds)
+    }, 3600000); // Changed from 10000 (10 seconds) to 3600000 (1 hour)
 
     return () => clearInterval(intervalId);
   }, [fetchRate]);
