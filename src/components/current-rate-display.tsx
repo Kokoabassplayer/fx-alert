@@ -86,6 +86,15 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
   const displayRate = rate !== undefined ? rate.toFixed(4) : "N/A";
   const rateColorClass = currentBand ? "text-foreground" : "text-muted-foreground"; 
 
+  const formatLastUpdatedDate = (date: Date | null): string => {
+    if (!date) return "N/A";
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    return `${year}${month}${day}`;
+  };
+
+
   return (
     <Card className="overflow-hidden shadow-lg rounded-xl">
       <CardHeader className="bg-card/50">
@@ -102,7 +111,7 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
           </div>
           {lastUpdated && (
             <p className="text-xs text-muted-foreground mt-1">
-              As of: {lastUpdated.toLocaleDateString()}
+              As of: {formatLastUpdatedDate(lastUpdated)}
             </p>
           )}
         </div>
@@ -184,4 +193,5 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
 };
 
 export default CurrentRateDisplay;
+
 
