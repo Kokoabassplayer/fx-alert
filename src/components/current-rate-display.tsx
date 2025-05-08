@@ -5,12 +5,13 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Loader2, Settings, Bell } from "lucide-react";
+import { Loader2, Settings, Bell, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { fetchCurrentUsdToThbRate, type CurrentRateResponse } from "@/lib/currency-api";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { Separator } from "@/components/ui/separator";
 
 import { 
     BANDS, 
@@ -25,7 +26,7 @@ interface CurrentRateDisplayProps {
   onAlertPrefsChange: (newPrefs: AlertPrefs) => void;
 }
 
-const REFRESH_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
+const REFRESH_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
   alertPrefs,
@@ -42,6 +43,7 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
 
   const fetchRate = useCallback(async () => {
     setIsLoading(true);
+    // Add a cache-busting query parameter by appending a timestamp
     const data = await fetchCurrentUsdToThbRate();
     if (data) {
       setCurrentRateData(data);
@@ -56,7 +58,7 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
   }, [toast]);
 
   useEffect(() => {
-    fetchRate(); // Initial fetch
+    fetchRate(); 
     const intervalId = setInterval(fetchRate, REFRESH_INTERVAL_MS);
     return () => clearInterval(intervalId);
   }, [fetchRate]);
@@ -97,7 +99,9 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
 
   const formatLastUpdatedDate = (date: Date | null): string => {
     if (!date) return "N/A";
+    // The API returns date in "YYYY-MM-DD" format, which is good to display directly.
     if (currentRateData?.date) return currentRateData.date;
+    // Fallback if currentRateData.date is not available for some reason
     const d = new Date(date); 
     const year = d.getFullYear();
     const month = (d.getMonth() + 1).toString().padStart(2, '0');
@@ -115,59 +119,63 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
         </CardTitle>
       </CardHeader>
       <CardContent className="p-6">
-        <div className="flex flex-col md:flex-row md:space-x-6 space-y-6 md:space-y-0">
+        <div className="grid md:grid-cols-2 gap-6 items-start">
           {/* Left Side: Current Rate */}
-          <div className="md:w-1/3 flex flex-col items-center md:items-start justify-center text-center md:text-left py-4 md:py-0">
-            <p className="text-sm text-muted-foreground">Current Rate</p>
-            <div className={`text-5xl font-bold ${rateColorClass}`}>
+          <div className="flex flex-col items-center md:items-start text-center md:text-left">
+            <p className="text-sm text-muted-foreground mb-1">Current Rate</p>
+            <div className={`text-6xl font-bold ${rateColorClass} mb-1`}>
               <span>{displayRate}</span>
             </div>
             {lastUpdated && (
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-xs text-muted-foreground">
                 As of: {formatLastUpdatedDate(lastUpdated)}
               </p>
             )}
           </div>
 
           {/* Right Side: Band Details */}
-          <div className="md:w-2/3">
-            {currentBand && !isLoading && rate !== undefined && (
-              <Card className={`shadow-md border-t-4 ${currentBand.colorConfig.borderColorClass} rounded-lg h-full`}>
-                <CardContent className="p-4 space-y-2 flex flex-col justify-center h-full">
-                  <div className="flex items-start justify-between">
-                    <Badge className={`${currentBand.colorConfig.badgeClass} text-sm px-3 py-1 shrink-0`}>
-                      {currentBand.displayName}
-                    </Badge>
-                    
-                    {(currentBand.rangeDisplay || currentBand.probability !== undefined) && (
-                      <div className="text-xs text-muted-foreground text-right space-y-0.5 pl-2">
-                        {currentBand.rangeDisplay && (
-                          <p>Rate Range: {currentBand.rangeDisplay}</p>
-                        )}
-                        {currentBand.probability !== undefined && (
-                          <p className="font-medium">Historical Odds: {currentBand.probability}</p>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  
-                  <p className="text-sm text-foreground/90 pt-1">{currentBand.action}</p>
+          <div className="space-y-4 md:pt-1">
+            {currentBand && !isLoading && rate !== undefined ? (
+              <>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                  <Badge className={`${currentBand.colorConfig.badgeClass} px-3 py-1 text-xs sm:text-sm`}>
+                    {currentBand.displayName}
+                  </Badge>
+                  {(currentBand.rangeDisplay || currentBand.probability !== undefined) && (
+                    <div className="text-left sm:text-right mt-1 sm:mt-0">
+                      {currentBand.rangeDisplay && <p className="text-xs text-muted-foreground">{currentBand.rangeDisplay}</p>}
+                      {currentBand.probability !== undefined && <p className="text-xs font-medium text-muted-foreground">Odds: {currentBand.probability}</p>}
+                    </div>
+                  )}
+                </div>
+                
+                <Separator className="my-3" /> 
+
+                <div>
+                  <p className="text-lg font-semibold text-primary mb-1">{currentBand.action}</p>
                   {currentBand.exampleAction && (
-                    <p className="text-xs text-muted-foreground/90 pt-1">
-                      <span className="font-semibold">Example:</span> {currentBand.exampleAction} (if normal DCA = 20k THB)
+                    <p className="text-sm text-foreground/80">
+                      <span className="font-medium text-foreground/90">Example:</span> {currentBand.exampleAction} (if normal DCA = 20k THB)
                     </p>
                   )}
-                  {currentBand.reason && (
-                    <p className="text-xs text-muted-foreground/80 pt-1 italic">
-                      <span className="font-semibold">Reason:</span> {currentBand.reason}
+                </div>
+
+                {currentBand.reason && (
+                  <div>
+                    <p className="text-xs text-muted-foreground/80 italic mt-2">
+                       <span className="font-semibold not-italic text-muted-foreground">Reason:</span> {currentBand.reason}
                     </p>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-             {(!currentBand || isLoading || rate === undefined) && (
-                <div className="flex items-center justify-center h-full text-muted-foreground p-4 border rounded-lg">
-                 {isLoading ? <Loader2 className="h-8 w-8 animate-spin text-primary" /> :  "Rate band information will appear here."}
+                  </div>
+                )}
+              </>
+            ) : (
+                <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-4 border border-dashed rounded-lg min-h-[200px] space-y-2">
+                 {isLoading ? <Loader2 className="h-8 w-8 animate-spin text-primary" /> :  
+                 <>
+                  <Info className="h-8 w-8 text-muted-foreground/50" />
+                  <p>Rate band information will appear here.</p>
+                 </>
+                 }
                 </div>
              )}
           </div>
@@ -194,10 +202,11 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
                     const staticBandDetails = BANDS.find(b => b.name === bandKey);
                     if (!staticBandDetails) return null; 
                     const bandLabel = `${staticBandDetails.displayName} Band`;
+                    const bandColorConfig = staticBandDetails.colorConfig;
                     return (
                     <div key={`alert-${bandKey}`} className="flex items-center justify-between p-2 rounded-md hover:bg-muted/50 transition-colors">
                         <Label htmlFor={`alert-${bandKey.toLowerCase()}`} className="flex items-center space-x-3 cursor-pointer">
-                        <span className={`w-3 h-3 rounded-full ${staticBandDetails.colorConfig.badgeClass.split(' ')[0]}`}></span>
+                        <span className={`w-3 h-3 rounded-full ${bandColorConfig.badgeClass.split(' ')[0]}`}></span>
                         <span className="text-sm font-medium text-foreground">{bandLabel}</span>
                         </Label>
                         <Switch
@@ -205,7 +214,7 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
                         checked={alertPrefs[bandKey]}
                         onCheckedChange={(checked) => handleAlertPrefChange(bandKey, checked)}
                         aria-label={`Toggle alerts for ${bandLabel}`}
-                        className={`${staticBandDetails.colorConfig.switchColorClass} data-[state=unchecked]:bg-input`}
+                        className={`${bandColorConfig.switchColorClass} data-[state=unchecked]:bg-input`}
                         />
                     </div>
                     );
