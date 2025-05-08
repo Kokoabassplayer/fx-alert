@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { FC } from 'react';
@@ -14,6 +15,7 @@ import {
   classifyRateToBand, 
   type BandName,
   type BandDefinition,
+  getStaticBandColorConfig, 
 } from "@/lib/bands";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -34,23 +36,23 @@ interface BandUIDefinition {
 }
 
 const BandLabel: FC<{ viewBox?: { x?: number; y?: number, height?: number }; value: string; textColorCssVar: string }> = ({ viewBox, value, textColorCssVar }) => {
-  if (!viewBox || typeof viewBox.x === 'undefined' || typeof viewBox.y === 'undefined') {
+  if (!viewBox || typeof viewBox.x === 'undefined' || typeof viewBox.y === 'undefined' || typeof viewBox.height === 'undefined') {
     return null;
   }
-  const { x, y } = viewBox;
-  const dx = 10; // padding from the left edge of the chart
-  const dy = (viewBox?.height ?? 20) / 2 + 5; // Vertically center the label within the band area
+  const { x, y, height } = viewBox;
+  const dx = 10; 
+  const dy = height / 2;
 
   return (
     <text
       x={x + dx}
       y={y + dy}
-      fill={textColorCssVar} // Use the CSS variable directly
+      fill={`hsl(${textColorCssVar})`} 
       fontSize={11}
       fontWeight="bold"
       textAnchor="start"
       dominantBaseline="middle"
-      className="pointer-events-none" // Ensure labels don't interfere with tooltips
+      className="pointer-events-none" 
     >
       {value}
     </text>
@@ -75,14 +77,15 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({
 
   const bandUIDefinitions = useMemo((): BandUIDefinition[] => {
     return BANDS.map(b => {
+      const colorConfig = getStaticBandColorConfig(b.name); // Use the utility here
       return {
         level: b.name,
         displayName: b.displayName,
         y1: b.minRate ?? undefined,
         y2: b.maxRate ?? undefined,
-        fillVar: b.colorConfig.chartSettings.fillVar,
-        strokeVar: b.colorConfig.chartSettings.strokeVar,
-        labelTextColorVar: b.colorConfig.chartSettings.labelTextColorVar,
+        fillVar: colorConfig.chartSettings.fillVar,
+        strokeVar: colorConfig.chartSettings.strokeVar,
+        labelTextColorVar: colorConfig.chartSettings.labelTextColorVar,
         tooltipLabel: b.displayName,
       };
     });
@@ -153,7 +156,7 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({
   const CustomTooltip: FC<any> = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       const rateValue = payload[0].value;
-      const bandForTooltip = classifyRateToBand(rateValue); // Ensure this uses the current dynamic bands if applicable
+      const bandForTooltip = classifyRateToBand(rateValue);
 
 
       return (
@@ -178,7 +181,7 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({
     if (periodInDays === 365) return "1-Year Trend";
     if (periodInDays === (5 * 365)) return "5-Year Trend";
     if (periodInDays === -1) { 
-        const defaultStartYear = "1999"; 
+        const defaultStartYear = "2005"; 
         const startYear = chartData.length > 0 ? new Date(chartData[0].date).getFullYear() : defaultStartYear;
         const endYear = chartData.length > 0 ? new Date(chartData[chartData.length -1].date).getFullYear() : new Date().getFullYear();
         if (startYear === defaultStartYear && chartData.length === 0) return "Historical Trend (Since Inception)"
@@ -205,7 +208,7 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({
               <SelectItem value="180">180 Days</SelectItem>
               <SelectItem value="365">1 Year</SelectItem>
               <SelectItem value={(5 * 365).toString()}>5 Years</SelectItem>
-              <SelectItem value="-1">Since Inception (1999-Present)</SelectItem>
+              <SelectItem value="-1">Since Inception (2005-Present)</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -238,15 +241,38 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({
                 tickLine={{ stroke: 'hsl(var(--border))' }}
                 axisLine={{ strokeWidth: 1, stroke: 'hsl(var(--border))' }}
                 allowDataOverflow={true}
-                width={60} 
-                label={{ value: 'THB/USD', angle: -90, position: 'insideLeft', fill: 'hsl(var(--foreground))', fontSize: 12, dy: 40, dx: -25 }} 
+                width={70}  // Increased width to accommodate the label
+                label={{ 
+                    value: 'THB/USD', 
+                    angle: -90, 
+                    position: 'insideLeft', 
+                    fill: 'hsl(var(--foreground))', 
+                    fontSize: 12, 
+                    dy: 40, // Adjust dy to position label correctly relative to axis
+                    dx: -15  // Adjust dx to position label correctly
+                }} 
               />
               <Tooltip content={<CustomTooltip />} />
 
               {bandUIDefinitions.map((bandDef) => {
                 if (alertPrefs[bandDef.level]) {
-                  const y1Actual = bandDef.y1 ?? yAxisDomain[0];
-                  const y2Actual = bandDef.y2 ?? yAxisDomain[1];
+                  let y1Actual = bandDef.y1 ?? yAxisDomain[0];
+                  let y2Actual = bandDef.y2 ?? yAxisDomain[1];
+                  
+                  const isExtremeBand = bandDef.level === "EXTREME";
+                  const minDataRate = chartData.length > 0 ? Math.min(...chartData.map(d => d.rate)) : yAxisDomain[0];
+
+                  if (isExtremeBand) {
+                    const chartHeight = yAxisDomain[1] - yAxisDomain[0];
+                    // If y2 is naturally null (topmost band) or above the data, cap its visual representation.
+                    // Or if minRate is significantly above the band's defined y2, making it too tall.
+                    if (bandDef.y2 === null || (bandDef.y2 && minDataRate > bandDef.y2 + chartHeight * 0.1) ) {
+                         y2Actual = Math.min(y2Actual, y1Actual + chartHeight * 0.20); // Cap height to 20% of chart
+                    } else if (bandDef.y2) {
+                         y2Actual = Math.min(y2Actual, bandDef.y2); // Use defined maxRate if sensible
+                    }
+                  }
+
 
                   const finalY1 = Math.min(y1Actual, y2Actual);
                   const finalY2 = Math.max(y1Actual, y2Actual);
@@ -254,19 +280,22 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({
                   if (finalY1 >= finalY2 && !(bandDef.level === "RICH" && finalY1 === yAxisDomain[1])) {
                      if (bandDef.level === "RICH" && finalY1 > yAxisDomain[1]) return null; 
                   }
+                  
+                  const bandColorConfig = getStaticBandColorConfig(bandDef.level);
+
 
                   return (
                     <ReferenceArea
                       key={bandDef.level}
                       y1={finalY1}
                       y2={finalY2}
-                      fill={bandDef.fillVar} // Use CSS variable for fill
-                      stroke={bandDef.strokeVar} // Use CSS variable for stroke
-                      strokeWidth={0.5} // Minimal stroke for definition if needed, or 0
-                      fillOpacity={1} // CSS variable already has alpha
-                      strokeOpacity={1} // CSS variable already has alpha for border
+                      fill={bandColorConfig.chartSettings.fillVar} 
+                      stroke={bandColorConfig.chartSettings.strokeVar} 
+                      strokeWidth={0.5} 
+                      fillOpacity={1} 
+                      strokeOpacity={1} 
                       ifOverflow="visible" 
-                      label={<BandLabel value={bandDef.displayName} textColorCssVar={bandDef.labelTextColorVar} />}
+                      label={<BandLabel value={bandDef.displayName} textColorCssVar={bandColorConfig.chartSettings.labelTextColorVar} />}
                     />
                   );
                 }

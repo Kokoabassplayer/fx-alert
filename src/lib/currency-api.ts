@@ -60,13 +60,11 @@ export async function fetchCurrentUsdToThbRate(): Promise<CurrentRateResponse | 
       return null;
     }
     
-    // More robust check for Frankfurter API's actual success/error structure
     if (typeof data !== 'object' || data === null) {
         console.warn("API response for current rate was not a non-null object:", data);
         return null;
     }
     
-    // Frankfurter API returns the data directly, not nested under 'success'
     if (!data.rates || typeof data.rates.THB !== 'number') {
       console.error("Invalid data format or structure for current rate:", data);
       return null;
@@ -75,7 +73,6 @@ export async function fetchCurrentUsdToThbRate(): Promise<CurrentRateResponse | 
     return data as CurrentRateResponse;
 
   } catch (error) { 
-    // Catching network errors or other issues during fetch
     console.error("Generic error fetching current rate:", error);
     return null;
   }
@@ -90,7 +87,7 @@ export async function fetchUsdToThbRateHistory(days: number = 90): Promise<Forma
   let startDate: string;
 
   if (days === -1) { // "Since Inception"
-    startDate = "1999-01-01"; // Frankfurter API earliest date
+    startDate = "2005-01-01"; // Frankfurter API earliest date with consistent data for THB
   } else {
     const pastDate = new Date();
     pastDate.setDate(today.getDate() - days);
@@ -98,7 +95,6 @@ export async function fetchUsdToThbRateHistory(days: number = 90): Promise<Forma
   }
   const endDate = formatDateForApi(today);
   
-  // Ensure start_date is not after end_date, which can happen if 'days' is very small or 0
   if (new Date(startDate) > new Date(endDate)) {
     console.warn(`Start date ${startDate} is after end date ${endDate}. Returning empty history.`);
     return [];
@@ -109,8 +105,6 @@ export async function fetchUsdToThbRateHistory(days: number = 90): Promise<Forma
   try {
     const response = await fetch(
       apiUrl,
-      // Consider 'no-store' if fresh data is always critical, or 'force-cache'/'default' if staleness is acceptable.
-      // For historical data that doesn't change, default caching is fine.
       { cache: 'no-store' } 
     );
     if (!response.ok) {
@@ -122,7 +116,7 @@ export async function fetchUsdToThbRateHistory(days: number = 90): Promise<Forma
       return [];
     }
     
-    let data: any; // Use 'any' temporarily to inspect the structure before casting
+    let data: any; 
     try {
       data = await response.json();
     } catch (jsonError) {
@@ -134,13 +128,11 @@ export async function fetchUsdToThbRateHistory(days: number = 90): Promise<Forma
       return [];
     }
 
-    // More robust check for Frankfurter API's actual success/error structure
     if (typeof data !== 'object' || data === null) {
         console.warn("API response for rate history was not a non-null object:", data);
         return [];
     }
     
-    // Frankfurter API returns the data directly, not nested under 'success'
     if (!data.rates || typeof data.rates !== 'object') {
       console.error("Invalid data format or structure for rate history (e.g. missing rates object):", data);
       return [];
@@ -149,17 +141,15 @@ export async function fetchUsdToThbRateHistory(days: number = 90): Promise<Forma
     const historicalData = data as HistoricalRateResponse;
 
     if (Object.keys(historicalData.rates).length === 0) {
-      // console.warn("Historical rate data is empty."); // Can be too noisy if API returns no data for short recent periods
       return [];
     }
 
     const formattedData = Object.entries(historicalData.rates)
       .map(([date, rateData]) => ({
         date,
-        // Ensure rateData and rateData.THB exist and are numbers
         rate: (rateData && typeof rateData.THB === 'number') ? rateData.THB : 0, 
       }))
-      .filter(item => item.rate > 0) // Filter out entries with rate 0 or if THB was missing
+      .filter(item => item.rate > 0) 
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
       
     return formattedData;
