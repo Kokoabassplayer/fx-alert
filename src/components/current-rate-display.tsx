@@ -47,7 +47,7 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
         title: "Error",
         description: "Failed to fetch current exchange rate.",
       });
-      setCurrentBand(undefined);
+      // Do not clear currentBand if API fails, retain last known good band
     }
     setIsLoading(false);
   }, [toast]);
@@ -59,7 +59,7 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
   useEffect(() => {
     const intervalId = setInterval(() => {
       fetchRate();
-    }, 60000); // 60 seconds
+    }, 10000); // Changed from 60000 (60 seconds) to 10000 (10 seconds)
 
     return () => clearInterval(intervalId);
   }, [fetchRate]);
@@ -67,7 +67,6 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
   // Notification Hook
   useEffect(() => {
     if (currentBand && rate !== undefined && alertPrefs[currentBand.name]) {
-      // Notify only for actionable bands and if the band has changed
       if (currentBand.name !== prevBandRef.current && ['EXTREME', 'DEEP', 'OPPORTUNE'].includes(currentBand.name)) {
          toast({
             title: `Rate Alert: ${currentBand.displayName} Zone!`,
