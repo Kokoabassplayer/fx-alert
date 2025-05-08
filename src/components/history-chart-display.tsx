@@ -1,4 +1,3 @@
-
 // src/components/history-chart-display.tsx
 
 "use client";
@@ -12,11 +11,12 @@ import { fetchUsdToThbRateHistory, type FormattedHistoricalRate } from "@/lib/cu
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceArea, CartesianGrid } from 'recharts';
 import { Badge } from '@/components/ui/badge';
 import { BANDS, type AlertPrefs, type BandName, getBandFromRate, type Band } from "@/lib/bands";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from '@/components/ui/label';
 
 
 interface HistoryChartDisplayProps {
   alertPrefs: AlertPrefs;
-  periodInDays: number;
 }
 
 interface BandUIDefinition {
@@ -30,7 +30,6 @@ interface BandUIDefinition {
   tooltipLabel?: string;
 }
 
-// Custom Label component for ReferenceArea
 const BandLabel: FC<{ viewBox?: { x?: number; y?: number }; value: string; fill: string }> = ({ viewBox, value, fill }) => {
   if (!viewBox || typeof viewBox.x === 'undefined' || typeof viewBox.y === 'undefined') {
     return null; 
@@ -54,10 +53,13 @@ const BandLabel: FC<{ viewBox?: { x?: number; y?: number }; value: string; fill:
 };
 
 
-const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ alertPrefs, periodInDays }) => {
+const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ alertPrefs }) => {
   const [chartData, setChartData] = useState<FormattedHistoricalRate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  const [selectedPeriod, setSelectedPeriod] = useState<string>("90"); // Default to 90 days
+
+  const periodInDays = useMemo(() => parseInt(selectedPeriod, 10), [selectedPeriod]);
 
   const bandUIDefinitions = useMemo((): BandUIDefinition[] => {
     return BANDS.map(b => ({
@@ -80,7 +82,6 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ alertPrefs, periodI
       setChartData(data);
     } else {
       setChartData([]);
-      // Only toast if it wasn't loading and there was data before, to avoid spamming on initial load or if no data exists for a period
       if(!isLoading && chartData.length > 0) { 
         toast({
           variant: "destructive",
@@ -94,8 +95,7 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ alertPrefs, periodI
 
   useEffect(() => {
     fetchHistory();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [periodInDays]); 
+  }, [fetchHistory]); 
 
 
   const yAxisDomain = useMemo(() => {
@@ -124,22 +124,18 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ alertPrefs, periodI
       overallMax = Math.max(maxDataRate, ...activeBandNumericBoundaries);
     }
 
-    // Handle cases where there's no data or no active bands
     if (chartData.length === 0 && activeBandNumericBoundaries.length === 0) {
-        // Default domain if nothing else to base it on
         overallMin = 28;
         overallMax = 38;
     } else if (chartData.length > 0 && activeBandNumericBoundaries.length === 0) {
         // Domain from data only
     } else if (chartData.length === 0 && activeBandNumericBoundaries.length > 0) {
-        // Domain from bands only
         overallMin = Math.min(...activeBandNumericBoundaries);
         overallMax = Math.max(...activeBandNumericBoundaries);
     }
 
-    // Add padding to the domain
     const range = overallMax - overallMin;
-    const padding = range === 0 ? 1 : range * 0.05; // 5% padding, or 1 if range is 0
+    const padding = range === 0 ? 1 : range * 0.05; 
 
     return [parseFloat((overallMin - padding).toFixed(2)), parseFloat((overallMax + padding).toFixed(2))] as [number, number];
 
@@ -166,7 +162,8 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ alertPrefs, periodI
   };
 
   const chartTitle = useMemo(() => {
-    switch (periodInDays) {
+    const currentPeriodInDays = parseInt(selectedPeriod, 10);
+    switch (currentPeriodInDays) {
       case 30: return "30-Day Trend";
       case 90: return "90-Day Trend";
       case 180: return "180-Day Trend";
@@ -175,19 +172,32 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ alertPrefs, periodI
       case -1: return "Trend Since Inception (2005)";
       default: return "Historical Trend";
     }
-  }, [periodInDays]);
+  }, [selectedPeriod]);
 
   return (
     <Card className="overflow-hidden shadow-lg rounded-xl">
-      <CardHeader className="bg-card/50">
-        <CardTitle className="flex items-center justify-between text-primary">
-          <span>{chartTitle}</span>
-          <div className="flex items-center space-x-2">
-            {isLoading && <Loader2 className="h-5 w-5 animate-spin text-primary" />}
-          </div>
+      <CardHeader className="bg-card/50 flex flex-row items-center justify-between">
+        <CardTitle className="text-primary">
+          {chartTitle}
         </CardTitle>
+        <div className="flex items-center space-x-2">
+           {isLoading && <Loader2 className="h-5 w-5 animate-spin text-primary" />}
+           <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+            <SelectTrigger id="chart-period-select" className="w-[180px] h-9">
+              <SelectValue placeholder="Select period" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="30">30 Days</SelectItem>
+              <SelectItem value="90">90 Days</SelectItem>
+              <SelectItem value="180">180 Days</SelectItem>
+              <SelectItem value="365">1 Year</SelectItem>
+              <SelectItem value={(5 * 365).toString()}>5 Years</SelectItem>
+              <SelectItem value="-1">Since Inception (2005)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </CardHeader>
-      <CardContent className="pt-6 pb-2 bg-background"> {/* Ensure background is not card for contrast */}
+      <CardContent className="pt-6 pb-2 bg-background">
         {isLoading && chartData.length === 0 ? (
           <div className="h-[300px] flex items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -207,27 +217,24 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ alertPrefs, periodI
                 tickLine={false}
                 axisLine={{ stroke: 'hsl(var(--border))' }}
                 interval="preserveStartEnd"
-                minTickGap={30} // Adjust for better label spacing
+                minTickGap={30}
               />
               <YAxis
                 domain={yAxisDomain}
                 tickFormatter={(value) => typeof value === 'number' ? value.toFixed(2) : ''}
                 tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
                 tickLine={false}
-                axisLine={{ strokeWidth: 0 }} // Hide Y-axis line itself
+                axisLine={{ strokeWidth: 0 }}
                 allowDataOverflow={true}
-                width={50} // Increased width for label
+                width={50}
                 label={{ value: 'THB/USD', angle: -90, position: 'insideLeft', fill: 'hsl(var(--muted-foreground))', fontSize: 12, dy: 40, dx: -10 }}
               />
               <Tooltip content={<CustomTooltip />} />
 
-              {/* Reference Areas for Bands */}
               {bandUIDefinitions.map((bandDef) => {
                 if (alertPrefs[bandDef.name]) {
                   const y1Actual = bandDef.y1 ?? yAxisDomain[0];
                   const y2Actual = bandDef.y2 ?? yAxisDomain[1];
-
-                  // Ensure y1 is less than y2 for ReferenceArea
                   const finalY1 = Math.min(y1Actual, y2Actual);
                   const finalY2 = Math.max(y1Actual, y2Actual);
                   
@@ -238,10 +245,10 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ alertPrefs, periodI
                       y2={finalY2}
                       fill={bandDef.fillVar}
                       stroke={bandDef.strokeVar}
-                      strokeWidth={0.5} // Reduced for subtlety
+                      strokeWidth={0.5}
                       fillOpacity={1} 
                       strokeOpacity={1}
-                      ifOverflow="visible" // Allows label to be drawn outside
+                      ifOverflow="visible"
                       label={<BandLabel value={bandDef.displayName} fill={`hsl(${bandDef.labelTextColorVar})`} />}
                     />
                   );
@@ -254,7 +261,7 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ alertPrefs, periodI
                 dataKey="rate"
                 stroke="hsl(var(--primary))"
                 strokeWidth={2}
-                dot={{ r: 0 }} // Hide dots for a cleaner line
+                dot={{ r: 0 }} 
                 activeDot={{ r: 5, stroke: 'hsl(var(--background))', strokeWidth: 2, fill: 'hsl(var(--primary))' }}
                 name="USD/THB Rate"
               />
@@ -267,4 +274,3 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ alertPrefs, periodI
 };
 
 export default HistoryChartDisplay;
-

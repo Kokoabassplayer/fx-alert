@@ -1,4 +1,3 @@
-
 "use client";
 
 import type { FC } from 'react';
@@ -6,13 +5,12 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Loader2, Settings, Bell, LineChart as LineChartIcon } from "lucide-react";
+import { Loader2, Settings, Bell } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { fetchCurrentUsdToThbRate, type CurrentRateResponse } from "@/lib/currency-api";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 
 import { getBandFromRate, BANDS, type Band, type AlertPrefs, type BandName, FULL_ANALYSIS_DATA } from "@/lib/bands";
@@ -20,15 +18,11 @@ import { getBandFromRate, BANDS, type Band, type AlertPrefs, type BandName, FULL
 interface CurrentRateDisplayProps {
   alertPrefs: AlertPrefs;
   onAlertPrefsChange: (newPrefs: AlertPrefs) => void;
-  chartPeriod: string;
-  onChartPeriodChange: (newPeriod: string) => void;
 }
 
 const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
   alertPrefs,
   onAlertPrefsChange,
-  chartPeriod,
-  onChartPeriodChange,
 }) => {
   const [currentRateData, setCurrentRateData] = useState<CurrentRateResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -87,7 +81,6 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
 
   const formatLastUpdatedDate = (date: Date | null): string => {
     if (!date) return "N/A";
-    // Ensure date is a Date object
     const d = new Date(date);
     const year = d.getFullYear();
     const month = (d.getMonth() + 1).toString().padStart(2, '0');
@@ -152,7 +145,7 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
           <PopoverTrigger asChild>
             <Button variant="ghost" className="w-full justify-start text-muted-foreground hover:text-primary hover:bg-primary/5">
               <Settings className="mr-2 h-4 w-4" />
-              Preferences
+              Alert Preferences
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-80 sm:w-96 shadow-xl rounded-lg p-4 space-y-4">
@@ -160,7 +153,7 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
                 <div className="space-y-1 mb-3">
                     <h4 className="font-medium leading-none text-primary flex items-center"><Bell className="mr-2 h-4 w-4" />Alert Preferences</h4>
                     <p className="text-xs text-muted-foreground ml-6">
-                        Manage notification visibility.
+                        Manage notification visibility for rate bands.
                     </p>
                 </div>
                 <div className="grid gap-3 pl-2">
@@ -186,31 +179,7 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
                 })}
                 </div>
             </div>
-            <Separator />
-             <div>
-                <div className="space-y-1 mb-3">
-                    <h4 className="font-medium leading-none text-primary flex items-center"><LineChartIcon className="mr-2 h-4 w-4" />Chart Preferences</h4>
-                     <p className="text-xs text-muted-foreground ml-6">
-                        Select historical data period.
-                    </p>
-                </div>
-                <div className="flex justify-between items-center space-x-2 mt-2 pl-2 p-2 rounded-md hover:bg-muted/50 transition-colors">
-                  <Label htmlFor="chart-period-select" className="text-sm font-medium text-foreground">Period:</Label>
-                  <Select value={chartPeriod} onValueChange={onChartPeriodChange}>
-                    <SelectTrigger id="chart-period-select" className="w-[180px] h-9">
-                      <SelectValue placeholder="Select period" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="30">30 Days</SelectItem>
-                      <SelectItem value="90">90 Days</SelectItem>
-                      <SelectItem value="180">180 Days</SelectItem>
-                      <SelectItem value="365">1 Year</SelectItem>
-                      <SelectItem value={(5 * 365).toString()}>5 Years</SelectItem>
-                      <SelectItem value="-1">Since Inception (2005)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-            </div>
+            {/* Chart preferences removed from here */}
           </PopoverContent>
         </Popover>
       </CardFooter>
@@ -219,4 +188,3 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
 };
 
 export default CurrentRateDisplay;
-

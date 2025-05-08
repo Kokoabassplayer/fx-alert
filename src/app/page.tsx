@@ -12,11 +12,6 @@ import { DEFAULT_ALERT_PREFS } from '@/lib/bands';
 
 const UsdThbMonitorPage: FC = () => {
   const [alertPrefs, setAlertPrefs] = useLocalStorage<AlertPrefs>("alertPrefs", DEFAULT_ALERT_PREFS);
-  const [chartPeriod, setChartPeriod] = useState<string>("90"); // Default to 90 days
-
-  const handlePeriodChange = (value: string) => {
-    setChartPeriod(value);
-  };
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col items-center p-4 sm:p-6">
@@ -30,12 +25,9 @@ const UsdThbMonitorPage: FC = () => {
         <CurrentRateDisplay
           alertPrefs={alertPrefs}
           onAlertPrefsChange={setAlertPrefs}
-          chartPeriod={chartPeriod}
-          onChartPeriodChange={handlePeriodChange}
         />
         <HistoryChartDisplay
           alertPrefs={alertPrefs}
-          periodInDays={parseInt(chartPeriod, 10)}
         />
         <AnalysisDisplay />
       </main>
