@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { FC } from 'react';
@@ -116,53 +117,62 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
           {isLoading && <Loader2 className="h-5 w-5 animate-spin text-primary" />}
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6 p-6">
-        <div className="text-center">
-          <p className="text-sm text-muted-foreground">Current Rate</p>
-          <div className={`text-5xl font-bold flex items-center justify-center space-x-2 ${rateColorClass}`}>
-            <span>{displayRate}</span>
+      <CardContent className="p-6">
+        <div className="flex flex-col md:flex-row md:space-x-6 space-y-6 md:space-y-0">
+          <div className="md:w-1/3 flex flex-col items-center md:items-start justify-center text-center md:text-left py-4 md:py-0">
+            <p className="text-sm text-muted-foreground">Current Rate</p>
+            <div className={`text-5xl font-bold ${rateColorClass}`}>
+              <span>{displayRate}</span>
+            </div>
+            {lastUpdated && (
+              <p className="text-xs text-muted-foreground mt-1">
+                As of: {formatLastUpdatedDate(lastUpdated)}
+              </p>
+            )}
           </div>
-          {lastUpdated && (
-            <p className="text-xs text-muted-foreground mt-1">
-              As of: {formatLastUpdatedDate(lastUpdated)}
-            </p>
-          )}
-        </div>
 
-        {currentBand && !isLoading && rate !== undefined && (
-          <Card className={`shadow-md border-t-4 ${currentBand.colorConfig.borderColorClass} rounded-lg`}>
-            <CardContent className="p-4 space-y-2">
-              <div className="flex items-start justify-between">
-                <Badge className={`${currentBand.colorConfig.badgeClass} text-sm px-3 py-1 shrink-0`}>
-                  {currentBand.displayName}
-                </Badge>
-                
-                {(currentBand.rangeDisplay || currentBand.probability !== undefined) && (
-                  <div className="text-xs text-muted-foreground text-right space-y-0.5 pl-2">
-                    {currentBand.rangeDisplay && (
-                      <p>Rate Range: {currentBand.rangeDisplay}</p>
-                    )}
-                    {currentBand.probability !== undefined && (
-                      <p className="font-medium">Historical Odds: {currentBand.probability}</p>
+          <div className="md:w-2/3">
+            {currentBand && !isLoading && rate !== undefined && (
+              <Card className={`shadow-md border-t-4 ${currentBand.colorConfig.borderColorClass} rounded-lg h-full`}>
+                <CardContent className="p-4 space-y-2 flex flex-col justify-center h-full">
+                  <div className="flex items-start justify-between">
+                    <Badge className={`${currentBand.colorConfig.badgeClass} text-sm px-3 py-1 shrink-0`}>
+                      {currentBand.displayName}
+                    </Badge>
+                    
+                    {(currentBand.rangeDisplay || currentBand.probability !== undefined) && (
+                      <div className="text-xs text-muted-foreground text-right space-y-0.5 pl-2">
+                        {currentBand.rangeDisplay && (
+                          <p>Rate Range: {currentBand.rangeDisplay}</p>
+                        )}
+                        {currentBand.probability !== undefined && (
+                          <p className="font-medium">Historical Odds: {currentBand.probability}</p>
+                        )}
+                      </div>
                     )}
                   </div>
-                )}
-              </div>
-              
-              <p className="text-sm text-foreground/90 pt-1">{currentBand.action}</p>
-               {currentBand.exampleAction && (
-                <p className="text-xs text-muted-foreground/90 pt-1">
-                  <span className="font-semibold">Example:</span> {currentBand.exampleAction} (if normal DCA = 20k THB)
-                </p>
-              )}
-              {currentBand.reason && (
-                <p className="text-xs text-muted-foreground/80 pt-1 italic">
-                  <span className="font-semibold">Reason:</span> {currentBand.reason}
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        )}
+                  
+                  <p className="text-sm text-foreground/90 pt-1">{currentBand.action}</p>
+                  {currentBand.exampleAction && (
+                    <p className="text-xs text-muted-foreground/90 pt-1">
+                      <span className="font-semibold">Example:</span> {currentBand.exampleAction} (if normal DCA = 20k THB)
+                    </p>
+                  )}
+                  {currentBand.reason && (
+                    <p className="text-xs text-muted-foreground/80 pt-1 italic">
+                      <span className="font-semibold">Reason:</span> {currentBand.reason}
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+             {(!currentBand || isLoading || rate === undefined) && (
+                <div className="md:w-2/3 flex items-center justify-center h-full text-muted-foreground p-4 border rounded-lg">
+                 {isLoading ? <Loader2 className="h-8 w-8 animate-spin text-primary" /> :  "Rate band information will appear here."}
+                </div>
+             )}
+          </div>
+        </div>
       </CardContent>
       <CardFooter className="p-4 border-t bg-card/50">
         <Popover>
