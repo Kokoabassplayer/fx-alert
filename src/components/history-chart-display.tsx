@@ -1,7 +1,7 @@
 "use client";
 
 import type { FC } from 'react';
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -10,8 +10,8 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceA
 import { Badge } from '@/components/ui/badge';
 import {
   type AlertPrefs,
-  BANDS, // Using static BANDS
-  classifyRateToBand, // Using simplified classifier
+  BANDS, 
+  classifyRateToBand, 
   type BandName,
   type BandDefinition,
 } from "@/lib/bands";
@@ -33,23 +33,24 @@ interface BandUIDefinition {
   tooltipLabel?: string;
 }
 
-const BandLabel: FC<{ viewBox?: { x?: number; y?: number, height?: number }; value: string; fill: string }> = ({ viewBox, value, fill }) => {
+const BandLabel: FC<{ viewBox?: { x?: number; y?: number, height?: number }; value: string; textColorCssVar: string }> = ({ viewBox, value, textColorCssVar }) => {
   if (!viewBox || typeof viewBox.x === 'undefined' || typeof viewBox.y === 'undefined') {
     return null;
   }
   const { x, y } = viewBox;
-  const dx = 10;
-  const dy = (viewBox?.height ?? 20) / 2 + 5;
+  const dx = 10; // padding from the left edge of the chart
+  const dy = (viewBox?.height ?? 20) / 2 + 5; // Vertically center the label within the band area
 
   return (
     <text
       x={x + dx}
       y={y + dy}
-      fill={fill}
+      fill={textColorCssVar} // Use the CSS variable directly
       fontSize={11}
       fontWeight="bold"
       textAnchor="start"
       dominantBaseline="middle"
+      className="pointer-events-none" // Ensure labels don't interfere with tooltips
     >
       {value}
     </text>
@@ -77,8 +78,8 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({
       return {
         level: b.name,
         displayName: b.displayName,
-        y1: b.minRate ?? undefined, // Use minRate from static BandDefinition
-        y2: b.maxRate ?? undefined, // Use maxRate from static BandDefinition
+        y1: b.minRate ?? undefined,
+        y2: b.maxRate ?? undefined,
         fillVar: b.colorConfig.chartSettings.fillVar,
         strokeVar: b.colorConfig.chartSettings.strokeVar,
         labelTextColorVar: b.colorConfig.chartSettings.labelTextColorVar,
@@ -96,7 +97,7 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({
             setChartData(data);
         } else {
             setChartData([]); 
-            if(periodInDays !== 0) { // Avoid toast on initial render if default period is 0 days and has no data
+            if(periodInDays !== 0) {
               toast({
                 title: "No Data",
                 description: `No historical data found for the selected period.`,
@@ -152,7 +153,7 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({
   const CustomTooltip: FC<any> = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       const rateValue = payload[0].value;
-      const bandForTooltip = classifyRateToBand(rateValue);
+      const bandForTooltip = classifyRateToBand(rateValue); // Ensure this uses the current dynamic bands if applicable
 
 
       return (
@@ -177,8 +178,6 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({
     if (periodInDays === 365) return "1-Year Trend";
     if (periodInDays === (5 * 365)) return "5-Year Trend";
     if (periodInDays === -1) { 
-        // Frankfurter API earliest year is 1999 for some pairs, but USD/THB seems to start later
-        // Let's use a more conservative start or derive from actual data if possible.
         const defaultStartYear = "1999"; 
         const startYear = chartData.length > 0 ? new Date(chartData[0].date).getFullYear() : defaultStartYear;
         const endYear = chartData.length > 0 ? new Date(chartData[chartData.length -1].date).getFullYear() : new Date().getFullYear();
@@ -239,7 +238,7 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({
                 tickLine={{ stroke: 'hsl(var(--border))' }}
                 axisLine={{ strokeWidth: 1, stroke: 'hsl(var(--border))' }}
                 allowDataOverflow={true}
-                width={60} // Increased width for label
+                width={60} 
                 label={{ value: 'THB/USD', angle: -90, position: 'insideLeft', fill: 'hsl(var(--foreground))', fontSize: 12, dy: 40, dx: -25 }} 
               />
               <Tooltip content={<CustomTooltip />} />
@@ -261,13 +260,13 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({
                       key={bandDef.level}
                       y1={finalY1}
                       y2={finalY2}
-                      fill={`hsl(${bandDef.fillVar.replace('var(--', '').replace(')', '')})`}
-                      stroke={`hsl(${bandDef.strokeVar.replace('var(--', '').replace(')', '')})`}
-                      strokeWidth={0} 
-                      fillOpacity={0.8} 
-                      strokeOpacity={0} 
+                      fill={bandDef.fillVar} // Use CSS variable for fill
+                      stroke={bandDef.strokeVar} // Use CSS variable for stroke
+                      strokeWidth={0.5} // Minimal stroke for definition if needed, or 0
+                      fillOpacity={1} // CSS variable already has alpha
+                      strokeOpacity={1} // CSS variable already has alpha for border
                       ifOverflow="visible" 
-                      label={<BandLabel value={bandDef.displayName} fill={`hsl(${bandDef.labelTextColorVar})`} />}
+                      label={<BandLabel value={bandDef.displayName} textColorCssVar={bandDef.labelTextColorVar} />}
                     />
                   );
                 }
