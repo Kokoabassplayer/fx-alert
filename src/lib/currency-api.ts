@@ -29,7 +29,7 @@ export interface FormattedHistoricalRate {
 
 export async function fetchCurrentUsdToThbRate(): Promise<CurrentRateResponse | null> {
   try {
-    const response = await fetch(`${API_BASE_URL}/latest?from=USD&to=THB`);
+    const response = await fetch(`${API_BASE_URL}/latest?from=USD&to=THB`, { cache: 'no-store' });
     if (!response.ok) {
       console.error(
         "Failed to fetch current rate (HTTP status):",
@@ -80,7 +80,8 @@ export async function fetchUsdToThbRateHistory(): Promise<FormattedHistoricalRat
 
   try {
     const response = await fetch(
-      `${API_BASE_URL}/${startDate}..${endDate}?from=USD&to=THB`
+      `${API_BASE_URL}/${startDate}..${endDate}?from=USD&to=THB`,
+      { cache: 'no-store' }
     );
     if (!response.ok) {
       console.error(
@@ -137,3 +138,4 @@ export async function fetchUsdToThbRateHistory(): Promise<FormattedHistoricalRat
     return [];
   }
 }
+
