@@ -1,9 +1,9 @@
+
 "use client";
 
 import type { FC } from 'react';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Loader2, Settings, Bell, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
 
 import { 
     BANDS, 
@@ -43,7 +44,6 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
 
   const fetchRate = useCallback(async () => {
     setIsLoading(true);
-    // Add a cache-busting query parameter by appending a timestamp
     const data = await fetchCurrentUsdToThbRate();
     if (data) {
       setCurrentRateData(data);
@@ -99,9 +99,7 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
 
   const formatLastUpdatedDate = (date: Date | null): string => {
     if (!date) return "N/A";
-    // The API returns date in "YYYY-MM-DD" format, which is good to display directly.
     if (currentRateData?.date) return currentRateData.date;
-    // Fallback if currentRateData.date is not available for some reason
     const d = new Date(date); 
     const year = d.getFullYear();
     const month = (d.getMonth() + 1).toString().padStart(2, '0');
@@ -181,49 +179,12 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
           </div>
         </div>
       </CardContent>
-      <CardFooter className="p-4 border-t bg-card/50">
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="ghost" className="w-full justify-start text-muted-foreground hover:text-primary hover:bg-primary/5">
-              <Settings className="mr-2 h-4 w-4" />
-              Alert & Chart Band Preferences
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-80 sm:w-96 shadow-xl rounded-lg p-4 space-y-4">
-            <div>
-                <div className="space-y-1 mb-3">
-                    <h4 className="font-medium leading-none text-primary flex items-center"><Bell className="mr-2 h-4 w-4" />Alert Preferences</h4>
-                    <p className="text-xs text-muted-foreground ml-6">
-                        Manage notification visibility for rate bands.
-                    </p>
-                </div>
-                <div className="grid gap-3 pl-2">
-                {(Object.keys(alertPrefs) as BandName[]).map((bandKey) => {
-                    const staticBandDetails = BANDS.find(b => b.name === bandKey);
-                    if (!staticBandDetails) return null; 
-                    const bandLabel = `${staticBandDetails.displayName} Band`;
-                    const bandColorConfig = staticBandDetails.colorConfig;
-                    return (
-                    <div key={`alert-${bandKey}`} className="flex items-center justify-between p-2 rounded-md hover:bg-muted/50 transition-colors">
-                        <Label htmlFor={`alert-${bandKey.toLowerCase()}`} className="flex items-center space-x-3 cursor-pointer">
-                        <span className={`w-3 h-3 rounded-full ${bandColorConfig.badgeClass.split(' ')[0]}`}></span>
-                        <span className="text-sm font-medium text-foreground">{bandLabel}</span>
-                        </Label>
-                        <Switch
-                        id={`alert-${bandKey.toLowerCase()}`}
-                        checked={alertPrefs[bandKey]}
-                        onCheckedChange={(checked) => handleAlertPrefChange(bandKey, checked)}
-                        aria-label={`Toggle alerts for ${bandLabel}`}
-                        className={`${bandColorConfig.switchColorClass} data-[state=unchecked]:bg-input`}
-                        />
-                    </div>
-                    );
-                })}
-                </div>
-            </div>
-          </PopoverContent>
-        </Popover>
-      </CardFooter>
+      {/* 
+        The CardFooter containing the "Alert & Chart Band Preferences" has been removed 
+        as per the user's request because these settings are no longer needed.
+        The alertPrefs and onAlertPrefsChange props are kept in case they are needed for other functionality
+        or if the settings are reintroduced elsewhere in the future.
+      */}
     </Card>
   );
 };
