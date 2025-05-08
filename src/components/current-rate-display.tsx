@@ -1,4 +1,3 @@
-
 "use client";
 
 import type { FC } from 'react';
@@ -98,9 +97,7 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
 
   const formatLastUpdatedDate = (date: Date | null): string => {
     if (!date) return "N/A";
-    // Date from API is already YYYY-MM-DD
     if (currentRateData?.date) return currentRateData.date;
-    // Fallback if direct date string is not available
     const d = new Date(date); 
     const year = d.getFullYear();
     const month = (d.getMonth() + 1).toString().padStart(2, '0');
@@ -119,6 +116,7 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
       </CardHeader>
       <CardContent className="p-6">
         <div className="flex flex-col md:flex-row md:space-x-6 space-y-6 md:space-y-0">
+          {/* Left Side: Current Rate */}
           <div className="md:w-1/3 flex flex-col items-center md:items-start justify-center text-center md:text-left py-4 md:py-0">
             <p className="text-sm text-muted-foreground">Current Rate</p>
             <div className={`text-5xl font-bold ${rateColorClass}`}>
@@ -131,6 +129,7 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
             )}
           </div>
 
+          {/* Right Side: Band Details */}
           <div className="md:w-2/3">
             {currentBand && !isLoading && rate !== undefined && (
               <Card className={`shadow-md border-t-4 ${currentBand.colorConfig.borderColorClass} rounded-lg h-full`}>
@@ -167,7 +166,7 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
               </Card>
             )}
              {(!currentBand || isLoading || rate === undefined) && (
-                <div className="md:w-2/3 flex items-center justify-center h-full text-muted-foreground p-4 border rounded-lg">
+                <div className="flex items-center justify-center h-full text-muted-foreground p-4 border rounded-lg">
                  {isLoading ? <Loader2 className="h-8 w-8 animate-spin text-primary" /> :  "Rate band information will appear here."}
                 </div>
              )}
