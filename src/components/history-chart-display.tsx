@@ -171,6 +171,7 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ alertPrefs, periodI
       case 90: return "90-Day Trend";
       case 180: return "180-Day Trend";
       case 365: return "1-Year Trend";
+      case (5 * 365): return "5-Year Trend";
       case -1: return "Trend Since Inception (2005)";
       default: return "Historical Trend";
     }

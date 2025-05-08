@@ -155,7 +155,7 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
               Preferences
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-80 shadow-xl rounded-lg p-4 space-y-4">
+          <PopoverContent className="w-80 sm:w-96 shadow-xl rounded-lg p-4 space-y-4">
             <div>
                 <div className="space-y-1 mb-3">
                     <h4 className="font-medium leading-none text-primary flex items-center"><Bell className="mr-2 h-4 w-4" />Alert Preferences</h4>
@@ -205,6 +205,7 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
                       <SelectItem value="90">90 Days</SelectItem>
                       <SelectItem value="180">180 Days</SelectItem>
                       <SelectItem value="365">1 Year</SelectItem>
+                      <SelectItem value={(5 * 365).toString()}>5 Years</SelectItem>
                       <SelectItem value="-1">Since Inception (2005)</SelectItem>
                     </SelectContent>
                   </Select>
