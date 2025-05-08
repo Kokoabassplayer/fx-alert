@@ -29,7 +29,7 @@ export interface FormattedHistoricalRate {
 
 export async function fetchCurrentUsdToThbRate(): Promise<CurrentRateResponse | null> {
   try {
-    const timestamp = Date.now();
+    const timestamp = Date.now(); // Add timestamp to ensure fresh data
     const response = await fetch(`${API_BASE_URL}/latest?from=USD&to=THB&t=${timestamp}`, { cache: 'no-store' });
     if (!response.ok) {
       console.error(
@@ -78,7 +78,7 @@ export async function fetchUsdToThbRateHistory(): Promise<FormattedHistoricalRat
   const today = new Date();
   const endDate = formatDateForApi(today);
   const startDate = formatDateForApi(new Date(new Date().setDate(today.getDate() - 90)));
-  const timestamp = Date.now();
+  const timestamp = Date.now(); // Add timestamp to ensure fresh data
 
   try {
     const response = await fetch(
@@ -136,3 +136,4 @@ export async function fetchUsdToThbRateHistory(): Promise<FormattedHistoricalRat
     return [];
   }
 }
+
