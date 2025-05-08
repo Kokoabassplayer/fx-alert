@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import type { FC } from 'react';
@@ -47,7 +48,7 @@ const BandLabel: FC<{ viewBox?: { x?: number; y?: number, height?: number }; val
     <text
       x={x + dx}
       y={y + dy}
-      fill={`hsl(${textColorCssVar})`} 
+      fill={textColorCssVar} // Use the CSS variable directly
       fontSize={11}
       fontWeight="bold"
       textAnchor="start"
@@ -77,7 +78,7 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({
 
   const bandUIDefinitions = useMemo((): BandUIDefinition[] => {
     return BANDS.map(b => {
-      const colorConfig = getStaticBandColorConfig(b.name); // Use the utility here
+      const colorConfig = getStaticBandColorConfig(b.name);
       return {
         level: b.name,
         displayName: b.displayName,
@@ -100,7 +101,7 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({
             setChartData(data);
         } else {
             setChartData([]); 
-            if(periodInDays !== 0) {
+            if(periodInDays !== 0) { // Only show toast if not deliberately an empty state (e.g. initial load with no data)
               toast({
                 title: "No Data",
                 description: `No historical data found for the selected period.`,
@@ -140,13 +141,14 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({
       overallMax = Math.max(maxDataRate, ...activeBandNumericBoundaries);
     }
     
+    // Default domain if no data and no active bands to define it
     if (chartData.length === 0 && activeBandNumericBoundaries.length === 0) {
         overallMin = 28; 
         overallMax = 38;
     }
 
     const range = overallMax - overallMin;
-    const padding = range === 0 ? 0.5 : range * 0.10; 
+    const padding = range === 0 ? 0.5 : range * 0.10; // Ensure padding is not zero if range is zero
 
     return [parseFloat((overallMin - padding).toFixed(2)), parseFloat((overallMax + padding).toFixed(2))] as [number, number];
 
@@ -213,7 +215,7 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({
           </Select>
         </div>
       </CardHeader>
-      <CardContent className="pt-6 pb-2">
+      <CardContent className="pt-6 pb-2 bg-background"> {/* Removed gray background from chart area directly */}
         {(isLoading && (!chartData || chartData.length === 0)) ? (
           <div className="h-[350px] flex items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -241,15 +243,15 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({
                 tickLine={{ stroke: 'hsl(var(--border))' }}
                 axisLine={{ strokeWidth: 1, stroke: 'hsl(var(--border))' }}
                 allowDataOverflow={true}
-                width={70}  // Increased width to accommodate the label
+                width={70}
                 label={{ 
                     value: 'THB/USD', 
                     angle: -90, 
                     position: 'insideLeft', 
                     fill: 'hsl(var(--foreground))', 
                     fontSize: 12, 
-                    dy: 40, // Adjust dy to position label correctly relative to axis
-                    dx: -15  // Adjust dx to position label correctly
+                    dy: 40, 
+                    dx: -15 
                 }} 
               />
               <Tooltip content={<CustomTooltip />} />
@@ -260,16 +262,18 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({
                   let y2Actual = bandDef.y2 ?? yAxisDomain[1];
                   
                   const isExtremeBand = bandDef.level === "EXTREME";
+                  const extremeBandDef = bandUIDefinitions.find(b => b.level === "EXTREME");
                   const minDataRate = chartData.length > 0 ? Math.min(...chartData.map(d => d.rate)) : yAxisDomain[0];
 
-                  if (isExtremeBand) {
+
+                  if (isExtremeBand && extremeBandDef) {
                     const chartHeight = yAxisDomain[1] - yAxisDomain[0];
-                    // If y2 is naturally null (topmost band) or above the data, cap its visual representation.
-                    // Or if minRate is significantly above the band's defined y2, making it too tall.
-                    if (bandDef.y2 === null || (bandDef.y2 && minDataRate > bandDef.y2 + chartHeight * 0.1) ) {
-                         y2Actual = Math.min(y2Actual, y1Actual + chartHeight * 0.20); // Cap height to 20% of chart
-                    } else if (bandDef.y2) {
-                         y2Actual = Math.min(y2Actual, bandDef.y2); // Use defined maxRate if sensible
+                    if (extremeBandDef.y2 && minDataRate > extremeBandDef.y2 + chartHeight * 0.1) {
+                         y2Actual = Math.min(y2Actual, y1Actual + chartHeight * 0.20);
+                    } else if (extremeBandDef.y2) {
+                         y2Actual = Math.min(y2Actual, extremeBandDef.y2); 
+                    } else { // y2 is null for EXTREME
+                         y2Actual = Math.min(yAxisDomain[1], y1Actual + chartHeight * 0.20);
                     }
                   }
 
@@ -320,3 +324,4 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({
 };
 
 export default HistoryChartDisplay;
+
