@@ -7,7 +7,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { fetchUsdToThbRateHistory, type FormattedHistoricalRate } from "@/lib/currency-api";
+import { fetchRateHistory, type FormattedHistoricalRate } from "@/lib/currency-api"; // Updated import
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceArea } from 'recharts';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -23,6 +23,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 interface HistoryChartDisplayProps {
   alertPrefs: AlertPrefs;
+  fromCurrency: string;
+  toCurrency: string;
 }
 
 interface BandUIDefinition {
@@ -61,8 +63,10 @@ const BandLabel: FC<{ viewBox?: { x?: number; y?: number, height?: number }; val
 };
 
 
-const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({ 
+const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({
   alertPrefs,
+  fromCurrency,
+  toCurrency,
 }) => {
   const [chartData, setChartData] = useState<FormattedHistoricalRate[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -95,76 +99,95 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({
 
   useEffect(() => {
     const fetchData = async () => {
-        setIsLoading(true);
-        const data = await fetchUsdToThbRateHistory(periodInDays);
-        if (data.length > 0) {
-            setChartData(data);
-        } else {
-            setChartData([]); 
-            if(periodInDays !== 0) { // Only show toast if not deliberately an empty state (e.g. initial load with no data)
-              toast({
-                title: "No Data",
-                description: `No historical data found for the selected period.`,
-                variant: "default",
-              });
-            }
-        }
+      if (!fromCurrency || !toCurrency || fromCurrency === toCurrency) {
+        setChartData([]); // Clear chart if currencies are invalid or same
         setIsLoading(false);
+        return;
+      }
+      setIsLoading(true);
+      const data = await fetchRateHistory(fromCurrency, toCurrency, periodInDays);
+      if (data.length > 0) {
+        setChartData(data);
+      } else {
+        setChartData([]);
+        // Avoid toast if period is 0 (initial state) or if currencies are not set properly
+        if (periodInDays !== 0 && fromCurrency && toCurrency && fromCurrency !== toCurrency) { 
+          toast({
+            title: "No Data",
+            description: `No historical data found for ${fromCurrency}/${toCurrency} for the selected period.`,
+            variant: "default",
+          });
+        }
+      }
+      setIsLoading(false);
     };
     fetchData();
-  }, [periodInDays, toast]);
+  }, [periodInDays, toast, fromCurrency, toCurrency]);
 
 
   const yAxisDomain = useMemo(() => {
-    let minDataRate = 30;
-    let maxDataRate = 36;
+    let minDataRate: number | undefined = undefined;
+    let maxDataRate: number | undefined = undefined;
 
     if (chartData && chartData.length > 0) {
       const rates = chartData.map(d => d.rate);
       minDataRate = Math.min(...rates);
       maxDataRate = Math.max(...rates);
     }
+    
+    // If not USD/THB, bands are not shown, so domain is purely data-driven or default
+    if (fromCurrency !== 'USD' || toCurrency !== 'THB') {
+        if (minDataRate === undefined || maxDataRate === undefined) {
+             // Provide a sensible default if no data
+            const typicalRate = 1; // A generic placeholder
+            return [typicalRate * 0.8, typicalRate * 1.2] as [number, number];
+        }
+        const range = maxDataRate - minDataRate;
+        const padding = range === 0 ? 0.1 * Math.abs(minDataRate) || 0.1 : range * 0.10;
+        return [parseFloat((minDataRate - padding).toFixed(4)), parseFloat((maxDataRate + padding).toFixed(4))] as [number, number];
+    }
 
+    // Logic for USD/THB with bands
     const activeBandNumericBoundaries: number[] = [];
     bandUIDefinitions.forEach(bandDef => {
-      if (alertPrefs[bandDef.level]) { 
+      if (alertPrefs[bandDef.level]) {
         if (bandDef.y1 !== undefined) activeBandNumericBoundaries.push(bandDef.y1);
         if (bandDef.y2 !== undefined) activeBandNumericBoundaries.push(bandDef.y2);
       }
     });
-
-    let overallMin = minDataRate;
-    let overallMax = maxDataRate;
+    
+    let overallMin = minDataRate ?? 30; // Default for USD/THB if no data
+    let overallMax = maxDataRate ?? 36; // Default for USD/THB if no data
 
     if (activeBandNumericBoundaries.length > 0) {
-      overallMin = Math.min(minDataRate, ...activeBandNumericBoundaries);
-      overallMax = Math.max(maxDataRate, ...activeBandNumericBoundaries);
+      overallMin = Math.min(overallMin, ...activeBandNumericBoundaries);
+      overallMax = Math.max(overallMax, ...activeBandNumericBoundaries);
     }
     
-    // Default domain if no data and no active bands to define it
-    if (chartData.length === 0 && activeBandNumericBoundaries.length === 0) {
+    if (chartData.length === 0 && activeBandNumericBoundaries.length === 0 && fromCurrency === 'USD' && toCurrency === 'THB') {
         overallMin = 28; 
         overallMax = 38;
     }
 
+
     const range = overallMax - overallMin;
-    const padding = range === 0 ? 0.5 : range * 0.10; // Ensure padding is not zero if range is zero
+    const padding = range === 0 ? 0.5 : range * 0.10; 
 
     return [parseFloat((overallMin - padding).toFixed(2)), parseFloat((overallMax + padding).toFixed(2))] as [number, number];
 
-  }, [chartData, bandUIDefinitions, alertPrefs]);
+  }, [chartData, bandUIDefinitions, alertPrefs, fromCurrency, toCurrency]);
 
 
   const CustomTooltip: FC<any> = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       const rateValue = payload[0].value;
-      const bandForTooltip = classifyRateToBand(rateValue);
-
+      // Only show band info in tooltip if USD/THB
+      const bandForTooltip = (fromCurrency === 'USD' && toCurrency === 'THB') ? classifyRateToBand(rateValue) : null;
 
       return (
         <div className="bg-background/90 backdrop-blur-sm p-3 border border-border rounded-lg shadow-xl">
           <p className="text-xs text-muted-foreground">{`Date: ${label}`}</p>
-          <p className="text-sm text-primary font-semibold">{`Rate: ${typeof rateValue === 'number' ? rateValue.toFixed(4) : 'N/A'}`}</p>
+          <p className="text-sm text-primary font-semibold">{`${toCurrency}/${fromCurrency}: ${typeof rateValue === 'number' ? rateValue.toFixed(4) : 'N/A'}`}</p>
           {bandForTooltip && (
             <div className="mt-1">
               <Badge className={`${bandForTooltip.colorConfig.badgeClass} text-xs px-2 py-0.5`}>{bandForTooltip.displayName}</Badge>
@@ -177,31 +200,35 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({
   };
 
   const chartTitle = useMemo(() => {
-    if (periodInDays === 30) return "30-Day Trend";
-    if (periodInDays === 90) return "90-Day Trend";
-    if (periodInDays === 180) return "180-Day Trend";
-    if (periodInDays === 365) return "1-Year Trend";
-    if (periodInDays === (5 * 365)) return "5-Year Trend";
-    if (periodInDays === -1) { 
-        const defaultStartYear = "2005"; 
+    const pair = `${fromCurrency}/${toCurrency}`;
+    let periodDesc = "";
+    if (periodInDays === 30) periodDesc = "30-Day Trend";
+    else if (periodInDays === 90) periodDesc = "90-Day Trend";
+    else if (periodInDays === 180) periodDesc = "180-Day Trend";
+    else if (periodInDays === 365) periodDesc = "1-Year Trend";
+    else if (periodInDays === (5 * 365)) periodDesc = "5-Year Trend";
+    else if (periodInDays === -1) {
+        const defaultStartYear = (fromCurrency === 'USD' && toCurrency === 'THB') ? "2005" : "2000"; // API has different start dates
         const startYear = chartData.length > 0 ? new Date(chartData[0].date).getFullYear() : defaultStartYear;
         const endYear = chartData.length > 0 ? new Date(chartData[chartData.length -1].date).getFullYear() : new Date().getFullYear();
-        if (startYear === defaultStartYear && chartData.length === 0) return "Historical Trend (Since Inception)"
-        return `Trend (${startYear} - ${endYear})`;
+        if (startYear.toString() === defaultStartYear && chartData.length === 0) return `Historical Trend (${pair})`;
+        periodDesc = `Trend (${startYear} - ${endYear})`;
+    } else {
+        periodDesc = "Historical Trend";
     }
-    return "Historical Trend";
-  }, [periodInDays, chartData]);
+    return `${periodDesc} for ${pair}`;
+  }, [periodInDays, chartData, fromCurrency, toCurrency]);
 
   return (
     <Card className="overflow-hidden shadow-lg rounded-xl">
-      <CardHeader className="bg-card/50 flex flex-row items-center justify-between py-4 px-6">
-        <CardTitle className="text-primary text-lg">
+      <CardHeader className="bg-card/50 flex flex-col sm:flex-row items-start sm:items-center sm:justify-between py-4 px-6 gap-2">
+        <CardTitle className="text-primary text-lg whitespace-nowrap">
           {chartTitle}
         </CardTitle>
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2 w-full sm:w-auto justify-end">
            {isLoading && <Loader2 className="h-5 w-5 animate-spin text-primary" />}
            <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
-            <SelectTrigger id="chart-period-select" className="w-[250px] h-9 text-sm">
+            <SelectTrigger id="chart-period-select" className="w-full sm:w-[250px] h-9 text-sm">
               <SelectValue placeholder="Select period" />
             </SelectTrigger>
             <SelectContent>
@@ -210,53 +237,61 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({
               <SelectItem value="180">180 Days</SelectItem>
               <SelectItem value="365">1 Year</SelectItem>
               <SelectItem value={(5 * 365).toString()}>5 Years</SelectItem>
-              <SelectItem value="-1">Since Inception (2005-Present)</SelectItem>
+              <SelectItem value="-1">Since Inception ({(fromCurrency === 'USD' && toCurrency === 'THB') ? '2005' : '2000'}-Present)</SelectItem>
             </SelectContent>
           </Select>
         </div>
       </CardHeader>
-      <CardContent className="pt-6 pb-2 bg-background"> {/* Removed gray background from chart area directly */}
+      <CardContent className="pt-6 pb-2 bg-background">
         {(isLoading && (!chartData || chartData.length === 0)) ? (
           <div className="h-[350px] flex items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : (!chartData || chartData.length === 0) && !isLoading ? (
-          <div className="h-[350px] flex items-center justify-center text-muted-foreground">
-            No historical data to display for the selected period.
+          <div className="h-[350px] flex items-center justify-center text-muted-foreground text-center px-4">
+            {fromCurrency && toCurrency && fromCurrency !== toCurrency ? 
+              `No historical data to display for ${fromCurrency}/${toCurrency} for the selected period.` :
+              "Please select valid and different 'From' and 'To' currencies to view chart."
+            }
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={350}>
-            <LineChart data={chartData} margin={{ top: 5, right: 30, left: 25, bottom: 5 }}> 
+            <LineChart data={chartData} margin={{ top: 5, right: 30, left: 25, bottom: 5 }}>
               <XAxis
                 dataKey="date"
-                tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                tickFormatter={(value) => {
+                    const date = new Date(value);
+                    if (periodInDays <= 90) return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                    if (periodInDays <= 365 * 2 ) return date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+                    return date.toLocaleDateString('en-US', { year: 'numeric' });
+                }}
                 tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
                 tickLine={{ stroke: 'hsl(var(--border))' }}
                 axisLine={{ stroke: 'hsl(var(--border))' }}
                 interval="preserveStartEnd"
-                minTickGap={40}
+                minTickGap={periodInDays > 365 ? 60 : 40} // Wider gap for longer periods
               />
               <YAxis
                 domain={yAxisDomain}
-                tickFormatter={(value) => typeof value === 'number' ? value.toFixed(2) : ''}
+                tickFormatter={(value) => typeof value === 'number' ? value.toFixed(toCurrency === 'JPY' ? 3 : 4) : ''} // More precision for JPY like pairs
                 tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
                 tickLine={{ stroke: 'hsl(var(--border))' }}
                 axisLine={{ strokeWidth: 1, stroke: 'hsl(var(--border))' }}
                 allowDataOverflow={true}
-                width={70}
-                label={{ 
-                    value: 'THB/USD', 
-                    angle: -90, 
-                    position: 'insideLeft', 
-                    fill: 'hsl(var(--foreground))', 
-                    fontSize: 12, 
-                    dy: 40, 
-                    dx: -15 
-                }} 
+                width={80} // Increased width for potentially longer rate numbers
+                label={{
+                    value: `${toCurrency}/${fromCurrency}`,
+                    angle: -90,
+                    position: 'insideLeft',
+                    fill: 'hsl(var(--foreground))',
+                    fontSize: 12,
+                    dy: 40, // Adjust as needed based on new width
+                    dx: -20 // Adjust as needed
+                }}
               />
               <Tooltip content={<CustomTooltip />} />
 
-              {bandUIDefinitions.map((bandDef) => {
+              {fromCurrency === 'USD' && toCurrency === 'THB' && bandUIDefinitions.map((bandDef) => {
                 if (alertPrefs[bandDef.level]) {
                   let y1Actual = bandDef.y1 ?? yAxisDomain[0];
                   let y2Actual = bandDef.y2 ?? yAxisDomain[1];
@@ -313,7 +348,7 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({
                 strokeWidth={2}
                 dot={{ r: 0 }}
                 activeDot={{ r: 5, stroke: 'hsl(var(--background))', strokeWidth: 2, fill: 'hsl(var(--primary))' }}
-                name="USD/THB Rate"
+                name={`${toCurrency}/${fromCurrency} Rate`}
               />
             </LineChart>
           </ResponsiveContainer>

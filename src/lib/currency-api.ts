@@ -5,7 +5,7 @@ export interface CurrentRateResponse {
   base: string;
   date: string; // e.g., "2023-10-27"
   rates: {
-    THB: number;
+    [currencyCode: string]: number;
   };
 }
 
@@ -16,7 +16,7 @@ export interface HistoricalRateResponse {
   end_date: string;   // e.g., "2023-10-27"
   rates: {
     [date: string]: { // Date string "YYYY-MM-DD"
-      THB: number;
+      [currencyCode: string]: number;
     };
   };
 }
@@ -33,11 +33,11 @@ export interface MonthlyAggregatedRate {
 }
 
 
-export async function fetchCurrentUsdToThbRate(): Promise<CurrentRateResponse | null> {
+export async function fetchCurrentRate(from: string, to: string): Promise<CurrentRateResponse | null> {
   try {
     // Add a cache-busting query parameter
     const timestamp = Date.now();
-    const response = await fetch(`${API_BASE_URL}/latest?from=USD&to=THB&t=${timestamp}`, { cache: 'no-store' });
+    const response = await fetch(`${API_BASE_URL}/latest?from=${from}&to=${to}&t=${timestamp}`, { cache: 'no-store' });
 
     if (!response.ok) {
       console.error(
@@ -65,15 +65,16 @@ export async function fetchCurrentUsdToThbRate(): Promise<CurrentRateResponse | 
         return null;
     }
     
-    if (!data.rates || typeof data.rates.THB !== 'number') {
-      console.error("Invalid data format or structure for current rate:", data);
+    // Check if the target currency is present in the rates object
+    if (!data.rates || typeof data.rates[to] !== 'number') {
+      console.error(`Invalid data format or structure for current rate (missing ${to} in rates):`, data);
       return null;
     }
 
     return data as CurrentRateResponse;
 
   } catch (error) { 
-    console.error("Generic error fetching current rate:", error);
+    console.error(`Generic error fetching current rate for ${from} to ${to}:`, error);
     return null;
   }
 }
@@ -82,12 +83,14 @@ function formatDateForApi(date: Date): string {
   return date.toISOString().split("T")[0];
 }
 
-export async function fetchUsdToThbRateHistory(days: number = 90): Promise<FormattedHistoricalRate[]> {
+export async function fetchRateHistory(from: string, to: string, days: number = 90): Promise<FormattedHistoricalRate[]> {
   const today = new Date();
   let startDate: string;
 
   if (days === -1) { // "Since Inception"
-    startDate = "2005-01-01"; // Frankfurter API earliest date with consistent data for THB
+    // Frankfurter API earliest date for many pairs is 1999-01-04, but use a slightly later common one
+    // or make this dynamic if certain pairs have much later start dates.
+    startDate = "2000-01-01"; 
   } else {
     const pastDate = new Date();
     pastDate.setDate(today.getDate() - days);
@@ -96,11 +99,11 @@ export async function fetchUsdToThbRateHistory(days: number = 90): Promise<Forma
   const endDate = formatDateForApi(today);
   
   if (new Date(startDate) > new Date(endDate)) {
-    console.warn(`Start date ${startDate} is after end date ${endDate}. Returning empty history.`);
+    console.warn(`Start date ${startDate} is after end date ${endDate} for ${from}-${to}. Returning empty history.`);
     return [];
   }
   
-  const apiUrl = `${API_BASE_URL}/${startDate}..${endDate}?from=USD&to=THB`;
+  const apiUrl = `${API_BASE_URL}/${startDate}..${endDate}?from=${from}&to=${to}`;
 
   try {
     const response = await fetch(
@@ -109,7 +112,7 @@ export async function fetchUsdToThbRateHistory(days: number = 90): Promise<Forma
     );
     if (!response.ok) {
       console.error(
-        "Failed to fetch rate history (HTTP status):",
+        `Failed to fetch rate history for ${from}-${to} (HTTP status):`,
         response.status,
         await response.text().catch(() => "Could not read response text")
       );
@@ -121,7 +124,7 @@ export async function fetchUsdToThbRateHistory(days: number = 90): Promise<Forma
       data = await response.json();
     } catch (jsonError) {
        console.error(
-        "Failed to parse JSON response for rate history:",
+        `Failed to parse JSON response for ${from}-${to} rate history:`,
         jsonError,
         await response.text().catch(() => "Could not read response text (after JSON parse failure)")
       );
@@ -129,32 +132,36 @@ export async function fetchUsdToThbRateHistory(days: number = 90): Promise<Forma
     }
 
     if (typeof data !== 'object' || data === null) {
-        console.warn("API response for rate history was not a non-null object:", data);
+        console.warn(`API response for ${from}-${to} rate history was not a non-null object:`, data);
         return [];
     }
     
     if (!data.rates || typeof data.rates !== 'object') {
-      console.error("Invalid data format or structure for rate history (e.g. missing rates object):", data);
+      console.error(`Invalid data format for ${from}-${to} rate history (missing rates object):`, data);
       return [];
     }
     
     const historicalData = data as HistoricalRateResponse;
 
     if (Object.keys(historicalData.rates).length === 0) {
+      console.warn(`No historical rates returned for ${from}-${to} between ${startDate} and ${endDate}.`);
       return [];
     }
 
     const formattedData = Object.entries(historicalData.rates)
-      .map(([date, rateData]) => ({
-        date,
-        rate: (rateData && typeof rateData.THB === 'number') ? rateData.THB : 0, 
-      }))
+      .map(([date, rateData]) => {
+        const rateValue = rateData && typeof rateData[to] === 'number' ? rateData[to] : 0;
+        return {
+          date,
+          rate: rateValue,
+        };
+      })
       .filter(item => item.rate > 0) 
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
       
     return formattedData;
   } catch (error) {
-    console.error("Error fetching rate history:", error);
+    console.error(`Error fetching ${from}-${to} rate history:`, error);
     return [];
   }
 }
@@ -190,4 +197,46 @@ export function aggregateMonthlyRates(dailyRates: FormattedHistoricalRate[]): Mo
     .sort((a, b) => a.yearMonth.localeCompare(b.yearMonth)); // Sort by YYYY-MM
 
   return aggregatedRates;
+}
+
+export async function fetchAvailableCurrencies(): Promise<{ [key: string]: string } | null> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/currencies`, { cache: 'no-store' });
+    if (!response.ok) {
+      console.error(
+        "Failed to fetch available currencies (HTTP status):",
+        response.status,
+        await response.text().catch(() => "Could not read response text")
+      );
+      return null;
+    }
+    let data: any;
+    try {
+      data = await response.json();
+    } catch (jsonError) {
+      console.error(
+        "Failed to parse JSON response for available currencies:",
+        jsonError,
+        await response.text().catch(() => "Could not read response text (after JSON parse failure)")
+      );
+      return null;
+    }
+
+    if (typeof data !== 'object' || data === null) {
+      console.warn("API response for available currencies was not a non-null object:", data);
+      return null;
+    }
+    
+    // Validate that data is an object of strings
+    for (const key in data) {
+      if (typeof data[key] !== 'string') {
+        console.error("Invalid data format for available currencies: values should be strings.", data);
+        return null;
+      }
+    }
+    return data as { [key: string]: string };
+  } catch (error) {
+    console.error("Generic error fetching available currencies:", error);
+    return null;
+  }
 }

@@ -2,6 +2,7 @@
 "use client";
 
 import type { FC } from 'react';
+import { useState } from 'react'; // Import useState
 import CurrentRateDisplay from '@/components/current-rate-display';
 import HistoryChartDisplay from '@/components/history-chart-display';
 import AnalysisDisplay from '@/components/analysis-display';
@@ -12,6 +13,8 @@ import { DEFAULT_ALERT_PREFS } from '@/lib/bands';
 
 const UsdThbMonitorPage: FC = () => {
   const [alertPrefs, setAlertPrefs] = useLocalStorage<AlertPrefs>("alertPrefs", DEFAULT_ALERT_PREFS);
+  const [selectedFromCurrency, setSelectedFromCurrency] = useState<string>('USD');
+  const [selectedToCurrency, setSelectedToCurrency] = useState<string>('EUR');
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col items-center p-4 sm:p-6">
@@ -25,11 +28,20 @@ const UsdThbMonitorPage: FC = () => {
         <CurrentRateDisplay
           alertPrefs={alertPrefs}
           onAlertPrefsChange={setAlertPrefs}
+          fromCurrency={selectedFromCurrency}
+          toCurrency={selectedToCurrency}
+          onFromCurrencyChange={setSelectedFromCurrency}
+          onToCurrencyChange={setSelectedToCurrency}
         />
         <HistoryChartDisplay
           alertPrefs={alertPrefs}
+          fromCurrency={selectedFromCurrency}
+          toCurrency={selectedToCurrency}
         />
-        <AnalysisDisplay />
+        <AnalysisDisplay
+          fromCurrency={selectedFromCurrency}
+          toCurrency={selectedToCurrency}
+        />
       </main>
       <footer className="w-full max-w-4xl mt-8 pt-6 border-t border-border text-left">
         <div className="mb-4">
