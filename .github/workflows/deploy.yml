@@ -1,0 +1,26 @@
+name: Build & Deploy to Firebase Hosting
+
+on:
+  push:
+    branches: [ master ]   # change to "main" if that's your branch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 20       # matches what Firebase CLI expects
+
+    - run: npm ci              # installs deps from package-lock
+    - run: npm run build       # runs "next build" -> out/
+
+    - uses: FirebaseExtended/action-hosting-deploy@v0
+      with:
+        repoToken: ${{ secrets.GITHUB_TOKEN }}
+        firebaseServiceAccount: ${{ secrets.FIREBASE_TOKEN }}
+        channelId: live
+        projectId: raterefresher           # keep this project ID
