@@ -100,87 +100,107 @@ const actionableThresholdsData = threshold_bands.map(band => {
 });
 
 
-const AnalysisDisplay: FC = () => {
-  return (
-    <div className="space-y-6">
-      <Card className="overflow-hidden shadow-lg rounded-xl">
-        <CardHeader>
-          <CardTitle className="text-primary">USD / THB Trend Summary (2010 – 2024)</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ul className="list-disc list-inside space-y-1 text-sm text-foreground">
-            {trendSummaryData.map((item, index) => (
-              <li key={index}>
-                <span className="font-semibold">{item.period}</span> – {item.description}
-              </li>
-            ))}
-          </ul>
-        </CardContent>
-      </Card>
+interface AnalysisDisplayProps {
+  fromCurrency: string;
+  toCurrency: string;
+}
 
-      <Card className="overflow-hidden shadow-lg rounded-xl">
-        <CardHeader>
-          <CardTitle className="text-primary">Distribution Statistics</CardTitle>
-          <CardDescription>{`Based on ${distribution_statistics.sample_months} monthly observations (${distribution_statistics.sample_period})`}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[200px]">Metric</TableHead>
-                <TableHead>Value (THB/USD)</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {distributionStatisticsData.map((stat) => (
-                <TableRow key={stat.metric}>
-                  <TableCell className="font-medium">{stat.metric}</TableCell>
-                  <TableCell>{stat.value}</TableCell>
-                </TableRow>
+const AnalysisDisplay: FC<AnalysisDisplayProps> = ({ fromCurrency, toCurrency }) => {
+  if (fromCurrency === 'USD' && toCurrency === 'THB') {
+    return (
+      <div className="space-y-6">
+        <Card className="overflow-hidden shadow-lg rounded-xl">
+          <CardHeader>
+            <CardTitle className="text-primary">USD / THB Trend Summary (2010 – 2024)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="list-disc list-inside space-y-1 text-sm text-foreground">
+              {trendSummaryData.map((item, index) => (
+                <li key={index}>
+                  <span className="font-semibold">{item.period}</span> – {item.description}
+                </li>
               ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+            </ul>
+          </CardContent>
+        </Card>
 
-      <Card className="overflow-hidden shadow-lg rounded-xl">
-        <CardHeader>
-          <CardTitle className="text-primary">Actionable Thresholds</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
+        <Card className="overflow-hidden shadow-lg rounded-xl">
+          <CardHeader>
+            <CardTitle className="text-primary">Distribution Statistics</CardTitle>
+            <CardDescription>{`Based on ${distribution_statistics.sample_months} monthly observations (${distribution_statistics.sample_period})`}</CardDescription>
+          </CardHeader>
+          <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Range (THB/USD)</TableHead>
-                  <TableHead>Level</TableHead>
-                  <TableHead>Probability *</TableHead>
-                  <TableHead>Action (brief)</TableHead>
-                  <TableHead>Example (DCA = 20k THB)</TableHead>
-                  <TableHead>Reason</TableHead>
+                  <TableHead className="w-[200px]">Metric</TableHead>
+                  <TableHead>Value (THB/USD)</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {actionableThresholdsData.map((threshold) => (
-                  <TableRow key={threshold.level}>
-                    <TableCell>{threshold.range}</TableCell>
-                    <TableCell className="font-medium">{threshold.level}</TableCell>
-                    <TableCell>{threshold.probability}</TableCell>
-                    <TableCell>{threshold.action}</TableCell>
-                    <TableCell>{threshold.example}</TableCell>
-                    <TableCell>{threshold.reason}</TableCell>
+                {distributionStatisticsData.map((stat) => (
+                  <TableRow key={stat.metric}>
+                    <TableCell className="font-medium">{stat.metric}</TableCell>
+                    <TableCell>{stat.value}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
-          </div>
-          <p className="text-xs text-muted-foreground mt-4">
-            * Probabilities are rounded values derived from the 2010 – 2024 monthly distribution.
+          </CardContent>
+        </Card>
+
+        <Card className="overflow-hidden shadow-lg rounded-xl">
+          <CardHeader>
+            <CardTitle className="text-primary">Actionable Thresholds</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Range (THB/USD)</TableHead>
+                    <TableHead>Level</TableHead>
+                    <TableHead>Probability *</TableHead>
+                    <TableHead>Action (brief)</TableHead>
+                    <TableHead>Example (DCA = 20k THB)</TableHead>
+                    <TableHead>Reason</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {actionableThresholdsData.map((threshold) => (
+                    <TableRow key={threshold.level}>
+                      <TableCell>{threshold.range}</TableCell>
+                      <TableCell className="font-medium">{threshold.level}</TableCell>
+                      <TableCell>{threshold.probability}</TableCell>
+                      <TableCell>{threshold.action}</TableCell>
+                      <TableCell>{threshold.example}</TableCell>
+                      <TableCell>{threshold.reason}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            <p className="text-xs text-muted-foreground mt-4">
+              * Probabilities are rounded values derived from the 2010 – 2024 monthly distribution.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  } else {
+    return (
+      <Card className="overflow-hidden shadow-lg rounded-xl">
+        <CardHeader>
+          <CardTitle className="text-primary">Market Analysis</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-foreground">
+            The detailed market analysis, including probabilities and suggestions, is currently specific to the USD/THB pair. We are working on expanding this feature to other currency pairs.
           </p>
         </CardContent>
       </Card>
-    </div>
-  );
+    );
+  }
 };
 
 export default AnalysisDisplay;
