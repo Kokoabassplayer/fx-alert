@@ -14,7 +14,7 @@ import { DEFAULT_ALERT_PREFS } from '@/lib/bands';
 const UsdThbMonitorPage: FC = () => {
   const [alertPrefs, setAlertPrefs] = useLocalStorage<AlertPrefs>("alertPrefs", DEFAULT_ALERT_PREFS);
   const [selectedFromCurrency, setSelectedFromCurrency] = useState<string>('USD');
-  const [selectedToCurrency, setSelectedToCurrency] = useState<string>('EUR');
+  const [selectedToCurrency, setSelectedToCurrency] = useState<string>('THB'); // Changed default to THB
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col items-center p-4 sm:p-6">
