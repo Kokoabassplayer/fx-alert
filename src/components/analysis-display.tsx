@@ -172,8 +172,7 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
             <TableHeader>
               <TableRow>
                 <TableHead>Level</TableHead>
-                <TableHead>Range ({fromCurrency}/{toCurrency})</TableHead> {/* Convention corrected */}
-                <TableHead>Probability</TableHead>
+                <TableHead>Range ({fromCurrency}/{toCurrency})</TableHead>{/* Convention corrected */} <TableHead>Probability</TableHead>
                 <TableHead>Brief</TableHead>
                 <TableHead>Reasoning</TableHead>
               </TableRow>
