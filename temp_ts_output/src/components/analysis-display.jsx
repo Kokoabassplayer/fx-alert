@@ -1,60 +1,50 @@
 // src/components/analysis-display.tsx
 'use client';
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { generatePairAnalysis, PairAnalysisData, TrendPeriod, DistributionStatistics, ThresholdBand } from '../../lib/dynamic-analysis';
+import { generatePairAnalysis } from '../../lib/dynamic-analysis';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Terminal } from 'lucide-react';
-
-interface AnalysisDisplayProps {
-  fromCurrency: string | null;
-  toCurrency: string | null;
-}
-
-const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({ fromCurrency, toCurrency }) => {
-  const [analysisData, setAnalysisData] = useState<PairAnalysisData | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!fromCurrency || !toCurrency) {
-        setError("Please select both 'from' and 'to' currencies to view analysis.");
-        setAnalysisData(null);
-        setIsLoading(false);
-        return;
-      }
-
-      setIsLoading(true);
-      setError(null);
-      setAnalysisData(null);
-
-      try {
-        console.log(`AnalysisDisplay: Fetching for ${fromCurrency}/${toCurrency}`);
-        const data = await generatePairAnalysis(fromCurrency, toCurrency);
-        if (data) {
-          setAnalysisData(data);
-          console.log(`AnalysisDisplay: Data received for ${fromCurrency}/${toCurrency}`, data);
-        } else {
-          setError(`No analysis data could be generated for ${fromCurrency}/${toCurrency}. This might be due to missing historical rates or other issues.`);
-          console.warn(`AnalysisDisplay: No data returned for ${fromCurrency}/${toCurrency}`);
-        }
-      } catch (e: any) {
-        console.error("AnalysisDisplay: Error fetching analysis data", e);
-        setError(`Failed to generate analysis: ${e.message || 'Unknown error'}`);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [fromCurrency, toCurrency]);
-
-  if (isLoading) {
-    return (
-      <Card>
+const AnalysisDisplay = ({ fromCurrency, toCurrency }) => {
+    const [analysisData, setAnalysisData] = useState(null);
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState(null);
+    useEffect(() => {
+        const fetchData = async () => {
+            if (!fromCurrency || !toCurrency) {
+                setError("Please select both 'from' and 'to' currencies to view analysis.");
+                setAnalysisData(null);
+                setIsLoading(false);
+                return;
+            }
+            setIsLoading(true);
+            setError(null);
+            setAnalysisData(null);
+            try {
+                console.log(`AnalysisDisplay: Fetching for ${fromCurrency}/${toCurrency}`);
+                const data = await generatePairAnalysis(fromCurrency, toCurrency);
+                if (data) {
+                    setAnalysisData(data);
+                    console.log(`AnalysisDisplay: Data received for ${fromCurrency}/${toCurrency}`, data);
+                }
+                else {
+                    setError(`No analysis data could be generated for ${fromCurrency}/${toCurrency}. This might be due to missing historical rates or other issues.`);
+                    console.warn(`AnalysisDisplay: No data returned for ${fromCurrency}/${toCurrency}`);
+                }
+            }
+            catch (e) {
+                console.error("AnalysisDisplay: Error fetching analysis data", e);
+                setError(`Failed to generate analysis: ${e.message || 'Unknown error'}`);
+            }
+            finally {
+                setIsLoading(false);
+            }
+        };
+        fetchData();
+    }, [fromCurrency, toCurrency]);
+    if (isLoading) {
+        return (<Card>
         <CardHeader>
           <CardTitle>Loading Analysis...</CardTitle>
         </CardHeader>
@@ -62,64 +52,44 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({ fromCurrency, toCurre
           <p>Please wait while we generate the currency pair analysis for {fromCurrency}/{toCurrency}.</p>
           {/* You could add a spinner component here */}
         </CardContent>
-      </Card>
-    );
-  }
-
-  if (error) {
-    return (
-      <Alert variant="destructive">
-        <Terminal className="h-4 w-4" />
+      </Card>);
+    }
+    if (error) {
+        return (<Alert variant="destructive">
+        <Terminal className="h-4 w-4"/>
         <AlertTitle>Error</AlertTitle>
         <AlertDescription>{error}</AlertDescription>
-      </Alert>
-    );
-  }
-
-  if (!analysisData) {
-    return (
-      <Card>
+      </Alert>);
+    }
+    if (!analysisData) {
+        return (<Card>
         <CardHeader>
           <CardTitle>Analysis Not Available</CardTitle>
         </CardHeader>
         <CardContent>
           <p>No analysis data could be generated for the selected currency pair ({fromCurrency}/{toCurrency}). This might be due to missing historical rates or other issues. Please try a different pair or check back later.</p>
         </CardContent>
-      </Card>
-    );
-  }
-
-  const { trend_summary, distribution_statistics, threshold_bands } = analysisData;
-  const stats = distribution_statistics; // Alias for convenience
-
-  const formatRate = (rate: number | null | undefined) => rate?.toFixed(4) || 'N/A';
-  const formatPercent = (value: number | null | undefined) => value !== null && value !== undefined ? `≈ ${(value * 100).toFixed(1)} %` : 'N/A';
-
-
-  return (
-    <div className="space-y-6">
+      </Card>);
+    }
+    const { trend_summary, distribution_statistics, threshold_bands } = analysisData;
+    const stats = distribution_statistics; // Alias for convenience
+    const formatRate = (rate) => (rate === null || rate === void 0 ? void 0 : rate.toFixed(4)) || 'N/A';
+    const formatPercent = (value) => value !== null && value !== undefined ? `≈ ${(value * 100).toFixed(1)} %` : 'N/A';
+    return (<div className="space-y-6">
       {/* Trend Summary Section */}
       <Card>
         <CardHeader>
           <CardTitle>{fromCurrency} / {toCurrency} Trend Summary</CardTitle>
-          {stats.sample_period && stats.sample_days && (
-             <CardDescription>
+          {stats.sample_period && stats.sample_days && (<CardDescription>
                 Based on data from {stats.sample_period} ({stats.sample_days} days).
-             </CardDescription>
-          )}
+             </CardDescription>)}
         </CardHeader>
         <CardContent>
-          {trend_summary.length > 0 ? (
-            <ul className="list-disc pl-5 space-y-1">
-              {trend_summary.map((trend, index) => (
-                <li key={index}>
+          {trend_summary.length > 0 ? (<ul className="list-disc pl-5 space-y-1">
+              {trend_summary.map((trend, index) => (<li key={index}>
                   <strong>{trend.period}:</strong> {trend.description}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p>No trend summary available.</p>
-          )}
+                </li>))}
+            </ul>) : (<p>No trend summary available.</p>)}
         </CardContent>
       </Card>
 
@@ -198,8 +168,7 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({ fromCurrency, toCurre
               </TableRow>
             </TableHeader>
             <TableBody>
-              {threshold_bands.map((band) => (
-                <TableRow key={band.level}>
+              {threshold_bands.map((band) => (<TableRow key={band.level}>
                   <TableCell className="font-semibold">{band.level.replace(/_/g, ' ')}</TableCell>
                   <TableCell>
                     {formatRate(band.range.min)} - {formatRate(band.range.max)}
@@ -207,14 +176,11 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({ fromCurrency, toCurre
                   <TableCell>{formatPercent(band.probability)}</TableCell>
                   <TableCell>{band.action_brief}</TableCell>
                   <TableCell>{band.reason}</TableCell>
-                </TableRow>
-              ))}
+                </TableRow>))}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
-    </div>
-  );
+    </div>);
 };
-
 export default AnalysisDisplay;
