@@ -26,7 +26,8 @@ interface HistoryChartDisplayProps {
   alertPrefs: AlertPrefs;
   fromCurrency: string;
   toCurrency: string;
-  pairAnalysisData: PairAnalysisData | null; // New prop
+  pairAnalysisData: PairAnalysisData | null;
+  selectedPeriodDays: number; // New prop for period
 }
 
 // Helper to map dynamic levels to static BandNames for color/prefs consistency
@@ -81,21 +82,20 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({
   alertPrefs,
   fromCurrency,
   toCurrency,
-  pairAnalysisData, // Destructure new prop
+  pairAnalysisData,
+  selectedPeriodDays, // Destructure new prop
 }) => {
   const [chartData, setChartData] = useState<FormattedHistoricalRate[]>([]);
   const [isLoading, setIsLoading] = useState(false); // For historical data fetch
   const { toast } = useToast();
-  const [selectedPeriod, setSelectedPeriod] = useState<string>("90"); 
+  // const [selectedPeriod, setSelectedPeriod] = useState<string>("90"); // Remove internal period state
   const [chartBands, setChartBands] = useState<BandDefinition[]>([]); // For dynamic chart bands
 
-
-  const periodInDays = useMemo(() => {
-    if (selectedPeriod === "-1") return -1; 
-    return parseInt(selectedPeriod, 10);
-  }, [selectedPeriod]);
-
-  // Removed static bandUIDefinitions useMemo block here. It will be replaced by chartBands from useEffect.
+  // periodInDays is now directly from selectedPeriodDays prop
+  // const periodInDays = useMemo(() => {
+  //   if (selectedPeriod === "-1") return -1;
+  //   return parseInt(selectedPeriod, 10);
+  // }, [selectedPeriod]);
 
   // useEffect to process dynamic threshold_bands into chartBands
   useEffect(() => {
@@ -130,18 +130,18 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({
   useEffect(() => {
     const fetchData = async () => {
       if (!fromCurrency || !toCurrency || fromCurrency === toCurrency) {
-        setChartData([]); // Clear chart if currencies are invalid or same
+        setChartData([]);
         setIsLoading(false);
         return;
       }
       setIsLoading(true);
-      const data = await fetchRateHistory(fromCurrency, toCurrency, periodInDays);
+      // Use selectedPeriodDays prop directly for fetching data
+      const data = await fetchRateHistory(fromCurrency, toCurrency, selectedPeriodDays);
       if (data.length > 0) {
         setChartData(data);
       } else {
         setChartData([]);
-        // Avoid toast if period is 0 (initial state) or if currencies are not set properly
-        if (periodInDays !== 0 && fromCurrency && toCurrency && fromCurrency !== toCurrency) { 
+        if (selectedPeriodDays !== 0 && fromCurrency && toCurrency && fromCurrency !== toCurrency) {
           toast({
             title: "No Data",
             description: `No historical data found for ${fromCurrency}/${toCurrency} for the selected period.`,
@@ -152,7 +152,7 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({
       setIsLoading(false);
     };
     fetchData();
-  }, [periodInDays, toast, fromCurrency, toCurrency]);
+  }, [selectedPeriodDays, fromCurrency, toCurrency, toast]); // Use selectedPeriodDays in dependency array
 
 
   const yAxisDomain = useMemo(() => {
@@ -244,22 +244,25 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({
   const chartTitle = useMemo(() => {
     const pair = `${fromCurrency}/${toCurrency}`;
     let periodDesc = "";
-    if (periodInDays === 30) periodDesc = "30-Day Trend";
-    else if (periodInDays === 90) periodDesc = "90-Day Trend";
-    else if (periodInDays === 180) periodDesc = "180-Day Trend";
-    else if (periodInDays === 365) periodDesc = "1-Year Trend";
-    else if (periodInDays === (5 * 365)) periodDesc = "5-Year Trend";
-    else if (periodInDays === -1) {
-        const defaultStartYear = (fromCurrency === 'USD' && toCurrency === 'THB') ? "2005" : "2000"; // API has different start dates
-        const startYear = chartData.length > 0 ? new Date(chartData[0].date).getFullYear() : defaultStartYear;
+    // Use selectedPeriodDays prop for title description
+    if (selectedPeriodDays === 30) periodDesc = "30-Day Trend";
+    else if (selectedPeriodDays === 90) periodDesc = "90-Day Trend";
+    else if (selectedPeriodDays === 180) periodDesc = "180-Day Trend";
+    else if (selectedPeriodDays === 365) periodDesc = "1-Year Trend";
+    else if (selectedPeriodDays === (365 * 3)) periodDesc = "3-Year Trend";
+    else if (selectedPeriodDays === (365 * 5)) periodDesc = "5-Year Trend";
+    else if (selectedPeriodDays === (365 * 10)) periodDesc = "10-Year Trend";
+    else if (selectedPeriodDays === -1) { // Max Available
+        const apiDefaultStartYear = "2000"; // Frankfurter API typical start
+        const startYear = chartData.length > 0 ? new Date(chartData[0].date).getFullYear() : apiDefaultStartYear;
         const endYear = chartData.length > 0 ? new Date(chartData[chartData.length -1].date).getFullYear() : new Date().getFullYear();
-        if (startYear.toString() === defaultStartYear && chartData.length === 0) return `Historical Trend (${pair})`;
+        if (chartData.length === 0 && startYear.toString() === apiDefaultStartYear) return `Historical Trend (${pair})`; // Generic if no data yet for max
         periodDesc = `Trend (${startYear} - ${endYear})`;
     } else {
-        periodDesc = "Historical Trend";
+        periodDesc = `Custom Period Trend (${selectedPeriodDays} days)`; // Fallback for other day counts
     }
     return `${periodDesc} for ${pair}`;
-  }, [periodInDays, chartData, fromCurrency, toCurrency]);
+  }, [selectedPeriodDays, chartData, fromCurrency, toCurrency]); // Use selectedPeriodDays in dependency array
 
   return (
     <Card className="overflow-hidden shadow-lg rounded-xl">
@@ -267,21 +270,10 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({
         <CardTitle className="text-primary text-lg whitespace-nowrap">
           {chartTitle}
         </CardTitle>
+        {/* isLoading indicator is kept, but the Select for period is removed from here */}
         <div className="flex items-center space-x-2 w-full sm:w-auto justify-end">
            {isLoading && <Loader2 className="h-5 w-5 animate-spin text-primary" />}
-           <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
-            <SelectTrigger id="chart-period-select" className="w-full sm:w-[250px] h-9 text-sm">
-              <SelectValue placeholder="Select period" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="30">30 Days</SelectItem>
-              <SelectItem value="90">90 Days</SelectItem>
-              <SelectItem value="180">180 Days</SelectItem>
-              <SelectItem value="365">1 Year</SelectItem>
-              <SelectItem value={(5 * 365).toString()}>5 Years</SelectItem>
-              <SelectItem value="-1">Since Inception ({(fromCurrency === 'USD' && toCurrency === 'THB') ? '2005' : '2000'}-Present)</SelectItem>
-            </SelectContent>
-          </Select>
+           {/* The Select component for choosing period is now in page.tsx */}
         </div>
       </CardHeader>
       <CardContent className="pt-6 pb-2 bg-background">
@@ -303,15 +295,16 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({
                 dataKey="date"
                 tickFormatter={(value) => {
                     const date = new Date(value);
-                    if (periodInDays <= 90) return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                    if (periodInDays <= 365 * 2 ) return date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+                    // Use selectedPeriodDays prop for tick formatting logic
+                    if (selectedPeriodDays <= 90) return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                    if (selectedPeriodDays <= 365 * 2) return date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
                     return date.toLocaleDateString('en-US', { year: 'numeric' });
                 }}
                 tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
                 tickLine={{ stroke: 'hsl(var(--border))' }}
                 axisLine={{ stroke: 'hsl(var(--border))' }}
                 interval="preserveStartEnd"
-                minTickGap={periodInDays > 365 ? 60 : 40} // Wider gap for longer periods
+                minTickGap={selectedPeriodDays > 365 ? 60 : 40} // Wider gap for longer periods
               />
               <YAxis
                 domain={yAxisDomain}

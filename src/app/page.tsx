@@ -3,6 +3,8 @@
 
 import type { FC } from 'react';
 import { useState, useEffect } from 'react'; // Import useState and useEffect
+import { Label } from "@/components/ui/label"; // Import Label
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"; // Import Select components
 import CurrentRateDisplay from '@/components/current-rate-display';
 import HistoryChartDisplay from '@/components/history-chart-display';
 import AnalysisDisplay from '@/components/analysis-display';
@@ -16,6 +18,16 @@ const UsdThbMonitorPage: FC = () => {
   const [alertPrefs, setAlertPrefs] = useLocalStorage<AlertPrefs>("alertPrefs", DEFAULT_ALERT_PREFS);
   const [selectedFromCurrency, setSelectedFromCurrency] = useState<string>('USD');
   const [selectedToCurrency, setSelectedToCurrency] = useState<string>('THB'); // Changed default to THB
+
+  // Define periodOptions within the component scope
+  const periodOptions = [
+    { label: "1 Year", value: 365 },
+    { label: "3 Years", value: 365 * 3 }, // 1095
+    { label: "5 Years", value: 365 * 5 }, // 1825
+    { label: "10 Years", value: 365 * 10 },// 3650
+    { label: "Max Available", value: -1 },
+  ];
+  const [selectedPeriodDays, setSelectedPeriodDays] = useState<number>(365 * 5); // Default to 5 years (1825 days)
 
   const [pairAnalysisData, setPairAnalysisData] = useState<PairAnalysisData | null>(null);
   const [isAnalysisLoading, setIsAnalysisLoading] = useState<boolean>(true); // Start true for initial load
@@ -35,8 +47,8 @@ const UsdThbMonitorPage: FC = () => {
       setPairAnalysisData(null); // Clear previous data
 
       try {
-        // console.log(`Page: Fetching analysis for ${selectedFromCurrency}/${selectedToCurrency}`); // Optional: for debugging
-        const data = await generatePairAnalysis(selectedFromCurrency, selectedToCurrency);
+        // console.log(`Page: Fetching analysis for ${selectedFromCurrency}/${selectedToCurrency} for ${selectedPeriodDays} days`); // Optional: for debugging
+        const data = await generatePairAnalysis(selectedFromCurrency, selectedToCurrency, selectedPeriodDays);
         if (data) {
           setPairAnalysisData(data);
           // console.log(`Page: Analysis data received for ${selectedFromCurrency}/${selectedToCurrency}`, data); // Optional: for debugging
@@ -53,7 +65,7 @@ const UsdThbMonitorPage: FC = () => {
     };
 
     loadPairAnalysis();
-  }, [selectedFromCurrency, selectedToCurrency]);
+  }, [selectedFromCurrency, selectedToCurrency, selectedPeriodDays]);
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col items-center p-4 sm:p-6">
@@ -64,6 +76,26 @@ const UsdThbMonitorPage: FC = () => {
       </header>
       
       <main className="w-full max-w-4xl space-y-6">
+        {/* Analysis Period Selector */}
+        <div className="flex items-center space-x-2 mb-4 self-start">
+          <Label htmlFor="period-select" className="text-sm">Analysis Period:</Label>
+          <Select
+            value={String(selectedPeriodDays)}
+            onValueChange={(stringValue) => setSelectedPeriodDays(Number(stringValue))}
+          >
+            <SelectTrigger id="period-select" className="w-[150px] sm:w-[180px]">
+              <SelectValue placeholder="Select period" />
+            </SelectTrigger>
+            <SelectContent>
+              {periodOptions.map(option => (
+                <SelectItem key={option.value} value={String(option.value)}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
         <CurrentRateDisplay
           alertPrefs={alertPrefs}
           onAlertPrefsChange={setAlertPrefs}
@@ -78,6 +110,7 @@ const UsdThbMonitorPage: FC = () => {
           fromCurrency={selectedFromCurrency}
           toCurrency={selectedToCurrency}
           pairAnalysisData={pairAnalysisData} // Pass new prop
+          selectedPeriodDays={selectedPeriodDays} // Add this line
         />
         <AnalysisDisplay
           fromCurrency={selectedFromCurrency}
