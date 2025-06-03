@@ -86,8 +86,7 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
       }
     };
     getAvailableCurrencies();
-  // eslint-disable-next-line react-hooks/exhaustive-deps 
-  }, [toast]); // Run once on mount to get currencies. fromCurrency/toCurrency changes handled by parent.
+  }, [fromCurrency, toCurrency, onToCurrencyChange, toast]);
 
   const fetchRate = useCallback(async (currentFrom: string, currentTo: string) => {
     setIsLoading(true);
