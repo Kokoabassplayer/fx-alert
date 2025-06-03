@@ -12,12 +12,13 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceA
 import { Badge } from '@/components/ui/badge';
 import {
   type AlertPrefs,
-  BANDS, 
-  classifyRateToBand, 
+  // BANDS, // Will be replaced by dynamic bands logic for chart display
+  classifyRateToBand, // May still be used by tooltip if dynamic classification is too complex there initially
   type BandName,
   type BandDefinition,
   getStaticBandColorConfig, 
 } from "@/lib/bands";
+import { type PairAnalysisData, type ThresholdBand as DynamicThresholdBand } from '@/lib/dynamic-analysis'; // Import PairAnalysisData
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 
@@ -25,7 +26,20 @@ interface HistoryChartDisplayProps {
   alertPrefs: AlertPrefs;
   fromCurrency: string;
   toCurrency: string;
+  pairAnalysisData: PairAnalysisData | null; // New prop
 }
+
+// Helper to map dynamic levels to static BandNames for color/prefs consistency
+const mapLevelToBandName = (level: string): BandName | null => {
+  switch (level.toUpperCase()) {
+    case 'EXTREME_LOW': return 'EXTREME';
+    case 'LOW': return 'DEEP';
+    case 'NEUTRAL': return 'NEUTRAL';
+    case 'HIGH': return 'OPPORTUNE';
+    case 'EXTREME_HIGH': return 'RICH';
+    default: return null;
+  }
+};
 
 interface BandUIDefinition {
   level: BandName;
@@ -67,11 +81,13 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({
   alertPrefs,
   fromCurrency,
   toCurrency,
+  pairAnalysisData, // Destructure new prop
 }) => {
   const [chartData, setChartData] = useState<FormattedHistoricalRate[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false); // For historical data fetch
   const { toast } = useToast();
   const [selectedPeriod, setSelectedPeriod] = useState<string>("90"); 
+  const [chartBands, setChartBands] = useState<BandDefinition[]>([]); // For dynamic chart bands
 
 
   const periodInDays = useMemo(() => {
@@ -79,22 +95,36 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({
     return parseInt(selectedPeriod, 10);
   }, [selectedPeriod]);
 
+  // Removed static bandUIDefinitions useMemo block here. It will be replaced by chartBands from useEffect.
 
-  const bandUIDefinitions = useMemo((): BandUIDefinition[] => {
-    return BANDS.map(b => {
-      const colorConfig = getStaticBandColorConfig(b.name);
-      return {
-        level: b.name,
-        displayName: b.displayName,
-        y1: b.minRate ?? undefined,
-        y2: b.maxRate ?? undefined,
-        fillVar: colorConfig.chartSettings.fillVar,
-        strokeVar: colorConfig.chartSettings.strokeVar,
-        labelTextColorVar: colorConfig.chartSettings.labelTextColorVar,
-        tooltipLabel: b.displayName,
-      };
-    });
-  }, []);
+  // useEffect to process dynamic threshold_bands into chartBands
+  useEffect(() => {
+    if (pairAnalysisData?.threshold_bands) {
+      const newChartBands = pairAnalysisData.threshold_bands.map((dynamicBand: DynamicThresholdBand): BandDefinition => {
+        const bandName = mapLevelToBandName(dynamicBand.level);
+        const colorConfig = bandName ? getStaticBandColorConfig(bandName) : getStaticBandColorConfig('NEUTRAL'); // Default color
+
+        return {
+          name: bandName || dynamicBand.level as BandName, // Use mapped BandName or dynamic level as fallback
+          displayName: dynamicBand.level.replace(/_/g, ' '),
+          minRate: dynamicBand.range.min ?? -Infinity,
+          maxRate: dynamicBand.range.max ?? Infinity,
+          condition: (rate: number) =>
+            (dynamicBand.range.min === null || rate >= dynamicBand.range.min) &&
+            (dynamicBand.range.max === null || rate <= dynamicBand.range.max),
+          action: dynamicBand.action_brief,
+          reason: dynamicBand.reason,
+          exampleAction: "", // Not available in DynamicThresholdBand
+          probability: dynamicBand.probability !== null ? `${(dynamicBand.probability * 100).toFixed(0)}%` : "N/A",
+          rangeDisplay: `${dynamicBand.range.min?.toFixed(4) ?? '...'} - ${dynamicBand.range.max?.toFixed(4) ?? '...'}`,
+          colorConfig: colorConfig,
+        };
+      });
+      setChartBands(newChartBands);
+    } else {
+      setChartBands([]); // No dynamic data, so no bands on chart or use a fallback
+    }
+  }, [pairAnalysisData]);
 
 
   useEffect(() => {
@@ -134,55 +164,67 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({
       minDataRate = Math.min(...rates);
       maxDataRate = Math.max(...rates);
     }
-    
-    // If not USD/THB, bands are not shown, so domain is purely data-driven or default
-    if (fromCurrency !== 'USD' || toCurrency !== 'THB') {
-        if (minDataRate === undefined || maxDataRate === undefined) {
-             // Provide a sensible default if no data
-            const typicalRate = 1; // A generic placeholder
-            return [typicalRate * 0.8, typicalRate * 1.2] as [number, number];
-        }
-        const range = maxDataRate - minDataRate;
-        const padding = range === 0 ? 0.1 * Math.abs(minDataRate) || 0.1 : range * 0.10;
-        return [parseFloat((minDataRate - padding).toFixed(4)), parseFloat((maxDataRate + padding).toFixed(4))] as [number, number];
-    }
 
-    // Logic for USD/THB with bands
     const activeBandNumericBoundaries: number[] = [];
-    bandUIDefinitions.forEach(bandDef => {
-      if (alertPrefs[bandDef.level]) {
-        if (bandDef.y1 !== undefined) activeBandNumericBoundaries.push(bandDef.y1);
-        if (bandDef.y2 !== undefined) activeBandNumericBoundaries.push(bandDef.y2);
-      }
-    });
+    if (chartBands && chartBands.length > 0) {
+      chartBands.forEach(band => {
+        const bandNameKey = band.name as BandName; // Assuming band.name is a valid BandName or mapped to one
+        if (alertPrefs[bandNameKey] !== false) { // Show if true or undefined (default to show)
+          if (band.minRate !== -Infinity && band.minRate !== undefined) activeBandNumericBoundaries.push(band.minRate);
+          if (band.maxRate !== Infinity && band.maxRate !== undefined) activeBandNumericBoundaries.push(band.maxRate);
+        }
+      });
+    }
     
-    let overallMin = minDataRate ?? 30; // Default for USD/THB if no data
-    let overallMax = maxDataRate ?? 36; // Default for USD/THB if no data
+    let overallMin: number | undefined = minDataRate;
+    let overallMax: number | undefined = maxDataRate;
 
     if (activeBandNumericBoundaries.length > 0) {
-      overallMin = Math.min(overallMin, ...activeBandNumericBoundaries);
-      overallMax = Math.max(overallMax, ...activeBandNumericBoundaries);
+      const minBandBoundary = Math.min(...activeBandNumericBoundaries);
+      const maxBandBoundary = Math.max(...activeBandNumericBoundaries);
+      overallMin = overallMin !== undefined ? Math.min(overallMin, minBandBoundary) : minBandBoundary;
+      overallMax = overallMax !== undefined ? Math.max(overallMax, maxBandBoundary) : maxBandBoundary;
     }
     
-    if (chartData.length === 0 && activeBandNumericBoundaries.length === 0 && fromCurrency === 'USD' && toCurrency === 'THB') {
-        overallMin = 28; 
-        overallMax = 38;
+    if (overallMin === undefined || overallMax === undefined) {
+      // Default values if no data and no bands, trying to be sensible based on pair
+      const typicalRate = (fromCurrency === 'USD' && (toCurrency === 'JPY' || toCurrency === 'THB'))
+                          ? (toCurrency === 'JPY' ? 110 : 33)
+                          : (fromCurrency === 'EUR' && toCurrency === 'USD' ? 1.1 : 1); // Generic fallback
+      overallMin = typicalRate * 0.9; // Adjusted default padding
+      overallMax = typicalRate * 1.1; // Adjusted default padding
     }
 
+    overallMin = Number(overallMin); // Ensure it's a number
+    overallMax = Number(overallMax); // Ensure it's a number
 
     const range = overallMax - overallMin;
-    const padding = range === 0 ? 0.5 : range * 0.10; 
+    let padding;
 
-    return [parseFloat((overallMin - padding).toFixed(2)), parseFloat((overallMax + padding).toFixed(2))] as [number, number];
+    if (range === 0) {
+      padding = Math.abs(overallMin) > 0.00001 ? Math.abs(overallMin) * 0.05 : 0.05; // 5% of rate or 0.05 if rate is ~0
+    } else {
+      padding = range * 0.15; // 15% padding for better visual space
+    }
+    padding = isFinite(padding) ? padding : 0.05; // Ensure padding is valid
 
-  }, [chartData, bandUIDefinitions, alertPrefs, fromCurrency, toCurrency]);
+    const typicalValue = (overallMax + overallMin) / 2;
+    const decimals = typicalValue > 50 ? 2 : 4; // Fewer decimals for high-value pairs like JPY
+
+    return [parseFloat((overallMin - padding).toFixed(decimals)), parseFloat((overallMax + padding).toFixed(decimals))] as [number, number];
+
+  }, [chartData, chartBands, alertPrefs, fromCurrency, toCurrency]); // Depends on chartBands now
 
 
   const CustomTooltip: FC<any> = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       const rateValue = payload[0].value;
-      // Only show band info in tooltip if USD/THB
-      const bandForTooltip = (fromCurrency === 'USD' && toCurrency === 'THB') ? classifyRateToBand(rateValue) : null;
+      let bandForTooltip: BandDefinition | null = null;
+
+      // Find which dynamic band the current rateValue falls into
+      if (typeof rateValue === 'number' && chartBands && chartBands.length > 0) {
+        bandForTooltip = chartBands.find(band => band.condition(rateValue)) || null;
+      }
 
       return (
         <div className="bg-background/90 backdrop-blur-sm p-3 border border-border rounded-lg shadow-xl">
@@ -291,55 +333,52 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({
               />
               <Tooltip content={<CustomTooltip />} />
 
-              {fromCurrency === 'USD' && toCurrency === 'THB' && bandUIDefinitions.map((bandDef) => {
-                if (alertPrefs[bandDef.level]) {
-                  let y1Actual = bandDef.y1 ?? yAxisDomain[0];
-                  let y2Actual = bandDef.y2 ?? yAxisDomain[1];
-                  
-                  const isExtremeBand = bandDef.level === "EXTREME";
-                  const extremeBandDef = bandUIDefinitions.find(b => b.level === "EXTREME");
-                  const minDataRate = chartData.length > 0 ? Math.min(...chartData.map(d => d.rate)) : yAxisDomain[0];
+              {/* Render ReferenceAreas based on chartBands for any currency pair */}
+              {chartBands.map((band) => {
+                // Ensure band.name is treated as BandName for alertPrefs lookup
+                const bandNameKey = band.name as BandName;
+                if (alertPrefs[bandNameKey] === false) { // Only render if not explicitly set to false
+                  return null;
+                }
+
+                // Use minRate and maxRate directly from the dynamic BandDefinition
+                // Handle -Infinity and Infinity by clamping to chart domain or reasonable visual limits if necessary
+                // For simplicity here, we assume yAxisDomain provides reasonable outer bounds if min/maxRate are +/-Infinity
+                let y1Actual = band.minRate === -Infinity ? yAxisDomain[0] : band.minRate;
+                let y2Actual = band.maxRate === Infinity ? yAxisDomain[1] : band.maxRate;
+
+                // Ensure y1Actual and y2Actual are valid numbers and y1 < y2
+                if (typeof y1Actual !== 'number' || !isFinite(y1Actual) ||
+                    typeof y2Actual !== 'number' || !isFinite(y2Actual) ||
+                    y1Actual >= y2Actual) {
+                  // console.warn("Skipping band render due to invalid/inverted y-coordinates", band);
+                  return null;
+                }
+
+                // Clamp to chart domain to prevent Recharts errors if bands exceed it
+                // This can be an issue if chart data itself is very narrow and bands are wide
+                y1Actual = Math.max(y1Actual, yAxisDomain[0]);
+                y2Actual = Math.min(y2Actual, yAxisDomain[1]);
+
+                // If clamping results in invalid area, skip
+                if (y1Actual >= y2Actual) return null;
 
 
-                  if (isExtremeBand && extremeBandDef) {
-                    const chartHeight = yAxisDomain[1] - yAxisDomain[0];
-                    if (extremeBandDef.y2 && minDataRate > extremeBandDef.y2 + chartHeight * 0.1) {
-                         y2Actual = Math.min(y2Actual, y1Actual + chartHeight * 0.20);
-                    } else if (extremeBandDef.y2) {
-                         y2Actual = Math.min(y2Actual, extremeBandDef.y2); 
-                    } else { // y2 is null for EXTREME
-                         y2Actual = Math.min(yAxisDomain[1], y1Actual + chartHeight * 0.20);
-                    }
-                  }
-
-
-                  const finalY1 = Math.min(y1Actual, y2Actual);
-                  const finalY2 = Math.max(y1Actual, y2Actual);
-                  
-                  if (finalY1 >= finalY2 && !(bandDef.level === "RICH" && finalY1 === yAxisDomain[1])) {
-                     if (bandDef.level === "RICH" && finalY1 > yAxisDomain[1]) return null; 
-                  }
-                  
-                  const bandColorConfig = getStaticBandColorConfig(bandDef.level);
-
-
-                  return (
+                return (
                     <ReferenceArea
-                      key={bandDef.level}
-                      y1={finalY1}
-                      y2={finalY2}
-                      fill={bandColorConfig.chartSettings.fillVar} 
-                      stroke={bandColorConfig.chartSettings.strokeVar} 
+                      key={band.name} // Use band.name (should be unique, e.g., mapped BandName or original level)
+                      y1={y1Actual}
+                      y2={y2Actual}
+                      fill={band.colorConfig.chartSettings.fillVar}
+                      stroke={band.colorConfig.chartSettings.strokeVar}
                       strokeWidth={0.5} 
                       fillOpacity={1} 
                       strokeOpacity={1} 
                       ifOverflow="visible" 
-                      label={<BandLabel value={bandDef.displayName} textColorCssVar={bandColorConfig.chartSettings.labelTextColorVar} />}
+                      label={<BandLabel value={band.displayName} textColorCssVar={band.colorConfig.chartSettings.labelTextColorVar} />}
                     />
                   );
-                }
-                return null;
-              })}
+                })}
 
               <Line
                 type="monotone"

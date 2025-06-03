@@ -22,12 +22,13 @@ import {
 } from "@/components/ui/select";
 
 import {
-    BANDS, 
+    // BANDS, // Static bands no longer primary for display logic
     type AlertPrefs, 
     type BandName, 
-    classifyRateToBand, 
-    type BandDefinition 
+    // classifyRateToBand, // Will use new classification logic
+    type BandDefinition // May still be used for toast structure or as a fallback
 } from "@/lib/bands";
+import { type PairAnalysisData, type ThresholdBand } from '@/lib/dynamic-analysis'; // Import new types
 
 interface CurrentRateDisplayProps {
   alertPrefs: AlertPrefs;
@@ -36,6 +37,7 @@ interface CurrentRateDisplayProps {
   toCurrency: string;
   onFromCurrencyChange: (newFrom: string) => void;
   onToCurrencyChange: (newTo: string) => void;
+  pairAnalysisData: PairAnalysisData | null; // New prop
 }
 
 const REFRESH_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
@@ -47,12 +49,14 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
   toCurrency,
   onFromCurrencyChange,
   onToCurrencyChange,
+  pairAnalysisData, // Destructure new prop
 }) => {
   const [currentRateData, setCurrentRateData] = useState<CurrentRateResponse | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true); // For the current rate fetch itself
   const { toast } = useToast();
-  const [currentBand, setCurrentBand] = useState<BandDefinition | null>(null);
-  const prevBandRef = useRef<BandName | undefined>(undefined);
+  // const [currentBand, setCurrentBand] = useState<BandDefinition | null>(null); // Old static band state
+  const [currentDynamicBand, setCurrentDynamicBand] = useState<ThresholdBand | null>(null); // New dynamic band state
+  const prevBandRef = useRef<string | undefined>(undefined); // BandName could be string (level from dynamic)
 
   // Internal state for availableCurrencies is still needed
   const [availableCurrencies, setAvailableCurrencies] = useState<{ [key: string]: string } | null>(null);
@@ -60,18 +64,17 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
   const rate = currentRateData?.rates?.[toCurrency]; 
   const lastUpdated = currentRateData?.date ? new Date(currentRateData.date) : null;
 
+  // Effect for fetching available currencies (remains largely the same)
   useEffect(() => {
     const getAvailableCurrencies = async () => {
       const currencies = await fetchAvailableCurrencies();
       if (currencies) {
         setAvailableCurrencies(currencies);
-        // If the current 'toCurrency' from props isn't in the fetched list,
-        // or if fromCurrency and toCurrency are the same, suggest a change.
         if (!currencies[toCurrency] || fromCurrency === toCurrency) {
           const validKeys = Object.keys(currencies);
           if (validKeys.length > 0) {
-            let newTo = validKeys.find(k => k !== fromCurrency); // Try to find one different from fromCurrency
-            if (!newTo && validKeys.length > 0) newTo = validKeys[0]; // Fallback to the first if all are same as from (e.g. only 1 currency) - though fetchRate will block this
+            let newTo = validKeys.find(k => k !== fromCurrency);
+            if (!newTo && validKeys.length > 0) newTo = validKeys[0];
             if (newTo && newTo !== toCurrency) {
               onToCurrencyChange(newTo);
             }
@@ -88,6 +91,7 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
     getAvailableCurrencies();
   }, [fromCurrency, toCurrency, onToCurrencyChange, toast]);
 
+  // Effect for fetching the current rate (remains largely the same)
   const fetchRate = useCallback(async (currentFrom: string, currentTo: string) => {
     setIsLoading(true);
     // Ensure from and to are different before fetching
@@ -130,45 +134,106 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
     }
   }, [fetchRate, fromCurrency, toCurrency]);
 
+  // useEffect to classify the current rate against dynamic bands
   useEffect(() => {
-    if (rate !== undefined) {
-      const newBand = classifyRateToBand(rate);
-      setCurrentBand(newBand);
-    } else {
-      setCurrentBand(null);
-    }
-  }, [rate]);
+    const currentFetchedRate = currentRateData?.rates?.[toCurrency];
+    const bands = pairAnalysisData?.threshold_bands;
 
+    if (currentFetchedRate !== undefined && bands && bands.length > 0) {
+      let foundBand: ThresholdBand | null = null;
+      // Assuming bands are ordered (e.g. lowest to highest), though logic should be robust
+      // For overlapping bands, the first match would be taken.
+      // The dynamic bands are defined with min/max, so direct comparison is fine.
+      for (const band of bands) {
+        const min = band.range.min;
+        const max = band.range.max;
+        // Inclusive checks: rate >= min AND rate <= max
+        // Handle cases where min or max might be null (though current dynamic bands have both)
 
-  useEffect(() => {
-    if (currentBand && currentBand.name && rate !== undefined && alertPrefs[currentBand.name] && fromCurrency && toCurrency) {
-      const currentBandName = currentBand.name;
-      // Only trigger toast if the current pair is USD/THB as bands are specific
-      if (fromCurrency === 'USD' && toCurrency === 'THB' && currentBandName !== prevBandRef.current && ['EXTREME', 'DEEP', 'OPPORTUNE'].includes(currentBandName)) {
-         toast({
-            title: `Rate Alert: ${currentBand.displayName} Zone!`,
-            description: `${fromCurrency}/${toCurrency} at ${rate.toFixed(4)}. Suggestion: ${currentBand.action}`,
-            variant: currentBandName === 'EXTREME' ? 'destructive' : 'default',
-            className: currentBand.colorConfig.toastClass
-         });
+        let minCheck = true;
+        if (min !== null) {
+            minCheck = currentFetchedRate >= min;
+        }
+
+        let maxCheck = true;
+        if (max !== null) {
+            // For the highest band, max might be the absolute historical max.
+            // If rate is equal to max, it's in the band.
+            // If the band defines inclusive_max = false, then it would be rate < max
+            maxCheck = currentFetchedRate <= max;
+            // A special case: if this is the EXTREME_HIGH band and rate > max, it's still in this band.
+            // However, our bands are contiguous, so rate <= max is usually fine.
+            // The last band (EXTREME_HIGH) has max as stats.max. If rate > stats.max, it's an outlier but still "extreme high".
+            // The provided logic for generateThresholdBands ensures max of EXTREME_HIGH is stats.max.
+        }
+
+        if (minCheck && maxCheck) {
+          foundBand = band;
+          break;
+        }
       }
-      prevBandRef.current = currentBandName;
+      // If rate is below the lowest min or above highest max of defined bands, it might not be found.
+      // This can happen if rate is an extreme outlier not covered by p10-p90 ranges if bands are strictly percentile based.
+      // Our current dynamic bands cover min to max.
+      setCurrentDynamicBand(foundBand);
+    } else {
+      setCurrentDynamicBand(null);
+    }
+  }, [currentRateData, toCurrency, pairAnalysisData]);
+
+  // Existing toast alert logic (still USD/THB specific for now)
+  useEffect(() => {
+    // This logic uses static band definitions (BANDS) for toast messages.
+    // This could be generalized later if dynamic bands also provide detailed toast content.
+    // For now, it remains USD/THB specific due to BANDS structure.
+    if (rate !== undefined && fromCurrency === 'USD' && toCurrency === 'THB') {
+      // Need to find which *static* band it falls into for the toast.
+      // This is a bit disconnected from currentDynamicBand but preserves existing toast behavior.
+      const staticBandForToast = (() => {
+          if (rate === undefined) return null;
+          // Simplified classification against BANDS for toast (ensure BANDS is available)
+          // This is a placeholder for the actual classifyRateToBand logic if it's still needed for toasts
+          // For now, let's assume currentDynamicBand.level can be mapped to a BandName for alertPrefs check
+          return currentDynamicBand ? { name: currentDynamicBand.level as BandName, displayName: currentDynamicBand.level, action: currentDynamicBand.action_brief, colorConfig: {toastClass: ""} } as BandDefinition : null;
+      })();
+
+
+      if (staticBandForToast && staticBandForToast.name && alertPrefs[staticBandForToast.name]) {
+        const currentBandName = staticBandForToast.name;
+        if (currentBandName !== prevBandRef.current && ['EXTREME_LOW', 'EXTREME_HIGH', 'LOW', 'HIGH'].includes(currentBandName)) { // Example levels
+           toast({
+              title: `Rate Alert: ${staticBandForToast.displayName} Zone!`,
+              description: `${fromCurrency}/${toCurrency} at ${rate.toFixed(4)}. Suggestion: ${staticBandForToast.action}`,
+              variant: (currentBandName === 'EXTREME_LOW' || currentBandName === 'EXTREME_HIGH') ? 'destructive' : 'default',
+              // className: staticBandForToast.colorConfig.toastClass // This needs to be mapped if using dynamic levels
+           });
+        }
+        prevBandRef.current = currentBandName;
+      } else {
+         prevBandRef.current = undefined;
+      }
     } else {
       prevBandRef.current = undefined;
     }
-  }, [currentBand, rate, alertPrefs, toast, fromCurrency, toCurrency]);
+  }, [currentDynamicBand, rate, alertPrefs, toast, fromCurrency, toCurrency]);
+
 
   const handleAlertPrefChange = (bandName: BandName, checked: boolean) => {
+    // This still uses BandName from static bands for alertPrefs keys.
+    // If alertPrefs keys need to be dynamic based on currentDynamicBand.level, this needs adjustment.
+    // For now, assuming alertPrefs keys match levels like 'EXTREME_LOW', 'NEUTRAL', etc.
     onAlertPrefsChange({ ...alertPrefs, [bandName]: checked });
   };
 
   const displayRate = rate !== undefined ? rate.toFixed(4) : "N/A";
-  const rateColorClass = currentBand ? "text-foreground" : "text-muted-foreground"; 
+  const rateColorClass = currentDynamicBand ? "text-foreground" : "text-muted-foreground";
 
   const formatLastUpdatedDate = (date: Date | null): string => {
     if (!date) return "N/A";
-    if (currentRateData?.date) return currentRateData.date;
-    const d = new Date(date); 
+    // The API returns date as "YYYY-MM-DD", which is fine.
+    if (currentRateData?.date && typeof currentRateData.date === 'string') return currentRateData.date;
+    // Fallback if it's somehow a Date object already
+    const d = new Date(date);
     const year = d.getFullYear();
     const month = (d.getMonth() + 1).toString().padStart(2, '0');
     const day = d.getDate().toString().padStart(2, '0');
@@ -254,56 +319,57 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
             )}
           </div>
 
-          {/* Right Side: Band Details */}
-          {/* This section's relevance might change based on currency pair. For now, it's displayed as is. */}
+          {/* Right Side: Band Details - Now uses currentDynamicBand */}
           <div className="space-y-4 md:pt-1">
-            {currentBand && !isLoading && rate !== undefined && fromCurrency === 'USD' && toCurrency === 'THB' ? ( // Conditionally render band info only for USD/THB for now
+            {currentDynamicBand && !isLoading && rate !== undefined ? (
               <>
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                  <Badge className={`${currentBand.colorConfig.badgeClass} px-3 py-1 text-xs sm:text-sm`}>
-                    {currentBand.displayName}
+                  <Badge className={`px-3 py-1 text-xs sm:text-sm ${getBadgeClassForLevel(currentDynamicBand.level)}`}>
+                    {currentDynamicBand.level.replace(/_/g, ' ')}
                   </Badge>
-                  {(currentBand.rangeDisplay || currentBand.probability !== undefined) && (
-                    <div className="text-left sm:text-right mt-1 sm:mt-0">
-                      {currentBand.rangeDisplay && <p className="text-xs text-muted-foreground">{currentBand.rangeDisplay}</p>}
-                      {currentBand.probability !== undefined && <p className="text-xs font-medium text-muted-foreground">Odds: {currentBand.probability}</p>}
-                    </div>
-                  )}
+                  <div className="text-left sm:text-right mt-1 sm:mt-0">
+                     {currentDynamicBand.range.min !== null && currentDynamicBand.range.max !== null && (
+                       <p className="text-xs text-muted-foreground">
+                         Range: {currentDynamicBand.range.min.toFixed(4)} - {currentDynamicBand.range.max.toFixed(4)}
+                       </p>
+                     )}
+                    {currentDynamicBand.probability !== null && (
+                        <p className="text-xs font-medium text-muted-foreground">
+                            Historical Odds: {(currentDynamicBand.probability * 100).toFixed(0)}%
+                        </p>
+                    )}
+                  </div>
                 </div>
                 
                 <Separator className="my-3" /> 
 
                 <div>
-                  <p className="text-lg font-semibold text-primary mb-1">{currentBand.action}</p>
-                  {currentBand.exampleAction && (
-                    <p className="text-sm text-foreground/80">
-                      <span className="font-medium text-foreground/90">Example:</span> {currentBand.exampleAction} (if normal DCA = 20k THB) {/* Example text might need to be dynamic */}
-                    </p>
-                  )}
+                  <p className="text-lg font-semibold text-primary mb-1">{currentDynamicBand.action_brief}</p>
+                  {/* Example Action removed as it's not in dynamic bands */}
                 </div>
 
-                {currentBand.reason && (
+                {currentDynamicBand.reason && (
                   <div>
                     <p className="text-xs text-muted-foreground/80 italic mt-2">
-                       <span className="font-semibold not-italic text-muted-foreground">Reason:</span> {currentBand.reason}
+                       <span className="font-semibold not-italic text-muted-foreground">Reason:</span> {currentDynamicBand.reason}
                     </p>
                   </div>
                 )}
               </>
             ) : (
                 <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-4 border border-dashed rounded-lg min-h-[200px] space-y-2">
-                 {isLoading && !rate ? <Loader2 className="h-8 w-8 animate-spin text-primary" /> :
-                 (fromCurrency !== 'USD' || toCurrency !== 'THB') && rate !== undefined && !isLoading ? // Check if rate is loaded but not for USD/THB
-                 <>
-                  <Info className="h-8 w-8 text-muted-foreground/50" />
-                  <p>Rate band analysis is currently specific to USD/THB.</p>
-                  <p className="text-xs">Displaying general rate information only for {fromCurrency}/{toCurrency}.</p>
-                 </>
-                 :  
-                 <>
-                  <Info className="h-8 w-8 text-muted-foreground/50" />
-                  <p>Rate band information will appear here { (fromCurrency === 'USD' && toCurrency === 'THB') ? '' : '(USD/THB only)'}.</p>
-                 </>
+                 {isLoading && !rate ? <Loader2 className="h-8 w-8 animate-spin text-primary" /> : // Loading current rate
+                   !pairAnalysisData || !pairAnalysisData.threshold_bands || pairAnalysisData.threshold_bands.length === 0 ? // Analysis data not ready
+                     <>
+                       <Info className="h-8 w-8 text-muted-foreground/50" />
+                       <p>Rate band analysis data is loading or not available.</p>
+                     </>
+                   : // Data is available, but rate might not be classified or is out of bands
+                     <>
+                       <Info className="h-8 w-8 text-muted-foreground/50" />
+                       <p>Rate band information will appear here.</p>
+                       { !currentDynamicBand && rate !== undefined && <p className="text-xs">Current rate {rate.toFixed(4)} not falling into defined bands.</p> }
+                     </>
                  }
                 </div>
              )}
@@ -314,10 +380,20 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
         The CardFooter containing the "Alert & Chart Band Preferences" has been removed 
         as per the user's request because these settings are no longer needed.
         The alertPrefs and onAlertPrefsChange props are kept in case they are needed for other functionality
-        or if the settings are reintroduced elsewhere in the future.
+        or if the settings are reintroduced elsewhere in the future. If alertPrefs are to be dynamic,
+        the handleAlertPrefChange keys would need to map to currentDynamicBand.level strings.
       */}
     </Card>
   );
+};
+
+// Helper function for badge styling based on dynamic level (can be expanded)
+const getBadgeClassForLevel = (level: string): string => {
+  if (level.includes("EXTREME_LOW")) return "bg-red-100 text-red-800 border-red-300";
+  if (level.includes("LOW")) return "bg-orange-100 text-orange-800 border-orange-300";
+  if (level.includes("HIGH")) return "bg-blue-100 text-blue-800 border-blue-300";
+  if (level.includes("EXTREME_HIGH")) return "bg-purple-100 text-purple-800 border-purple-300";
+  return "bg-gray-100 text-gray-800 border-gray-300"; // NEUTRAL or other
 };
 
 export default CurrentRateDisplay;
