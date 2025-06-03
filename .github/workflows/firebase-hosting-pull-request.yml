@@ -1,0 +1,15 @@
+# .github/workflows/firebase-hosting-pull-request.yml
+name: Firebase preview for PRs
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+jobs:
+  build_and_preview:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: '${{ secrets.GITHUB_TOKEN }}'
+          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_RATEREFRESHER }}'
+          projectId: raterefresher          # <== your Firebase project ID
