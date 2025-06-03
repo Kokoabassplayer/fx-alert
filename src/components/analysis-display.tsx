@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { generatePairAnalysis, PairAnalysisData, TrendPeriod, DistributionStatistics, ThresholdBand } from '../../lib/dynamic-analysis';
+import { generatePairAnalysis, type PairAnalysisData } from '@/lib/dynamic-analysis';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Terminal } from 'lucide-react';
 
@@ -13,6 +13,8 @@ interface AnalysisDisplayProps {
   toCurrency: string | null;
 }
 
+// Note: Removed TrendPeriod, DistributionStatistics, ThresholdBand from import as they are part of PairAnalysisData or not directly used here.
+// If they are needed directly, they should be imported with `type` keyword as well.
 const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({ fromCurrency, toCurrency }) => {
   const [analysisData, setAnalysisData] = useState<PairAnalysisData | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
