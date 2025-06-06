@@ -1,6 +1,6 @@
-# FX Alert (Codename: RateRefresher)
+# FX Alert 
 
-FX Alert is a demo application built with **Next.js** and
+FX Alert(Codename: RateRefresher) is a demo application built with **Next.js** and
 **Firebase Studio**. It displays current and historical exchange rates using the
 [Frankfurter API](https://www.frankfurter.app/). The app highlights threshold
 bands, shows a historical chart and provides a short AI‑generated analysis of
