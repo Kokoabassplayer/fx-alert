@@ -79,6 +79,11 @@ function calculateDistributionStatistics(
   const sum = sortedRates.reduce((acc, val) => acc + val, 0);
   const mean = sum / sortedRates.length;
 
+  const variance =
+    sortedRates.reduce((acc, val) => acc + Math.pow(val - mean, 2), 0) /
+    sortedRates.length;
+  const stdDev = Math.sqrt(variance);
+
   const mid = Math.floor(sortedRates.length / 2);
   const median = sortedRates.length % 2 !== 0 ? sortedRates[mid] : (sortedRates[mid - 1] + sortedRates[mid]) / 2;
 
@@ -96,7 +101,19 @@ function calculateDistributionStatistics(
   const lastDate = rates.length > 0 ? rates[rates.length - 1].date : undefined;
   const sample_period = firstDate && lastDate ? `${firstDate} to ${lastDate}` : "N/A";
 
-  return { mean, median, min, max, p10, p25, p75, p90, sample_days: rates.length, sample_period };
+  return {
+    mean,
+    median,
+    stdDev,
+    min,
+    max,
+    p10,
+    p25,
+    p75,
+    p90,
+    sample_days: rates.length,
+    sample_period,
+  };
 }
 
 function generateTrendSummary(
@@ -185,7 +202,20 @@ function generateThresholdBands(
   _rates: FormattedHistoricalRate[]
 ): ThresholdBand[] {
   console.log('Generating threshold bands...');
-  if (!stats.p10 || !stats.p25 || !stats.p75 || !stats.p90 || !stats.min || !stats.max) {
+  if (
+    stats.p10 === null ||
+    stats.p25 === null ||
+    stats.p75 === null ||
+    stats.p90 === null ||
+    stats.min === null ||
+    stats.max === null ||
+    stats.p10 === undefined ||
+    stats.p25 === undefined ||
+    stats.p75 === undefined ||
+    stats.p90 === undefined ||
+    stats.min === undefined ||
+    stats.max === undefined
+  ) {
       console.warn('Insufficient statistics to generate threshold bands.');
       return [];
   }
