@@ -5,6 +5,7 @@ import type { FC } from 'react';
 import { useState, useEffect } from 'react'; // Import useState and useEffect
 import { Label } from "@/components/ui/label"; // Import Label
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"; // Import Select components
+import { TrendingUp, ExternalLink, Award } from 'lucide-react';
 import CurrentRateDisplay from '@/components/current-rate-display';
 import HistoryChartDisplay from '@/components/history-chart-display';
 import AnalysisDisplay from '@/components/analysis-display';
@@ -12,6 +13,7 @@ import { generatePairAnalysis, type PairAnalysisData } from '@/lib/dynamic-analy
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import type { AlertPrefs } from '@/lib/bands';
 import { DEFAULT_ALERT_PREFS } from '@/lib/bands';
+import { affiliateLinks } from '@/lib/affiliate-links';
 
 
 const UsdThbMonitorPage: FC = () => {
@@ -74,7 +76,7 @@ const UsdThbMonitorPage: FC = () => {
           FX Alert
         </h1>
       </header>
-      
+
       <main className="w-full max-w-4xl space-y-6">
         {/* Analysis Period Selector */}
         <div className="flex items-center space-x-2 mb-4 self-start">
@@ -139,6 +141,59 @@ const UsdThbMonitorPage: FC = () => {
             <li>Past performance is not indicative of future results. All investments carry risk, and you may lose money.</li>
             </ul>
         </div>
+        <div className="mb-4">
+          <h2 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-2">
+            <Award className="w-4 h-4 text-primary" />
+            Recommended Services
+          </h2>
+          <p className="text-xs text-muted-foreground mb-3">
+            Trusted platforms for currency trading and international transfers:
+          </p>
+          <div className="grid grid-cols-1 gap-3">
+            {affiliateLinks.map((link) => (
+              <a
+                key={link.id}
+                href={link.url}
+                className="group relative flex items-start gap-3 p-3 rounded-lg border border-border/50 bg-card/50 hover:bg-card hover:border-primary/30 hover:shadow-md hover:shadow-primary/5 transition-all duration-200"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {/* Icon */}
+                <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center group-hover:from-primary/20 group-hover:to-primary/10 transition-colors">
+                  <TrendingUp className="w-5 h-5 text-primary" />
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
+                      {link.title}
+                    </span>
+                    {link.badge && (
+                      <span className="px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-primary/10 text-primary">
+                        {link.badge}
+                      </span>
+                    )}
+                    <ExternalLink className="w-3 h-3 text-muted-foreground/50 group-hover:text-primary transition-colors" />
+                  </div>
+                  {link.category && (
+                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground/70">
+                      {link.category}
+                    </span>
+                  )}
+                  {link.description && (
+                    <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                      {link.description}
+                    </p>
+                  )}
+                </div>
+
+                {/* Hover indicator */}
+                <div className="absolute inset-0 rounded-lg ring-2 ring-primary/0 group-hover:ring-primary/10 transition-all duration-200 pointer-events-none" />
+              </a>
+            ))}
+          </div>
+        </div>
         <p className="text-xs text-muted-foreground text-center mt-6">
           Application developed by Nuttapong Buttprom using Firebase Studio.
         </p>
@@ -148,4 +203,3 @@ const UsdThbMonitorPage: FC = () => {
 }
 
 export default UsdThbMonitorPage;
-

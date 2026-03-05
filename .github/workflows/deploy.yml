@@ -2,7 +2,9 @@ name: Build & Deploy to Firebase Hosting
 
 on:
   push:
-    branches: [ master ]   # change to "main" if that's your branch
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
 
 jobs:
   deploy:
@@ -13,14 +15,26 @@ jobs:
 
     - uses: actions/setup-node@v4
       with:
-        node-version: 20       # matches what Firebase CLI expects
+        node-version: 20
 
-    - run: npm ci              # installs deps from package-lock
-    - run: npm run build       # runs "next build" -> out/
+    - run: npm ci
+    - run: npm run build
 
-    - uses: FirebaseExtended/action-hosting-deploy@v0
+    # Deploy to Production (when pushing to master)
+    - if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+      uses: FirebaseExtended/action-hosting-deploy@v0
       with:
         repoToken: ${{ secrets.GITHUB_TOKEN }}
-        firebaseServiceAccount: ${{ secrets.FIREBASE_TOKEN }}
+        firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_RATEREFRESHER }}
         channelId: live
-        projectId: raterefresher           # keep this project ID
+        projectId: raterefresher
+
+    # Deploy to Preview (when opening a PR)
+    - if: github.event_name == 'pull_request'
+      uses: FirebaseExtended/action-hosting-deploy@v0
+      with:
+        repoToken: ${{ secrets.GITHUB_TOKEN }}
+        firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_RATEREFRESHER }}
+        channelId: preview
+        expires: 7d
+        projectId: raterefresher
