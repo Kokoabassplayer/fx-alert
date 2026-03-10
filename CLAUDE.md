@@ -2,6 +2,41 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+---
+
+## 🔴 CRITICAL RULES - READ FIRST
+
+### MANDATORY: Always Use Worktree + PR Workflow
+
+**NEVER push directly to master. ALWAYS create a worktree and PR for review.**
+
+```bash
+# Step 1: Create new worktree for the feature
+git worktree add ../fx-alert-feature-name -b feature/feature-name
+
+# Step 2: Work in that worktree
+cd ../fx-alert-feature-name
+
+# Step 3: Make changes and commit
+git add .
+git commit -m "feat: description"
+
+# Step 4: Push branch
+git push origin feature/feature-name
+
+# Step 5: Create PR
+gh pr create --title "Title" --body "Description"
+
+# Step 6: After merge, cleanup
+git worktree remove ../fx-alert-feature-name
+```
+
+**Branch naming:** `feature/short-description`, `fix/short-description`, `monetization/sprint-N`
+
+**Why worktrees?** Multiple agents can work simultaneously without conflicts.
+
+---
+
 ## Project Overview
 
 FX Alert (codename: RateRefresher) is a Next.js web app that displays foreign exchange rates with historical analysis and AI-generated insights. It's deployed to Firebase Hosting and uses the free Frankfurter API for rate data.
