@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react'; // Import useState and useEffect
 import { Label } from "@/components/ui/label"; // Import Label
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"; // Import Select components
 import { TrendingUp, ExternalLink, Award } from 'lucide-react';
+import Link from 'next/link';
 import CurrentRateDisplay from '@/components/current-rate-display';
 import HistoryChartDisplay from '@/components/history-chart-display';
 import AnalysisDisplay from '@/components/analysis-display';
@@ -194,7 +195,16 @@ const UsdThbMonitorPage: FC = () => {
             ))}
           </div>
         </div>
-        <p className="text-xs text-muted-foreground text-center mt-6">
+        <div className="flex justify-center gap-4 mt-6">
+          <Link href="/privacy" className="text-xs text-muted-foreground hover:text-primary transition-colors">
+            Privacy Policy
+          </Link>
+          <span className="text-xs text-muted-foreground">•</span>
+          <Link href="/terms" className="text-xs text-muted-foreground hover:text-primary transition-colors">
+            Terms of Service
+          </Link>
+        </div>
+        <p className="text-xs text-muted-foreground text-center mt-4">
           Application developed by Nuttapong Buttprom using Firebase Studio.
         </p>
       </footer>
