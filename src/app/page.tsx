@@ -195,13 +195,29 @@ const UsdThbMonitorPage: FC = () => {
             ))}
           </div>
         </div>
-        <div className="flex justify-center gap-4 mt-6">
-          <Link href="/privacy" className="text-xs text-muted-foreground hover:text-primary transition-colors">
-            Privacy Policy
+        <div className="flex justify-center gap-2 sm:gap-3 mt-6 flex-wrap text-xs">
+          <Link href="/about" className="text-muted-foreground hover:text-primary transition-colors">
+            About
           </Link>
-          <span className="text-xs text-muted-foreground">•</span>
-          <Link href="/terms" className="text-xs text-muted-foreground hover:text-primary transition-colors">
-            Terms of Service
+          <span className="text-muted-foreground">•</span>
+          <Link href="/faq" className="text-muted-foreground hover:text-primary transition-colors">
+            FAQ
+          </Link>
+          <span className="text-muted-foreground">•</span>
+          <Link href="/guides/send-money-to-thailand" className="text-muted-foreground hover:text-primary transition-colors">
+            Guides
+          </Link>
+          <span className="text-muted-foreground">•</span>
+          <Link href="/newsletter" className="text-muted-foreground hover:text-primary transition-colors font-medium text-primary">
+            Newsletter
+          </Link>
+          <span className="text-muted-foreground">•</span>
+          <Link href="/privacy" className="text-muted-foreground hover:text-primary transition-colors">
+            Privacy
+          </Link>
+          <span className="text-muted-foreground">•</span>
+          <Link href="/terms" className="text-muted-foreground hover:text-primary transition-colors">
+            Terms
           </Link>
         </div>
         <p className="text-xs text-muted-foreground text-center mt-6">

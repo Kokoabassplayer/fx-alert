@@ -40,8 +40,41 @@ export function LegalLayout({ title, description, lastUpdated, children }: Legal
         </main>
 
         {/* Footer */}
-        <footer className="mt-12 pt-6 border-t border-border text-center">
-          <p className="text-xs text-muted-foreground">
+        <footer className="mt-12 pt-6 border-t border-border">
+          <div className="flex justify-center gap-2 sm:gap-3 flex-wrap mb-4 text-xs">
+            <Link href="/" className="text-muted-foreground hover:text-primary transition-colors">
+              Home
+            </Link>
+            <span className="text-muted-foreground">•</span>
+            <Link href="/about" className="text-muted-foreground hover:text-primary transition-colors">
+              About
+            </Link>
+            <span className="text-muted-foreground">•</span>
+            <Link href="/pricing" className="text-muted-foreground hover:text-primary transition-colors">
+              Pricing
+            </Link>
+            <span className="text-muted-foreground">•</span>
+            <Link href="/alerts" className="text-muted-foreground hover:text-primary transition-colors">
+              Alerts
+            </Link>
+            <span className="text-muted-foreground">•</span>
+            <Link href="/guides/send-money-to-thailand" className="text-muted-foreground hover:text-primary transition-colors">
+              Guides
+            </Link>
+            <span className="text-muted-foreground">•</span>
+            <Link href="/newsletter" className="text-muted-foreground hover:text-primary transition-colors font-medium text-primary">
+              Newsletter
+            </Link>
+            <span className="text-muted-foreground">•</span>
+            <Link href="/privacy" className="text-muted-foreground hover:text-primary transition-colors">
+              Privacy
+            </Link>
+            <span className="text-muted-foreground">•</span>
+            <Link href="/terms" className="text-muted-foreground hover:text-primary transition-colors">
+              Terms
+            </Link>
+          </div>
+          <p className="text-xs text-muted-foreground text-center">
             © {new Date().getFullYear()} FX Alert. All rights reserved.
           </p>
         </footer>
