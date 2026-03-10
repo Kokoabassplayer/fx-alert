@@ -6,7 +6,5 @@ export const APP_CONFIG = {
   NAME: 'FX Alert',
   EMAIL: 'kokoabassplayer+fxalert@gmail.com',
   DEVELOPER: 'Nuttapong Buttprom',
-  LEGAL_LAST_UPDATED: 'March 10, 2026',
+  LEGAL_LAST_UPDATED: '2026-03-10',
 } as const;
-
-export const COPYRIGHT_YEAR = new Date().getFullYear();

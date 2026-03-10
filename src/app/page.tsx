@@ -204,7 +204,7 @@ const UsdThbMonitorPage: FC = () => {
             Terms of Service
           </Link>
         </div>
-        <p className="text-xs text-muted-foreground text-center mt-4">
+        <p className="text-xs text-muted-foreground text-center mt-6">
           Application developed by Nuttapong Buttprom using Firebase Studio.
         </p>
       </footer>

@@ -29,7 +29,7 @@ export function LegalLayout({ title, description, lastUpdated, children }: Legal
           </h1>
           {lastUpdated && (
             <p className="text-sm text-muted-foreground">
-              Last updated: {lastUpdated}
+              Last updated: {new Date(lastUpdated).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
             </p>
           )}
         </header>
@@ -42,7 +42,7 @@ export function LegalLayout({ title, description, lastUpdated, children }: Legal
         {/* Footer */}
         <footer className="mt-12 pt-6 border-t border-border text-center">
           <p className="text-xs text-muted-foreground">
-            © {new Date().getFullYear()} {title.split(' - ')[0]}. All rights reserved.
+            © {new Date().getFullYear()} FX Alert. All rights reserved.
           </p>
         </footer>
       </div>
