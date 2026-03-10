@@ -1,0 +1,30 @@
+[     401ms] [WARNING] [HMR] Invalid message: {"action":"isrManifest","data":{"/":true,"/newsletter":true,"/guides/send-money-to-thailand":true}}
+TypeError: Cannot read properties of undefined (reading '__N_SSP')
+    at handleStaticIndicator (http://localhost:9002/_next/static/chunks/%5Broot%20of%20the%20server%5D__3a40d6d2._.js:12110:124)
+    at processMessage (http://localhost:9002/_next/static/chunks/%5Broot%20of%20the%20server%5D__3a40d6d2._.js:12125:17)
+    at http://localhost:9002/_next/static/chunks/%5Broot%20of%20the%20server%5D__3a40d6d2._.js:11949:13
+    at WebSocket.handleMessage (http://localhost:9002/_next/static/chunks/%5Broot%20of%20the%20server%5D__3a40d6d2._.js:11604:17) @ http://localhost:9002/_next/static/chunks/%5Broot%20of%20the%20server%5D__3a40d6d2._.js:11951
+[     417ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:9002/currency-pairs/usd-thb:0
+[     505ms] Error: Page "/currency-pairs/[pair]/page" is missing exported function "generateStaticParams()", which is required with "output: export" config.
+    at DevServer.renderToResponseWithComponentsImpl (file://C:\Users\OSNuttapongB\Desktop\fx-alert\node_modules\next\dist\server\base-server.js:1178:49)
+[     501ms] [WARNING] [HMR] Invalid message: {"action":"isrManifest","data":{"/":true,"/newsletter":true,"/guides/send-money-to-thailand":true}}
+TypeError: Cannot read properties of undefined (reading '__N_SSP')
+    at handleStaticIndicator (http://localhost:9002/_next/static/chunks/%5Broot%20of%20the%20server%5D__3a40d6d2._.js:12110:124)
+    at processMessage (http://localhost:9002/_next/static/chunks/%5Broot%20of%20the%20server%5D__3a40d6d2._.js:12125:17)
+    at http://localhost:9002/_next/static/chunks/%5Broot%20of%20the%20server%5D__3a40d6d2._.js:11949:13
+    at WebSocket.handleMessage (http://localhost:9002/_next/static/chunks/%5Broot%20of%20the%20server%5D__3a40d6d2._.js:11604:17) @ http://localhost:9002/_next/static/chunks/%5Broot%20of%20the%20server%5D__3a40d6d2._.js:11951
+[   11973ms] [WARNING] [HMR] Invalid message: {"action":"isrManifest","data":{"/":true,"/newsletter":true,"/guides/send-money-to-thailand":true}}
+TypeError: Cannot read properties of undefined (reading '__N_SSP')
+    at handleStaticIndicator (http://localhost:9002/_next/static/chunks/%5Broot%20of%20the%20server%5D__3a40d6d2._.js:12110:124)
+    at processMessage (http://localhost:9002/_next/static/chunks/%5Broot%20of%20the%20server%5D__3a40d6d2._.js:12125:17)
+    at http://localhost:9002/_next/static/chunks/%5Broot%20of%20the%20server%5D__3a40d6d2._.js:11949:13
+    at WebSocket.handleMessage (http://localhost:9002/_next/static/chunks/%5Broot%20of%20the%20server%5D__3a40d6d2._.js:11604:17) @ http://localhost:9002/_next/static/chunks/%5Broot%20of%20the%20server%5D__3a40d6d2._.js:11951
+[   11988ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:9002/currency-pairs/usd-thb:0
+[   12067ms] Error: Page "/currency-pairs/[pair]/page" is missing exported function "generateStaticParams()", which is required with "output: export" config.
+    at DevServer.renderToResponseWithComponentsImpl (file://C:\Users\OSNuttapongB\Desktop\fx-alert\node_modules\next\dist\server\base-server.js:1178:49)
+[   12066ms] [WARNING] [HMR] Invalid message: {"action":"isrManifest","data":{"/":true,"/newsletter":true,"/guides/send-money-to-thailand":true}}
+TypeError: Cannot read properties of undefined (reading '__N_SSP')
+    at handleStaticIndicator (http://localhost:9002/_next/static/chunks/%5Broot%20of%20the%20server%5D__3a40d6d2._.js:12110:124)
+    at processMessage (http://localhost:9002/_next/static/chunks/%5Broot%20of%20the%20server%5D__3a40d6d2._.js:12125:17)
+    at http://localhost:9002/_next/static/chunks/%5Broot%20of%20the%20server%5D__3a40d6d2._.js:11949:13
+    at WebSocket.handleMessage (http://localhost:9002/_next/static/chunks/%5Broot%20of%20the%20server%5D__3a40d6d2._.js:11604:17) @ http://localhost:9002/_next/static/chunks/%5Broot%20of%20the%20server%5D__3a40d6d2._.js:11951

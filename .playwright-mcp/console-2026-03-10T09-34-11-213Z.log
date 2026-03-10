@@ -1,0 +1,37 @@
+[    3204ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:9002/currency-pairs/usd-thb:0
+[    3303ms] Error: Page "/currency-pairs/[pair]/page" is missing exported function "generateStaticParams()", which is required with "output: export" config.
+    at DevServer.renderToResponseWithComponentsImpl (file://C:\Users\OSNuttapongB\Desktop\fx-alert\node_modules\next\dist\server\base-server.js:1178:49)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async DevServer.renderPageComponent (file://C:\Users\OSNuttapongB\Desktop\fx-alert\node_modules\next\dist\server\base-server.js:2393:24)
+    at async DevServer.renderToResponseImpl (file://C:\Users\OSNuttapongB\Desktop\fx-alert\node_modules\next\dist\server\base-server.js:2430:32)
+    at async DevServer.pipeImpl (file://C:\Users\OSNuttapongB\Desktop\fx-alert\node_modules\next\dist\server\base-server.js:1003:25)
+    at async NextNodeServer.handleCatchallRenderRequest (file://C:\Users\OSNuttapongB\Desktop\fx-alert\node_modules\next\dist\server\next-server.js:304:17)
+    at async DevServer.handleRequestImpl (file://C:\Users\OSNuttapongB\Desktop\fx-alert\node_modules\next\dist\server\base-server.js:895:17)
+    at async (file://C:\Users\OSNuttapongB\Desktop\fx-alert\node_modules\next\dist\server\dev\next-dev-server.js:371:20)
+    at async Span.traceAsyncFn (file://C:\Users\OSNuttapongB\Desktop\fx-alert\node_modules\next\dist\trace\trace.js:157:20)
+    at async DevServer.handleRequest (file://C:\Users\OSNuttapongB\Desktop\fx-alert\node_modules\next\dist\server\dev\next-dev-server.js:368:24)
+    at async invokeRender (file://C:\Users\OSNuttapongB\Desktop\fx-alert\node_modules\next\dist\server\lib\router-server.js:247:21)
+    at async handleRequest (file://C:\Users\OSNuttapongB\Desktop\fx-alert\node_modules\next\dist\server\lib\router-server.js:438:24)
+    at async requestHandlerImpl (file://C:\Users\OSNuttapongB\Desktop\fx-alert\node_modules\next\dist\server\lib\router-server.js:462:13)
+    at async Server.requestListener (file://C:\Users\OSNuttapongB\Desktop\fx-alert\node_modules\next\dist\server\lib\start-server.js:158:13)
+[    3302ms] [WARNING] [HMR] Invalid message: {"action":"isrManifest","data":{"/":true,"/newsletter":true,"/guides/send-money-to-thailand":true}}
+TypeError: Cannot read properties of undefined (reading '__N_SSP')
+    at handleStaticIndicator (http://localhost:9002/_next/static/chunks/%5Broot%20of%20the%20server%5D__3a40d6d2._.js:12110:124)
+    at processMessage (http://localhost:9002/_next/static/chunks/%5Broot%20of%20the%20server%5D__3a40d6d2._.js:12125:17)
+    at http://localhost:9002/_next/static/chunks/%5Broot%20of%20the%20server%5D__3a40d6d2._.js:11949:13
+    at WebSocket.handleMessage (http://localhost:9002/_next/static/chunks/%5Broot%20of%20the%20server%5D__3a40d6d2._.js:11604:17) @ http://localhost:9002/_next/static/chunks/%5Broot%20of%20the%20server%5D__3a40d6d2._.js:11951
+[   47828ms] [WARNING] [HMR] Invalid message: {"action":"isrManifest","data":{"/":true,"/newsletter":true,"/guides/send-money-to-thailand":true}}
+TypeError: Cannot read properties of undefined (reading '__N_SSP')
+    at handleStaticIndicator (http://localhost:9002/_next/static/chunks/%5Broot%20of%20the%20server%5D__3a40d6d2._.js:12110:124)
+    at processMessage (http://localhost:9002/_next/static/chunks/%5Broot%20of%20the%20server%5D__3a40d6d2._.js:12125:17)
+    at http://localhost:9002/_next/static/chunks/%5Broot%20of%20the%20server%5D__3a40d6d2._.js:11949:13
+    at WebSocket.handleMessage (http://localhost:9002/_next/static/chunks/%5Broot%20of%20the%20server%5D__3a40d6d2._.js:11604:17) @ http://localhost:9002/_next/static/chunks/%5Broot%20of%20the%20server%5D__3a40d6d2._.js:11951
+[   47847ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:9002/currency-pairs/usd-thb:0
+[   47931ms] Error: Page "/currency-pairs/[pair]/page" is missing exported function "generateStaticParams()", which is required with "output: export" config.
+    at DevServer.renderToResponseWithComponentsImpl (file://C:\Users\OSNuttapongB\Desktop\fx-alert\node_modules\next\dist\server\base-server.js:1178:49)
+[   47931ms] [WARNING] [HMR] Invalid message: {"action":"isrManifest","data":{"/":true,"/newsletter":true,"/guides/send-money-to-thailand":true}}
+TypeError: Cannot read properties of undefined (reading '__N_SSP')
+    at handleStaticIndicator (http://localhost:9002/_next/static/chunks/%5Broot%20of%20the%20server%5D__3a40d6d2._.js:12110:124)
+    at processMessage (http://localhost:9002/_next/static/chunks/%5Broot%20of%20the%20server%5D__3a40d6d2._.js:12125:17)
+    at http://localhost:9002/_next/static/chunks/%5Broot%20of%20the%20server%5D__3a40d6d2._.js:11949:13
+    at WebSocket.handleMessage (http://localhost:9002/_next/static/chunks/%5Broot%20of%20the%20server%5D__3a40d6d2._.js:11604:17) @ http://localhost:9002/_next/static/chunks/%5Broot%20of%20the%20server%5D__3a40d6d2._.js:11951

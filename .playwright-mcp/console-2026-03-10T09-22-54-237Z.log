@@ -1,0 +1,2 @@
+[     295ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:9002/:0
+[     362ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:9002/favicon.ico:0

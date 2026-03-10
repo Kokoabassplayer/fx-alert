@@ -1,0 +1,6 @@
+[     228ms] [WARNING] [HMR] Invalid message: {"action":"isrManifest","data":{"/":true,"/newsletter":true,"/guides/send-money-to-thailand":true}}
+TypeError: Cannot read properties of undefined (reading '__N_SSP')
+    at handleStaticIndicator (http://localhost:9002/_next/static/chunks/%5Broot%20of%20the%20server%5D__3a40d6d2._.js:12110:124)
+    at processMessage (http://localhost:9002/_next/static/chunks/%5Broot%20of%20the%20server%5D__3a40d6d2._.js:12125:17)
+    at http://localhost:9002/_next/static/chunks/%5Broot%20of%20the%20server%5D__3a40d6d2._.js:11949:13
+    at WebSocket.handleMessage (http://localhost:9002/_next/static/chunks/%5Broot%20of%20the%20server%5D__3a40d6d2._.js:11604:17) @ http://localhost:9002/_next/static/chunks/%5Broot%20of%20the%20server%5D__3a40d6d2._.js:11951
