@@ -116,10 +116,8 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
         <CardContent>
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead>Statistic</TableHead>
-                <TableHead className="text-right">Value ({toCurrency}/{fromCurrency})</TableHead>
-              </TableRow>
+              {/* Elements on same line: HTML prohibits text nodes (whitespace) as children of <tr> */}
+              <TableRow><TableHead>Statistic</TableHead><TableHead className="text-right">Value ({toCurrency}/{fromCurrency})</TableHead></TableRow>
             </TableHeader>
             <TableBody>
               <TableRow>
@@ -170,12 +168,8 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
         <CardContent>
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead>Level</TableHead>
-                <TableHead>Range ({fromCurrency}/{toCurrency})</TableHead>{/* Convention corrected */} <TableHead>Probability</TableHead>
-                <TableHead>Brief</TableHead>
-                <TableHead>Reasoning</TableHead>
-              </TableRow>
+              {/* Elements on same line: HTML prohibits text nodes (whitespace) as children of <tr> */}
+              <TableRow><TableHead>Level</TableHead><TableHead>Range ({fromCurrency}/{toCurrency})</TableHead><TableHead>Probability</TableHead><TableHead>Brief</TableHead><TableHead>Reasoning</TableHead></TableRow>
             </TableHeader>
             <TableBody>
               {threshold_bands.map((band) => (
