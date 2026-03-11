@@ -1,8 +1,11 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
-import Script from 'next/script';               // ①  add this
+import Script from 'next/script';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
+import { SiteHeader } from '@/components/site-header';
+import { SiteFooter } from '@/components/site-footer';
+import { mainNavLinks } from '@/components/nav-links';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -44,7 +47,13 @@ export default function RootLayout({
       </head>
 
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        {children}
+        <div className="flex min-h-screen flex-col">
+          <SiteHeader links={mainNavLinks} />
+          <main className="flex-1">
+            {children}
+          </main>
+          <SiteFooter />
+        </div>
         <Toaster />
       </body>
     </html>
