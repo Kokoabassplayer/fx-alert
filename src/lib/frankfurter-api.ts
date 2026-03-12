@@ -64,8 +64,6 @@ export async function fetchFrankfurterRate(
       return null;
     }
 
-    console.log(`Frankfurter API: ${from}/${to} = ${rate} (${data.date})`);
-
     return {
       rate: rate,
       timestamp: new Date(data.date).getTime(),
@@ -76,20 +74,5 @@ export async function fetchFrankfurterRate(
   } catch (error) {
     console.error(`Frankfurter API fetch error for ${from}/${to}:`, error);
     return null;
-  }
-}
-
-/**
- * Check if Frankfurter API is available
- *
- * @returns true if API is responding
- */
-export async function checkFrankfurterAvailability(): Promise<boolean> {
-  try {
-    // Test with a common pair (USD/THB)
-    const testResult = await fetchFrankfurterRate('USD', 'THB');
-    return testResult !== null;
-  } catch {
-    return false;
   }
 }
