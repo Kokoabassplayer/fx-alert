@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronDown, Home, Info, DollarSign, Bell, BookOpen, Mail } from "lucide-react";
+import { ChevronDown, BookOpen } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,12 +14,12 @@ import { cn } from "@/lib/utils";
 import type { NavLink, IconName } from "./nav-links";
 
 const iconMap: Record<IconName, React.ComponentType<{ className?: string }>> = {
-  home: Home,
-  info: Info,
-  'dollar-sign': DollarSign,
-  bell: Bell,
+  home: () => null,
+  info: () => null,
+  'dollar-sign': () => null,
+  bell: () => null,
   'book-open': BookOpen,
-  mail: Mail,
+  mail: () => null,
 };
 
 interface MainNavProps {
@@ -41,17 +41,16 @@ export function MainNav({ links }: MainNavProps) {
             <DropdownMenu key={link.href}>
               <DropdownMenuTrigger
                 className={cn(
-                  "flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-md transition-colors",
+                  "flex items-center gap-1 px-4 py-2 text-sm font-medium rounded-md transition-colors",
                   isActive(link.href) || link.children.some((c) => isActive(c.href))
                     ? "text-primary bg-accent"
                     : "text-muted-foreground hover:text-foreground hover:bg-accent"
                 )}
               >
-                <Icon className="h-4 w-4" />
                 {link.label}
-                <ChevronDown className="h-3 w-3" />
+                <ChevronDown className="h-3.5 w-3.5 ml-0.5" />
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="min-w-[160px]">
+              <DropdownMenuContent align="start" className="min-w-[180px]">
                 {link.children.map((child) => {
                   const ChildIcon = iconMap[child.icon];
                   return (
@@ -63,8 +62,8 @@ export function MainNav({ links }: MainNavProps) {
                           isActive(child.href) && "text-primary"
                         )}
                       >
-                        <ChildIcon className="h-4 w-4" />
-                        {child.label}
+                        <ChildIcon className="h-4 w-4 text-muted-foreground" />
+                        <span>{child.label}</span>
                       </Link>
                     </DropdownMenuItem>
                   );
@@ -79,16 +78,15 @@ export function MainNav({ links }: MainNavProps) {
             key={link.href}
             href={link.href}
             className={cn(
-              "flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-md transition-colors",
+              "px-4 py-2 text-sm font-medium rounded-md transition-colors",
               isActive(link.href)
                 ? "text-primary bg-accent"
                 : "text-muted-foreground hover:text-foreground hover:bg-accent"
             )}
           >
-            <Icon className="h-4 w-4" />
             {link.label}
             {link.badge && (
-              <Badge variant="secondary" className="ml-1 text-xs px-1.5 py-0">
+              <Badge variant="secondary" className="ml-1.5 text-xs px-1.5 py-0">
                 {link.badge}
               </Badge>
             )}
