@@ -11,16 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import type { NavLink, IconName } from "./nav-links";
-
-const iconMap: Record<IconName, React.ComponentType<{ className?: string }>> = {
-  home: () => null,
-  info: () => null,
-  'dollar-sign': () => null,
-  bell: () => null,
-  'book-open': BookOpen,
-  mail: () => null,
-};
+import type { NavLink } from "./nav-links";
 
 interface MainNavProps {
   links: NavLink[];
@@ -34,8 +25,6 @@ export function MainNav({ links }: MainNavProps) {
   return (
     <nav className="hidden md:flex items-center gap-1">
       {links.map((link) => {
-        const Icon = iconMap[link.icon];
-
         if (link.children) {
           return (
             <DropdownMenu key={link.href}>
@@ -51,23 +40,20 @@ export function MainNav({ links }: MainNavProps) {
                 <ChevronDown className="h-3.5 w-3.5 ml-0.5" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="min-w-[180px]">
-                {link.children.map((child) => {
-                  const ChildIcon = iconMap[child.icon];
-                  return (
-                    <DropdownMenuItem key={child.href} asChild>
-                      <Link
-                        href={child.href}
-                        className={cn(
-                          "cursor-pointer flex items-center gap-2",
-                          isActive(child.href) && "text-primary"
-                        )}
-                      >
-                        <ChildIcon className="h-4 w-4 text-muted-foreground" />
-                        <span>{child.label}</span>
-                      </Link>
-                    </DropdownMenuItem>
-                  );
-                })}
+                {link.children.map((child) => (
+                  <DropdownMenuItem key={child.href} asChild>
+                    <Link
+                      href={child.href}
+                      className={cn(
+                        "cursor-pointer flex items-center gap-2",
+                        isActive(child.href) && "text-primary"
+                      )}
+                    >
+                      <BookOpen className="h-4 w-4 text-muted-foreground" />
+                      <span>{child.label}</span>
+                    </Link>
+                  </DropdownMenuItem>
+                ))}
               </DropdownMenuContent>
             </DropdownMenu>
           );
