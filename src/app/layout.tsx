@@ -22,6 +22,19 @@ export const metadata: Metadata = {
   title: 'FX Alert',
   description:
     'Monitor USD to THB exchange rates and trends, with actionable insights based on rate bands.',
+  openGraph: {
+    title: 'FX Alert - Foreign Exchange Rate Monitoring',
+    description: 'Monitor USD to THB exchange rates and trends, with actionable insights based on rate bands.',
+    url: 'https://raterefresher.web.app',
+    siteName: 'FX Alert',
+    locale: 'en_US',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'FX Alert - Foreign Exchange Rate Monitoring',
+    description: 'Monitor USD to THB exchange rates and trends, with actionable insights based on rate bands.',
+  },
 };
 
 export default function RootLayout({
