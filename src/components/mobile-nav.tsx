@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu } from "lucide-react";
+import { Menu, Home, Info, DollarSign, Bell, BookOpen, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -18,7 +18,16 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Separator } from "@/components/ui/separator";
-import type { NavLink } from "./nav-links";
+import type { NavLink, IconName } from "./nav-links";
+
+const iconMap: Record<IconName, React.ComponentType<{ className?: string }>> = {
+  home: Home,
+  info: Info,
+  'dollar-sign': DollarSign,
+  bell: Bell,
+  'book-open': BookOpen,
+  mail: Mail,
+};
 
 interface MobileNavProps {
   links: NavLink[];
@@ -45,7 +54,7 @@ export function MobileNav({ links }: MobileNavProps) {
         </SheetHeader>
         <nav className="flex flex-col gap-1 px-2">
           {links.map((link) => {
-            const Icon = link.icon;
+            const Icon = iconMap[link.icon];
 
             if (link.children) {
               return (
@@ -58,19 +67,23 @@ export function MobileNav({ links }: MobileNavProps) {
                       </div>
                     </AccordionTrigger>
                     <AccordionContent className="pl-11 pb-2">
-                      {link.children.map((child) => (
-                        <Link
-                          key={child.href}
-                          href={child.href}
-                          className={`block py-2 text-sm transition-colors hover:text-primary ${
-                            isActive(child.href)
-                              ? "text-primary font-medium"
-                              : "text-muted-foreground"
-                          }`}
-                        >
-                          {child.label}
-                        </Link>
-                      ))}
+                      {link.children.map((child) => {
+                        const ChildIcon = iconMap[child.icon];
+                        return (
+                          <Link
+                            key={child.href}
+                            href={child.href}
+                            className={`flex items-center gap-2 py-2 text-sm transition-colors hover:text-primary ${
+                              isActive(child.href)
+                                ? "text-primary font-medium"
+                                : "text-muted-foreground"
+                            }`}
+                          >
+                            <ChildIcon className="h-4 w-4" />
+                            {child.label}
+                          </Link>
+                        );
+                      })}
                     </AccordionContent>
                   </AccordionItem>
                 </Accordion>

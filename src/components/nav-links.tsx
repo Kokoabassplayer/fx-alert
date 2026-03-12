@@ -1,17 +1,9 @@
-import type { LucideIcon } from 'lucide-react';
-import {
-  Home,
-  Info,
-  DollarSign,
-  Bell,
-  BookOpen,
-  Mail,
-} from 'lucide-react';
+export type IconName = 'home' | 'info' | 'dollar-sign' | 'bell' | 'book-open' | 'mail';
 
 export interface NavLink {
   href: string;
   label: string;
-  icon: LucideIcon;
+  icon: IconName;
   badge?: string;
   children?: NavLink[];
 }
@@ -22,17 +14,17 @@ export interface FooterLink {
 }
 
 export const mainNavLinks: NavLink[] = [
-  { href: '/', label: 'Home', icon: Home },
-  { href: '/about', label: 'About', icon: Info },
-  { href: '/pricing', label: 'Pricing', icon: DollarSign },
-  { href: '/alerts', label: 'Alerts', icon: Bell },
+  { href: '/', label: 'Home', icon: 'home' },
+  { href: '/about', label: 'About', icon: 'info' },
+  { href: '/pricing', label: 'Pricing', icon: 'dollar-sign' },
+  { href: '/alerts', label: 'Alerts', icon: 'bell' },
   {
     href: '/guides',
     label: 'Guides',
-    icon: BookOpen,
+    icon: 'book-open',
     children: [
-      { href: '/guides/send-money-to-thailand', label: 'Send Money to Thailand', icon: BookOpen },
+      { href: '/guides/send-money-to-thailand', label: 'Send Money to Thailand', icon: 'book-open' },
     ],
   },
-  { href: '/newsletter', label: 'Newsletter', icon: Mail, badge: 'Free' },
+  { href: '/newsletter', label: 'Newsletter', icon: 'mail', badge: 'Free' },
 ];
