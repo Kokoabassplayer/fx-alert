@@ -1,3 +1,5 @@
+import { fetchFrankfurterRate, type FrankfurterRateResult } from './frankfurter-api';
+
 const API_BASE_URL = "https://api.frankfurter.app";
 
 export interface CurrentRateResponse {
@@ -7,6 +9,18 @@ export interface CurrentRateResponse {
   rates: {
     [currencyCode: string]: number;
   };
+}
+
+/**
+ * Real-time rate response with source attribution
+ */
+export interface RealTimeRateResponse {
+  rate: number;
+  timestamp: number;
+  source: 'frankfurter';
+  date: string;
+  fromCurrency: string;
+  toCurrency: string;
 }
 
 export interface HistoricalRateResponse {
@@ -73,10 +87,37 @@ export async function fetchCurrentRate(from: string, to: string): Promise<Curren
 
     return data as CurrentRateResponse;
 
-  } catch (error) { 
+  } catch (error) {
     console.error(`Generic error fetching current rate for ${from} to ${to}:`, error);
     return null;
   }
+}
+
+/**
+ * Fetch current exchange rate using Frankfurter API
+ *
+ * @param from - Base currency code
+ * @param to - Quote currency code
+ * @returns Rate data with source attribution, or null if fetch fails
+ */
+export async function fetchRealTimeRate(
+  from: string,
+  to: string
+): Promise<RealTimeRateResponse | null> {
+  // Use Frankfurter API (supports CORS, no auth needed)
+  const apiRate = await fetchFrankfurterRate(from, to);
+  if (apiRate) {
+    return {
+      rate: apiRate.rate,
+      timestamp: apiRate.timestamp,
+      source: apiRate.source,
+      date: apiRate.date,
+      fromCurrency: from,
+      toCurrency: to,
+    };
+  }
+
+  return null;
 }
 
 function formatDateForApi(date: Date): string {
