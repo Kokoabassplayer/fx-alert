@@ -32,7 +32,7 @@ export function MainNav({ links }: MainNavProps) {
                 className={cn(
                   "flex items-center gap-1 px-4 py-2 text-sm font-medium rounded-md transition-colors",
                   isActive(link.href) || link.children.some((c) => isActive(c.href))
-                    ? "text-foreground bg-accent border border-primary/20"
+                    ? "text-primary-foreground bg-primary hover:bg-primary/90"
                     : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
                 )}
               >
@@ -66,7 +66,7 @@ export function MainNav({ links }: MainNavProps) {
             className={cn(
               "px-4 py-2 text-sm font-medium rounded-md transition-colors",
               isActive(link.href)
-                ? "text-foreground bg-accent border border-primary/20"
+                ? "text-primary-foreground bg-primary hover:bg-primary/90"
                 : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
             )}
           >
