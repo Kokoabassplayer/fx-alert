@@ -2,7 +2,7 @@ import { fetchRealTimeRate } from './currency-api';
 import type { RateAlert, AlertCheckResult } from './alerts-types';
 
 /**
- * Check a single alert against the current rate (real-time via Yahoo Finance)
+ * Check a single alert against the current rate via Frankfurter API
  */
 export async function checkAlert(alert: RateAlert): Promise<AlertCheckResult | null> {
   const rateData = await fetchRealTimeRate(alert.fromCurrency, alert.toCurrency);
