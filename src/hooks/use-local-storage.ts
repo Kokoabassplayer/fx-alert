@@ -1,8 +1,7 @@
-
 "use client";
 
 import type { Dispatch, SetStateAction} from 'react';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 // Helper function to safely get and parse value from localStorage
 function getValueFromLocalStorage<T>(key: string, defaultValue: T): T {
@@ -14,17 +13,13 @@ function getValueFromLocalStorage<T>(key: string, defaultValue: T): T {
     if (storedValue === null) {
       return defaultValue;
     }
-    // Parse the stored JSON
     const parsedStoredValue = JSON.parse(storedValue);
 
-    // If both defaultValue and parsedStoredValue are objects (but not arrays), merge them
-    // This ensures that new keys in defaultValue are included if not present in storedValue
     if (typeof defaultValue === 'object' && defaultValue !== null && !Array.isArray(defaultValue) &&
         typeof parsedStoredValue === 'object' && parsedStoredValue !== null && !Array.isArray(parsedStoredValue)) {
       return { ...defaultValue, ...parsedStoredValue } as T;
     }
-    
-    // Otherwise, return the parsed value directly
+
     return parsedStoredValue as T;
   } catch (error) {
     console.error(`Error parsing localStorage key "${key}":`, error);
@@ -36,22 +31,31 @@ export function useLocalStorage<T>(
   key: string,
   defaultValue: T
 ): [T, Dispatch<SetStateAction<T>>] {
-  const [value, setValue] = useState<T>(() => {
-    return getValueFromLocalStorage(key, defaultValue);
-  });
+  // Initialize with defaultValue to avoid SSR/client hydration mismatch
+  const [value, setValue] = useState<T>(defaultValue);
+  const initializedRef = useRef(false);
 
-  // Effect to update localStorage when 'value' changes
+  // Read from localStorage on mount (runs once per component mount)
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        window.localStorage.setItem(key, JSON.stringify(value));
-      } catch (error) {
-        console.error(`Error setting localStorage key "${key}":`, error);
-      }
+    if (typeof window === 'undefined' || initializedRef.current) return;
+
+    const storedValue = getValueFromLocalStorage(key, defaultValue);
+    setValue(storedValue);
+    initializedRef.current = true;
+  }, [key]);
+
+  // Write to localStorage when value changes (only after initialization)
+  useEffect(() => {
+    if (typeof window === 'undefined' || !initializedRef.current) return;
+
+    try {
+      window.localStorage.setItem(key, JSON.stringify(value));
+    } catch (error) {
+      console.error(`Error setting localStorage key "${key}":`, error);
     }
   }, [key, value]);
-  
-  // Effect to update state if localStorage changes in another tab/window
+
+  // Cross-tab synchronization
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
@@ -59,7 +63,6 @@ export function useLocalStorage<T>(
       if (event.key === key && event.newValue !== null) {
         try {
           const newValueFromStorage = JSON.parse(event.newValue);
-           // Similar merge logic as in getValueFromLocalStorage, if needed
            if (typeof defaultValue === 'object' && defaultValue !== null && !Array.isArray(defaultValue) &&
                typeof newValueFromStorage === 'object' && newValueFromStorage !== null && !Array.isArray(newValueFromStorage)) {
             setValue({ ...defaultValue, ...newValueFromStorage } as T);
@@ -68,11 +71,8 @@ export function useLocalStorage<T>(
            }
         } catch (error) {
           console.error(`Error parsing updated localStorage key "${key}" from storage event:`, error);
-           // Optionally reset to defaultValue or current value if parsing fails
-           // setValue(defaultValue); 
         }
       } else if (event.key === key && event.newValue === null) {
-        // Key was removed from localStorage, reset to default
         setValue(defaultValue);
       }
     };
@@ -81,8 +81,7 @@ export function useLocalStorage<T>(
     return () => {
       window.removeEventListener('storage', handleStorageChange);
     };
-  }, [key, defaultValue]); // Include defaultValue in dependencies if its structure can change
+  }, [key, defaultValue]);
 
   return [value, setValue];
 }
-
