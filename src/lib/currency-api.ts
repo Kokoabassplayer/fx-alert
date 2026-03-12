@@ -17,7 +17,7 @@ export interface CurrentRateResponse {
 export interface RealTimeRateResponse {
   rate: number;
   timestamp: number;
-  source: 'yahoo' | 'frankfurter';
+  source: 'frankfurter';
   date: string;
   fromCurrency: string;
   toCurrency: string;
@@ -94,47 +94,30 @@ export async function fetchCurrentRate(from: string, to: string): Promise<Curren
 }
 
 /**
- * Fetch real-time rate using hybrid approach:
- * 1. Try Yahoo Finance first (real-time, no rate limits)
- * 2. Fall back to Frankfurter API (daily close) if Yahoo fails
+ * Fetch current exchange rate using Frankfurter API
  *
  * @param from - Base currency code
  * @param to - Quote currency code
- * @returns Real-time rate data with source attribution, or null if both fail
+ * @returns Rate data with source attribution, or null if fetch fails
  */
 export async function fetchRealTimeRate(
   from: string,
   to: string
 ): Promise<RealTimeRateResponse | null> {
-  // Try Yahoo Finance first (real-time data)
-  const yahooRate = await fetchYahooRate(from, to);
-  if (yahooRate) {
+  // Use Frankfurter API (supports CORS, no auth needed)
+  const apiRate = await fetchYahooRate(from, to);
+  if (apiRate) {
     return {
-      rate: yahooRate.rate,
-      timestamp: yahooRate.timestamp,
-      source: 'yahoo',
-      date: yahooRate.date,
+      rate: apiRate.rate,
+      timestamp: apiRate.timestamp,
+      source: apiRate.source,
+      date: apiRate.date,
       fromCurrency: from,
       toCurrency: to,
     };
   }
 
-  // Fallback to Frankfurter (daily close data)
-  console.log(`Yahoo unavailable for ${from}/${to}, falling back to Frankfurter`);
-  const frankfurterRate = await fetchCurrentRate(from, to);
-  if (!frankfurterRate) {
-    return null;
-  }
-
-  const rate = frankfurterRate.rates[to];
-  return {
-    rate: rate,
-    timestamp: new Date(frankfurterRate.date).getTime(),
-    source: 'frankfurter',
-    date: frankfurterRate.date,
-    fromCurrency: from,
-    toCurrency: to,
-  };
+  return null;
 }
 
 function formatDateForApi(date: Date): string {

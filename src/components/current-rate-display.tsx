@@ -40,7 +40,7 @@ interface CurrentRateDisplayProps {
   pairAnalysisData: PairAnalysisData | null; // New prop
 }
 
-const REFRESH_INTERVAL_MS = 60 * 1000; // 60 seconds - real-time updates
+const REFRESH_INTERVAL_MS = 60 * 60 * 1000; // 1 hour - rates update daily
 
 const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
   alertPrefs,
@@ -231,31 +231,19 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
 
   const formatLastUpdatedDate = (date: Date | null): string => {
     if (!date) return "N/A";
-    if (dataSource === 'yahoo') {
-      // Real-time: Show time like "2:45 PM"
-      return date.toLocaleTimeString('en-US', {
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true
-      });
-    } else {
-      // Daily close: Show date like "Mar 11"
-      return date.toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric'
-      });
-    }
+    // Frankfurter provides daily rates, show the date
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric'
+    });
   };
 
   const getDataSourceLabel = (): string => {
-    return dataSource === 'yahoo' ? 'Live' : 'Daily Close';
+    return 'Daily';
   };
 
   const getDataSourceBadgeClass = (): string => {
-    if (dataSource === 'yahoo') {
-      return 'bg-green-100 text-green-800 border-green-300';
-    }
-    return 'bg-gray-100 text-gray-600 border-gray-300';
+    return 'bg-blue-100 text-blue-800 border-blue-300';
   };
 
 
