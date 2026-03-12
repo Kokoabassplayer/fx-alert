@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/componen
 import { Label } from "@/components/ui/label";
 import { Loader2, Settings, Bell, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { fetchCurrentRate, fetchAvailableCurrencies, type CurrentRateResponse } from "@/lib/currency-api";
+import { fetchRealTimeRate, fetchAvailableCurrencies, type RealTimeRateResponse } from "@/lib/currency-api";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
@@ -40,7 +40,7 @@ interface CurrentRateDisplayProps {
   pairAnalysisData: PairAnalysisData | null; // New prop
 }
 
-const REFRESH_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
+const REFRESH_INTERVAL_MS = 60 * 1000; // 60 seconds - real-time updates
 
 const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
   alertPrefs,
@@ -51,7 +51,7 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
   onToCurrencyChange,
   pairAnalysisData, // Destructure new prop
 }) => {
-  const [currentRateData, setCurrentRateData] = useState<CurrentRateResponse | null>(null);
+  const [currentRateData, setCurrentRateData] = useState<RealTimeRateResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true); // For the current rate fetch itself
   const { toast } = useToast();
   // const [currentBand, setCurrentBand] = useState<BandDefinition | null>(null); // Old static band state
@@ -61,8 +61,9 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
   // Internal state for availableCurrencies is still needed
   const [availableCurrencies, setAvailableCurrencies] = useState<{ [key: string]: string } | null>(null);
 
-  const rate = currentRateData?.rates?.[toCurrency]; 
-  const lastUpdated = currentRateData?.date ? new Date(currentRateData.date) : null;
+  const rate = currentRateData?.rate;
+  const lastUpdated = currentRateData?.timestamp ? new Date(currentRateData.timestamp) : null;
+  const dataSource = currentRateData?.source;
 
   // Effect for fetching available currencies (remains largely the same)
   useEffect(() => {
@@ -109,7 +110,7 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
       return;
     }
 
-    const data = await fetchCurrentRate(currentFrom, currentTo);
+    const data = await fetchRealTimeRate(currentFrom, currentTo);
     if (data) {
       setCurrentRateData(data);
     } else {
@@ -136,7 +137,7 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
 
   // useEffect to classify the current rate against dynamic bands
   useEffect(() => {
-    const currentFetchedRate = currentRateData?.rates?.[toCurrency];
+    const currentFetchedRate = currentRateData?.rate;
     const bands = pairAnalysisData?.threshold_bands;
 
     if (currentFetchedRate !== undefined && bands && bands.length > 0) {
@@ -230,14 +231,31 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
 
   const formatLastUpdatedDate = (date: Date | null): string => {
     if (!date) return "N/A";
-    // The API returns date as "YYYY-MM-DD", which is fine.
-    if (currentRateData?.date && typeof currentRateData.date === 'string') return currentRateData.date;
-    // Fallback if it's somehow a Date object already
-    const d = new Date(date);
-    const year = d.getFullYear();
-    const month = (d.getMonth() + 1).toString().padStart(2, '0');
-    const day = d.getDate().toString().padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    if (dataSource === 'yahoo') {
+      // Real-time: Show time like "2:45 PM"
+      return date.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      });
+    } else {
+      // Daily close: Show date like "Mar 11"
+      return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric'
+      });
+    }
+  };
+
+  const getDataSourceLabel = (): string => {
+    return dataSource === 'yahoo' ? 'Live' : 'Daily Close';
+  };
+
+  const getDataSourceBadgeClass = (): string => {
+    if (dataSource === 'yahoo') {
+      return 'bg-green-100 text-green-800 border-green-300';
+    }
+    return 'bg-gray-100 text-gray-600 border-gray-300';
   };
 
 
@@ -308,13 +326,20 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
         <div className="grid md:grid-cols-2 gap-6 items-start">
           {/* Left Side: Current Rate */}
           <div className="flex flex-col items-center md:items-start text-center md:text-left">
-            <p className="text-sm text-muted-foreground mb-1">Current Rate ({fromCurrency} to {toCurrency})</p>
+            <div className="flex items-center gap-2 mb-1">
+              <p className="text-sm text-muted-foreground">Current Rate ({fromCurrency} to {toCurrency})</p>
+              {dataSource && (
+                <Badge className={`px-2 py-0.5 text-xs ${getDataSourceBadgeClass()}`}>
+                  {getDataSourceLabel()}
+                </Badge>
+              )}
+            </div>
             <div className={`text-6xl font-bold ${rateColorClass} mb-1`}>
               <span>{displayRate}</span>
             </div>
             {lastUpdated && (
               <p className="text-xs text-muted-foreground">
-                As of: {formatLastUpdatedDate(lastUpdated)}
+                Updated: {formatLastUpdatedDate(lastUpdated)}
               </p>
             )}
           </div>

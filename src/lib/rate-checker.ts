@@ -1,17 +1,17 @@
-import { fetchCurrentRate } from './currency-api';
+import { fetchRealTimeRate } from './currency-api';
 import type { RateAlert, AlertCheckResult } from './alerts-types';
 
 /**
- * Check a single alert against the current rate
+ * Check a single alert against the current rate (real-time via Yahoo Finance)
  */
 export async function checkAlert(alert: RateAlert): Promise<AlertCheckResult | null> {
-  const rateData = await fetchCurrentRate(alert.fromCurrency, alert.toCurrency);
+  const rateData = await fetchRealTimeRate(alert.fromCurrency, alert.toCurrency);
 
-  if (!rateData || !rateData.rates[alert.toCurrency]) {
+  if (!rateData) {
     return null;
   }
 
-  const currentRate = rateData.rates[alert.toCurrency];
+  const currentRate = rateData.rate;
   let triggered = false;
 
   if (alert.condition === 'above') {
