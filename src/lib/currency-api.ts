@@ -1,4 +1,4 @@
-import { fetchYahooRate } from './yahoo-finance-api';
+import { fetchFrankfurterRate, type FrankfurterRateResult } from './frankfurter-api';
 
 const API_BASE_URL = "https://api.frankfurter.app";
 
@@ -105,7 +105,7 @@ export async function fetchRealTimeRate(
   to: string
 ): Promise<RealTimeRateResponse | null> {
   // Use Frankfurter API (supports CORS, no auth needed)
-  const apiRate = await fetchYahooRate(from, to);
+  const apiRate = await fetchFrankfurterRate(from, to);
   if (apiRate) {
     return {
       rate: apiRate.rate,

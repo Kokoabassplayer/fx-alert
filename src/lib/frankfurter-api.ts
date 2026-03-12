@@ -1,5 +1,5 @@
 /**
- * Real-Time FX Rates API Client
+ * Frankfurter API Client for FX Rates
  *
  * This module provides access to currency exchange rates using the Frankfurter API.
  * Frankfurter is a free, open-source API that provides current and historical exchange rates.
@@ -10,7 +10,7 @@
  * Docs: https://api.frankfurter.app/
  */
 
-export interface YahooRateResult {
+export interface FrankfurterRateResult {
   rate: number;
   timestamp: number;
   source: 'frankfurter';
@@ -39,10 +39,10 @@ interface FrankfurterResponse {
  * @param to - Quote currency code (e.g., "THB")
  * @returns Rate data or null if fetch fails
  */
-export async function fetchYahooRate(
+export async function fetchFrankfurterRate(
   from: string,
   to: string
-): Promise<YahooRateResult | null> {
+): Promise<FrankfurterRateResult | null> {
   try {
     const url = `https://api.frankfurter.app/latest?from=${from}&to=${to}`;
 
@@ -84,10 +84,10 @@ export async function fetchYahooRate(
  *
  * @returns true if API is responding
  */
-export async function checkYahooAvailability(): Promise<boolean> {
+export async function checkFrankfurterAvailability(): Promise<boolean> {
   try {
     // Test with a common pair (USD/THB)
-    const testResult = await fetchYahooRate('USD', 'THB');
+    const testResult = await fetchFrankfurterRate('USD', 'THB');
     return testResult !== null;
   } catch {
     return false;
