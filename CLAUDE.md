@@ -122,3 +122,38 @@ From `docs/blueprint.md`:
 - No backend — all API calls are client-side to Frankfurter
 - User preferences persisted via `useLocalStorage` hook
 - All historical data calculations are client-side
+
+## Testing Guidelines
+
+### Current State
+**No automated tests are currently set up.** Testing is done manually via:
+- Chrome DevTools for console errors and network requests
+- Visual inspection of UI components
+- Manual verification of key user flows
+
+### When to Add Unit Tests
+Unit tests are valuable for:
+- Complex business logic with multiple edge cases
+- Data transformations or calculations
+- Critical paths that could break the app
+
+**Unit tests are NOT strictly required for:**
+- Simple API wrappers (like `fetchFrankfurterRate`)
+- UI refactors with no logic changes
+- Styling or layout updates
+- Documentation changes
+
+### Recommended Approach
+1. **Manual testing first** - Use Chrome DevTools to verify functionality
+2. **Add tests for complex logic** - When adding calculations or data transformations
+3. **Future consideration** - When the codebase grows, set up Jest + React Testing Library
+
+### Example Test Structure (for future reference)
+```typescript
+// Test: fetchFrankfurterRate handles API success
+test('returns rate data when API succeeds', async () => {
+  const result = await fetchFrankfurterRate('USD', 'THB');
+  expect(result?.rate).toBeGreaterThan(0);
+  expect(result?.source).toBe('frankfurter');
+});
+```
