@@ -4,6 +4,7 @@ import Link from "next/link";
 import { TrendingUp } from "lucide-react";
 import { MobileNav } from "./mobile-nav";
 import { MainNav } from "./main-nav";
+import { ThemeToggle } from "./theme-toggle";
 import type { NavLink } from "./nav-links";
 
 interface SiteHeaderProps {
@@ -24,7 +25,9 @@ export function SiteHeader({ links }: SiteHeaderProps) {
         {/* Desktop Navigation */}
         <MainNav links={links} />
 
-        <div className="ml-auto flex items-center">
+        <div className="ml-auto flex items-center gap-1">
+          {/* Theme Toggle */}
+          <ThemeToggle />
           {/* Mobile Menu */}
           <MobileNav links={links} />
         </div>

@@ -6,6 +6,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { SiteHeader } from '@/components/site-header';
 import { SiteFooter } from '@/components/site-footer';
 import { mainNavLinks } from '@/components/nav-links';
+import { ThemeProvider } from '@/components/theme-provider';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -29,7 +30,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="light">
+    <html lang="en" suppressHydrationWarning>
       {/* ②  new <head> with GA4 tag */}
       <head>
         <Script
@@ -47,14 +48,16 @@ export default function RootLayout({
       </head>
 
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <div className="flex min-h-screen flex-col">
-          <SiteHeader links={mainNavLinks} />
-          <main className="flex-1">
-            {children}
-          </main>
-          <SiteFooter />
-        </div>
-        <Toaster />
+        <ThemeProvider>
+          <div className="flex min-h-screen flex-col">
+            <SiteHeader links={mainNavLinks} />
+            <main className="flex-1">
+              {children}
+            </main>
+            <SiteFooter />
+          </div>
+          <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   );
