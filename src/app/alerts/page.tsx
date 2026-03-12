@@ -1,278 +1,251 @@
-import type { Metadata } from 'next';
+"use client"
+
+import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { Home, Bell, Mail, Plus, Trash2, Info } from 'lucide-react';
-import { LegalLayout } from '@/components/legal-layout';
-import { APP_CONFIG } from '@/lib/constants';
-
-export const metadata: Metadata = {
-  title: 'Rate Alerts - FX Alert | Email & SMS Notifications',
-  description: 'Set up custom exchange rate alerts for USD/THB and other currency pairs. Get notified via email or SMS when rates hit your target levels.',
-};
-
-// This would come from a database in production
-const exampleAlerts = [
-  {
-    id: '1',
-    fromCurrency: 'USD',
-    toCurrency: 'THB',
-    condition: 'above',
-    threshold: 35.5,
-    active: true,
-  },
-  {
-    id: '2',
-    fromCurrency: 'USD',
-    toCurrency: 'THB',
-    condition: 'below',
-    threshold: 33.0,
-    active: false,
-  },
-];
+import { Bell, RefreshCw, Info, Mail, Home } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
+import { fetchCurrentRate } from '@/lib/currency-api';
+import { checkAlerts, getTriggeredAlerts } from '@/lib/rate-checker';
+import type { RateAlert } from '@/lib/alerts-types';
+import { useAlerts } from '@/hooks/use-alerts';
+import { AlertForm } from '@/components/alert-form';
+import { AlertList } from '@/components/alert-list';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function AlertsPage() {
+  const { alerts, activeAlerts, createAlert, deleteAlert, toggleAlert } = useAlerts();
+  const { toast } = useToast();
+  const [currentRates, setCurrentRates] = useState<Record<string, number>>({});
+  const [isChecking, setIsChecking] = useState(false);
+  const [lastCheckTime, setLastCheckTime] = useState<Date | null>(null);
+
+  // Fetch current rates for all unique currency pairs in alerts
+  const fetchCurrentRates = useCallback(async () => {
+    if (alerts.length === 0) return;
+
+    setIsChecking(true);
+    const rates: Record<string, number> = {};
+
+    // Get unique currency pairs
+    const pairs = Array.from(
+      new Set(alerts.map(a => `${a.fromCurrency}/${a.toCurrency}`))
+    );
+
+    for (const pair of pairs) {
+      const [from, to] = pair.split('/');
+      const data = await fetchCurrentRate(from, to);
+      if (data && data.rates[to]) {
+        rates[pair] = data.rates[to];
+      }
+    }
+
+    setCurrentRates(rates);
+    setLastCheckTime(new Date());
+    setIsChecking(false);
+  }, [alerts]);
+
+  // Check alerts and show notifications for triggered ones
+  const checkForTriggeredAlerts = useCallback(async () => {
+    if (activeAlerts.length === 0) return;
+
+    setIsChecking(true);
+    const results = await checkAlerts(activeAlerts);
+    const triggered = getTriggeredAlerts(results);
+
+    if (triggered.length > 0) {
+      triggered.forEach(({ alert, currentRate }) => {
+        const pair = `${alert.fromCurrency}/${alert.toCurrency}`;
+        toast({
+          title: "🔔 Alert Triggered!",
+          description: `${pair} is ${currentRate.toFixed(2)} (${alert.condition} ${alert.threshold.toFixed(2)})`,
+          variant: "default",
+        });
+      });
+    } else {
+      toast({
+        title: "No triggered alerts",
+        description: "None of your active alerts have been triggered.",
+        variant: "default",
+      });
+    }
+
+    // Update current rates
+    const rates: Record<string, number> = {};
+    results.forEach(({ alert, currentRate }) => {
+      const pair = `${alert.fromCurrency}/${alert.toCurrency}`;
+      rates[pair] = currentRate;
+    });
+    setCurrentRates(rates);
+    setLastCheckTime(new Date());
+    setIsChecking(false);
+  }, [activeAlerts, toast]);
+
+  // Fetch rates on mount and when alerts change
+  useEffect(() => {
+    fetchCurrentRates();
+  }, [fetchCurrentRates]);
+
+  // Auto-refresh rates every 60 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchCurrentRates();
+    }, 60000);
+
+    return () => clearInterval(interval);
+  }, [fetchCurrentRates]);
+
+  // Handle alert creation
+  const handleCreateAlert = (
+    fromCurrency: string,
+    toCurrency: string,
+    condition: 'above' | 'below',
+    threshold: number
+  ) => {
+    createAlert(fromCurrency, toCurrency, condition, threshold);
+    toast({
+      title: "Alert Created",
+      description: `You'll be notified when ${fromCurrency}/${toCurrency} goes ${condition} ${threshold.toFixed(2)}.`,
+    });
+
+    // Fetch current rate for the new pair
+    setTimeout(() => {
+      fetchCurrentRate(fromCurrency, toCurrency).then(data => {
+        if (data && data.rates[toCurrency]) {
+          setCurrentRates(prev => ({
+            ...prev,
+            [`${fromCurrency}/${toCurrency}`]: data.rates[toCurrency],
+          }));
+        }
+      });
+    }, 100);
+  };
+
   return (
-    <LegalLayout
-      title="Exchange Rate Alerts"
-      description={metadata.description || ''}
-    >
-      {/* Hero Section */}
-      <section className="text-center mb-8">
-        <div className="flex items-center justify-center gap-2 mb-3">
-          <Bell className="w-8 h-8 text-primary" />
-          <h2 className="text-2xl font-bold text-foreground">
-            Rate Alerts (Coming Soon)
-          </h2>
+    <div className="container max-w-4xl mx-auto px-4 py-8">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+            <Bell className="w-6 h-6 text-primary" />
+            Rate Alerts
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Get notified when exchange rates hit your targets
+          </p>
         </div>
-        <p className="text-sm text-muted-foreground max-w-xl mx-auto">
-          Set custom exchange rate thresholds and receive notifications via email or SMS when rates hit your target levels.
-          Never miss an opportunity to exchange at favorable rates.
-        </p>
-      </section>
-
-      {/* Premium Notice */}
-      <section className="bg-primary/5 border border-primary/20 rounded-xl p-6 mb-8">
-        <div className="flex items-start gap-3">
-          <Info className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-          <div>
-            <h3 className="text-sm font-semibold text-foreground mb-1">
-              Premium Feature - Coming Soon
-            </h3>
-            <p className="text-xs text-muted-foreground mb-3">
-              Rate alerts are part of our Premium (199 THB/month) and Pro (499 THB/month) plans.
-              We're currently finalizing the feature and will launch soon.
-            </p>
-            <Link
-              href="/pricing"
-              className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
-            >
-              View Pricing
-              <Bell className="w-3 h-3" />
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* How It Works */}
-      <section className="mb-10">
-        <h3 className="text-lg font-semibold text-foreground mb-4">How Rate Alerts Work</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="p-4 rounded-lg bg-card/50 border border-border/50">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-sm font-bold text-primary">
-                1
-              </div>
-              <h4 className="text-sm font-semibold text-foreground">Set Your Threshold</h4>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Define the exchange rate level you want to be notified about. Set upper or lower limits for any currency pair.
-            </p>
-          </div>
-
-          <div className="p-4 rounded-lg bg-card/50 border border-border/50">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-sm font-bold text-primary">
-                2
-              </div>
-              <h4 className="text-sm font-semibold text-foreground">We Monitor Rates</h4>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Our system monitors exchange rates 24/7. When your threshold is crossed, you'll be notified instantly.
-            </p>
-          </div>
-
-          <div className="p-4 rounded-lg bg-card/50 border border-border/50">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-sm font-bold text-primary">
-                3
-              </div>
-              <h4 className="text-sm font-semibold text-foreground">Get Notified</h4>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Receive alerts via email (Premium) or SMS (Pro). Take action quickly when rates are favorable.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* Example Alert Setup */}
-      <section className="mb-10">
-        <h3 className="text-lg font-semibold text-foreground mb-4">Example Alert Setup</h3>
-        <div className="bg-card/30 rounded-lg border border-border/50 overflow-hidden">
-          <div className="p-4 border-b border-border/50">
-            <h4 className="text-sm font-semibold text-foreground mb-1">Your Alerts (Preview)</h4>
-            <p className="text-xs text-muted-foreground">
-              Example alerts for demonstration. Actual alerts will be saved to your account after sign-up.
-            </p>
-          </div>
-
-          {/* Alert 1 */}
-          <div className="p-4 border-b border-border/50 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center">
-                <Bell className="w-5 h-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-foreground">
-                  USD/THB <span className="text-green-600">above</span> 35.50
-                </p>
-                <p className="text-xs text-muted-foreground">Notify me when rate exceeds 35.50 THB</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="px-2 py-1 text-[10px] font-medium rounded bg-green-500/10 text-green-600">
-                Active
-              </span>
-              <button className="p-1.5 rounded hover:bg-muted text-muted-foreground">
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-
-          {/* Alert 2 */}
-          <div className="p-4 flex items-center justify-between opacity-60">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
-                <Bell className="w-5 h-5 text-amber-600" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-foreground">
-                  USD/THB <span className="text-amber-600">below</span> 33.00
-                </p>
-                <p className="text-xs text-muted-foreground">Notify me when rate drops below 33.00 THB</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="px-2 py-1 text-[10px] font-medium rounded bg-muted text-muted-foreground">
-                Inactive
-              </span>
-              <button className="p-1.5 rounded hover:bg-muted text-muted-foreground">
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-
-          {/* Add New Alert Button */}
-          <div className="p-4 bg-muted/30">
-            <button
-              disabled
-              className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-medium rounded-lg border-2 border-dashed border-border text-muted-foreground cursor-not-allowed"
-            >
-              <Plus className="w-4 h-4" />
-              Add New Alert (Coming Soon)
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* Notification Types */}
-      <section className="mb-10">
-        <h3 className="text-lg font-semibold text-foreground mb-4">Notification Types</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="p-4 rounded-lg bg-card/50 border border-border/50">
-            <div className="flex items-center gap-2 mb-3">
-              <Mail className="w-5 h-5 text-primary" />
-              <h4 className="text-sm font-semibold text-foreground">Email Alerts</h4>
-              <span className="ml-auto px-2 py-0.5 text-[10px] font-medium rounded bg-primary/10 text-primary">
-                Premium
-              </span>
-            </div>
-            <p className="text-xs text-muted-foreground mb-2">
-              Receive instant email notifications when your thresholds are crossed.
-            </p>
-            <ul className="text-xs text-muted-foreground space-y-1 ml-4">
-              <li>• Instant alerts</li>
-              <li>• Daily/Weekly summaries</li>
-              <li>• Customizable frequency</li>
-            </ul>
-          </div>
-
-          <div className="p-4 rounded-lg bg-card/50 border border-border/50">
-            <div className="flex items-center gap-2 mb-3">
-              <Bell className="w-5 h-5 text-primary" />
-              <h4 className="text-sm font-semibold text-foreground">SMS Alerts</h4>
-              <span className="ml-auto px-2 py-0.5 text-[10px] font-medium rounded bg-primary/10 text-primary">
-                Pro
-              </span>
-            </div>
-            <p className="text-xs text-muted-foreground mb-2">
-              Get instant SMS notifications for critical rate movements.
-            </p>
-            <ul className="text-xs text-muted-foreground space-y-1 ml-4">
-              <li>• Instant mobile alerts</li>
-              <li>• No app required</li>
-              <li>• Global coverage</li>
-            </ul>
-          </div>
-        </div>
-      </section>
-
-      {/* Use Cases */}
-      <section className="mb-10">
-        <h3 className="text-lg font-semibold text-foreground mb-4">Popular Alert Use Cases</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900">
-            <p className="text-sm font-medium text-foreground">USD/THB Above 35.00</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              "Good for: Recipients waiting to convert USD to THB at favorable rates"
-            </p>
-          </div>
-          <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900">
-            <p className="text-sm font-medium text-foreground">USD/THB Below 33.00</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              "Good for: Buyers waiting for USD to become cheaper"
-            </p>
-          </div>
-          <div className="p-3 rounded-lg bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-900">
-            <p className="text-sm font-medium text-foreground">EUR/THB Above 38.00</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              "Good for: European tourists planning Thailand trips"
-            </p>
-          </div>
-          <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900">
-            <p className="text-sm font-medium text-foreground">GBP/THB Above 44.00</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              "Good for: UK expats sending money home"
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-xl p-6 text-center">
-        <h3 className="text-base font-semibold text-foreground mb-2">
-          Be the First to Know When Alerts Launch
-        </h3>
-        <p className="text-xs text-muted-foreground mb-4">
-          Join our newsletter to get notified when rate alerts become available, plus receive early bird pricing.
-        </p>
-        <Link
-          href="/newsletter"
-          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-        >
-          <Mail className="w-4 h-4" />
-          Notify Me
+        <Link href="/">
+          <Button variant="ghost" size="sm">
+            <Home className="w-4 h-4 mr-2" />
+            Home
+          </Button>
         </Link>
-      </section>
-    </LegalLayout>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>Total Alerts</CardDescription>
+            <CardTitle className="text-2xl">{alerts.length}</CardTitle>
+          </CardHeader>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>Active</CardDescription>
+            <CardTitle className="text-2xl text-green-600">{activeAlerts.length}</CardTitle>
+          </CardHeader>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>Last Check</CardDescription>
+            <CardTitle className="text-sm">
+              {lastCheckTime ? lastCheckTime.toLocaleTimeString() : 'Never'}
+            </CardTitle>
+          </CardHeader>
+        </Card>
+      </div>
+
+      {/* Info Banner */}
+      <Card className="mb-6 bg-primary/5 border-primary/20">
+        <CardContent className="p-4">
+          <div className="flex items-start gap-3">
+            <Info className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-medium text-foreground mb-1">
+                Browser-Based Alerts (Free)
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Alerts are stored in your browser's local storage. Keep this tab open to receive notifications.
+                Rates are checked automatically every 60 seconds.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Actions Bar */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={fetchCurrentRates}
+            disabled={isChecking || alerts.length === 0}
+            className="gap-2"
+          >
+            <RefreshCw className={`w-4 h-4 ${isChecking ? 'animate-spin' : ''}`} />
+            Refresh Rates
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={checkForTriggeredAlerts}
+            disabled={isChecking || activeAlerts.length === 0}
+            className="gap-2"
+          >
+            <Bell className="w-4 h-4" />
+            Check Alerts
+          </Button>
+        </div>
+        <AlertForm onSubmit={handleCreateAlert} />
+      </div>
+
+      {/* Alerts List */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Your Alerts</CardTitle>
+          <CardDescription>
+            {activeAlerts.length} active, {alerts.length - activeAlerts.length} inactive
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <AlertList
+            alerts={alerts}
+            onToggle={toggleAlert}
+            onDelete={deleteAlert}
+            currentRates={currentRates}
+          />
+        </CardContent>
+      </Card>
+
+      {/* Newsletter CTA */}
+      <Card className="mt-6 bg-gradient-to-br from-primary/5 to-primary/10">
+        <CardContent className="p-6 text-center">
+          <Mail className="w-8 h-8 text-primary mx-auto mb-3" />
+          <h3 className="text-base font-semibold text-foreground mb-2">
+            Want Email Notifications?
+          </h3>
+          <p className="text-xs text-muted-foreground mb-4">
+            Join our newsletter to receive weekly rate summaries and key market updates directly in your inbox.
+          </p>
+          <Link href="/newsletter">
+            <Button variant="outline" size="sm">
+              Subscribe to Newsletter
+            </Button>
+          </Link>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
