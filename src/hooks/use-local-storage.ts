@@ -2,7 +2,7 @@
 "use client";
 
 import type { Dispatch, SetStateAction} from 'react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 // Helper function to safely get and parse value from localStorage
 function getValueFromLocalStorage<T>(key: string, defaultValue: T): T {
@@ -39,27 +39,32 @@ export function useLocalStorage<T>(
   // Initialize with defaultValue to avoid SSR/client hydration mismatch
   // The localStorage value will be synced in useEffect on mount
   const [value, setValue] = useState<T>(defaultValue);
-  const [isInitialized, setIsInitialized] = useState(false);
+  const mountedRef = useRef(false);
 
-  // Sync with localStorage on client-side mount (once)
+  // First effect: read from localStorage on mount (runs once)
   useEffect(() => {
-    if (typeof window !== 'undefined' && !isInitialized) {
+    if (typeof window === 'undefined') return;
+
+    if (!mountedRef.current) {
       const storedValue = getValueFromLocalStorage(key, defaultValue);
       setValue(storedValue);
-      setIsInitialized(true);
+      mountedRef.current = true;
     }
-  }, [key, defaultValue, isInitialized]);
+  }, [key]); // Only re-run if key changes
 
-  // Effect to update localStorage when 'value' changes (after initialization)
+  // Second effect: write to localStorage when value changes (only after mount)
   useEffect(() => {
-    if (typeof window !== 'undefined' && isInitialized) {
+    if (typeof window === 'undefined') return;
+
+    // Only write after we've mounted and loaded initial value
+    if (mountedRef.current) {
       try {
         window.localStorage.setItem(key, JSON.stringify(value));
       } catch (error) {
         console.error(`Error setting localStorage key "${key}":`, error);
       }
     }
-  }, [key, value, isInitialized]);
+  }, [key, value]);
   
   // Effect to update state if localStorage changes in another tab/window
   useEffect(() => {
