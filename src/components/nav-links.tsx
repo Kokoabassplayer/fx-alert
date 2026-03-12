@@ -24,6 +24,10 @@ export const mainNavLinks: NavLink[] = [
     icon: 'book-open',
     children: [
       { href: '/guides/send-money-to-thailand', label: 'Send Money to Thailand', icon: 'book-open' },
+      { href: '/guides/best-time-to-exchange', label: 'Best Time to Exchange', icon: 'book-open' },
+      { href: '/guides/understanding-forex-spreads', label: 'Understanding Forex Spreads', icon: 'book-open' },
+      { href: '/guides/currency-pairs-explained', label: 'Currency Pairs Explained', icon: 'book-open' },
+      { href: '/guides/exchange-rate-forecasting', label: 'Exchange Rate Forecasting', icon: 'book-open' },
     ],
   },
   { href: '/newsletter', label: 'Newsletter', icon: 'mail', badge: 'Free' },
