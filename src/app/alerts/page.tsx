@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { Bell, RefreshCw, Info, Mail, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { fetchCurrentRate } from '@/lib/currency-api';
 import { checkAlerts, getTriggeredAlerts } from '@/lib/rate-checker';
 import type { RateAlert } from '@/lib/alerts-types';
