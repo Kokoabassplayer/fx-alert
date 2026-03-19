@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { Home, TrendingDown, Banknote, Shield, Clock, AlertCircle } from 'lucide-react';
 import { APP_CONFIG } from '@/lib/constants';
 import { LegalLayout } from '@/components/legal-layout';
+import { StructuredData, articleSchema } from '@/components/structured-data';
 
 export const metadata: Metadata = {
   title: 'Best Ways to Send Money to Thailand (2026) | Fee Comparison & Guide',
@@ -49,11 +50,20 @@ const providers = [
 ];
 
 export default function SendMoneyToThailandPage() {
+  const siteUrl = 'https://raterefresher.web.app';
+
   return (
-    <LegalLayout
-      title="Best Ways to Send Money to Thailand"
-      description={metadata.description || ''}
-    >
+    <>
+      <StructuredData data={articleSchema({
+        title: 'Best Ways to Send Money to Thailand (2026) | Fee Comparison & Guide',
+        description: 'Compare Wise, Remitly, banks, and forex brokers for sending money to Thailand. Find the lowest fees, best exchange rates, and fastest transfer times.',
+        publishDate: '2025-01-01',
+        url: `${siteUrl}/guides/send-money-to-thailand`,
+      })} />
+      <LegalLayout
+        title="Best Ways to Send Money to Thailand"
+        description={metadata.description || ''}
+      >
       {/* Introduction */}
       <section className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-xl p-6 sm:p-8 mb-6">
         <h2 className="text-2xl font-bold text-foreground mb-3">
@@ -261,5 +271,6 @@ export default function SendMoneyToThailandPage() {
         </div>
       </section>
     </LegalLayout>
+    </>
   );
 }

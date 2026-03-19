@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { TrendingUp, BarChart3, AlertTriangle, Eye, Clock, Activity } from 'lucide-react';
 import { LegalLayout } from '@/components/legal-layout';
+import { StructuredData, articleSchema } from '@/components/structured-data';
 
 export const metadata: Metadata = {
   title: 'Exchange Rate Forecasting | How Predictions Work',
@@ -86,11 +87,20 @@ const usingFXAlert = [
 ];
 
 export default function ExchangeRateForecastingPage() {
+  const siteUrl = 'https://raterefresher.web.app';
+
   return (
-    <LegalLayout
-      title="Exchange Rate Forecasting"
-      description={metadata.description || ''}
-    >
+    <>
+      <StructuredData data={articleSchema({
+        title: 'Exchange Rate Forecasting | How Predictions Work',
+        description: 'Learn how exchange rate forecasting works, technical vs fundamental analysis, limitations of predictions, and how to use FX Alert historical data.',
+        publishDate: '2025-01-01',
+        url: `${siteUrl}/guides/exchange-rate-forecasting`,
+      })} />
+      <LegalLayout
+        title="Exchange Rate Forecasting"
+        description={metadata.description || ''}
+      >
       {/* Introduction */}
       <section className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-xl p-6 sm:p-8 mb-6">
         <h2 className="text-2xl font-bold text-foreground mb-3">
@@ -262,5 +272,6 @@ export default function ExchangeRateForecastingPage() {
         </div>
       </section>
     </LegalLayout>
+    </>
   );
 }

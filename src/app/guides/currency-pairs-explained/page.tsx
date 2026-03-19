@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Coins, TrendingUp, Globe, BookOpen } from 'lucide-react';
 import { LegalLayout } from '@/components/legal-layout';
+import { StructuredData, articleSchema } from '@/components/structured-data';
 
 export const metadata: Metadata = {
   title: 'Currency Pairs Explained | Understanding Forex Quotes',
@@ -77,11 +78,20 @@ const howToReadSteps = [
 ];
 
 export default function CurrencyPairsExplainedPage() {
+  const siteUrl = 'https://raterefresher.web.app';
+
   return (
-    <LegalLayout
-      title="Currency Pairs Explained"
-      description={metadata.description || ''}
-    >
+    <>
+      <StructuredData data={articleSchema({
+        title: 'Currency Pairs Explained | Understanding Forex Quotes',
+        description: 'Learn about major, minor, and exotic currency pairs. How to read forex quotes, understand base and quote currencies, and common pair notations.',
+        publishDate: '2025-01-01',
+        url: `${siteUrl}/guides/currency-pairs-explained`,
+      })} />
+      <LegalLayout
+        title="Currency Pairs Explained"
+        description={metadata.description || ''}
+      >
       {/* Introduction */}
       <section className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-xl p-6 sm:p-8 mb-6">
         <h2 className="text-2xl font-bold text-foreground mb-3">
@@ -266,5 +276,6 @@ export default function CurrencyPairsExplainedPage() {
         </div>
       </section>
     </LegalLayout>
+    </>
   );
 }

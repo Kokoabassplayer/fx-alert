@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ArrowRightLeft, Percent, TrendingDown, Info, Calculator, Banknote } from 'lucide-react';
 import { LegalLayout } from '@/components/legal-layout';
+import { StructuredData, articleSchema } from '@/components/structured-data';
 
 export const metadata: Metadata = {
   title: 'Understanding Forex Spreads | How Spreads Affect Your Exchange',
@@ -59,11 +60,20 @@ const tips = [
 ];
 
 export default function UnderstandingForexSpreadsPage() {
+  const siteUrl = 'https://raterefresher.web.app';
+
   return (
-    <LegalLayout
-      title="Understanding Forex Spreads"
-      description={metadata.description || ''}
-    >
+    <>
+      <StructuredData data={articleSchema({
+        title: 'Understanding Forex Spreads | How Spreads Affect Your Exchange',
+        description: 'Learn what forex spreads are, how they affect your currency exchanges, variable vs fixed spreads, and tips to minimize spread costs.',
+        publishDate: '2025-01-01',
+        url: `${siteUrl}/guides/understanding-forex-spreads`,
+      })} />
+      <LegalLayout
+        title="Understanding Forex Spreads"
+        description={metadata.description || ''}
+      >
       {/* Introduction */}
       <section className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-xl p-6 sm:p-8 mb-6">
         <h2 className="text-2xl font-bold text-foreground mb-3">
@@ -244,5 +254,6 @@ export default function UnderstandingForexSpreadsPage() {
         </div>
       </section>
     </LegalLayout>
+    </>
   );
 }
