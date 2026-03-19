@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Clock, Calendar, TrendingUp, TrendingDown, AlertCircle, BarChart3 } from 'lucide-react';
 import { LegalLayout } from '@/components/legal-layout';
+import { StructuredData, articleSchema } from '@/components/structured-data';
 
 export const metadata: Metadata = {
   title: 'Best Time to Exchange Currency | Market Timing Strategies',
@@ -63,11 +64,20 @@ const tips = [
 ];
 
 export default function BestTimeToExchangePage() {
+  const siteUrl = 'https://raterefresher.web.app';
+
   return (
-    <LegalLayout
-      title="Best Time to Exchange Currency"
-      description={metadata.description || ''}
-    >
+    <>
+      <StructuredData data={articleSchema({
+        title: 'Best Time to Exchange Currency | Market Timing Strategies',
+        description: 'Learn the best times to exchange currency based on day of week, time of day, seasonal patterns, and economic indicators. Maximize your exchange value.',
+        publishDate: '2025-01-01',
+        url: `${siteUrl}/guides/best-time-to-exchange`,
+      })} />
+      <LegalLayout
+        title="Best Time to Exchange Currency"
+        description={metadata.description || ''}
+      >
       {/* Introduction */}
       <section className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-xl p-6 sm:p-8 mb-6">
         <h2 className="text-2xl font-bold text-foreground mb-3">
@@ -203,5 +213,6 @@ export default function BestTimeToExchangePage() {
         </div>
       </section>
     </LegalLayout>
+    </>
   );
 }
