@@ -113,4 +113,3 @@ export function getAffiliateStatus(): Array<{ id: string; title: string; isAffil
     id, title, isAffiliate, url
   }));
 }
-// debug
