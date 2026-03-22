@@ -3,6 +3,15 @@
 import type { FC } from 'react';
 import { useState } from 'react';
 import { Mail, CheckCircle2, Loader2 } from 'lucide-react';
+import { trackNewsletterSignup } from '@/lib/analytics';
+
+// Source type mapping for analytics
+const SOURCE_MAP: Record<string, 'homepage' | 'newsletter_page' | 'footer'> = {
+  homepage: 'homepage',
+  about: 'homepage',
+  footer: 'footer',
+  dedicated: 'newsletter_page',
+} as const;
 
 interface NewsletterSignupProps {
   className?: string;
@@ -35,6 +44,7 @@ const NewsletterSignup: FC<NewsletterSignupProps> = ({ className = '', source = 
       });
 
       if (response.ok) {
+        trackNewsletterSignup(email, SOURCE_MAP[source]);
         setStatus('success');
         setMessage('Thank you! You\'ll receive weekly FX rate forecasts soon.');
         setEmail('');

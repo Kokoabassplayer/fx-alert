@@ -12,6 +12,9 @@ import { useAlerts } from '@/hooks/use-alerts';
 import { AlertForm } from '@/components/alert-form';
 import { AlertList } from '@/components/alert-list';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { trackAlertCreated } from '@/lib/analytics';
+
+const DEFAULT_NOTIFICATION_METHOD = 'email' as const;
 
 export default function AlertsPage() {
   const { alerts, activeAlerts, createAlert, deleteAlert, toggleAlert } = useAlerts();
@@ -94,6 +97,7 @@ export default function AlertsPage() {
     threshold: number
   ) => {
     createAlert(fromCurrency, toCurrency, condition, threshold);
+    trackAlertCreated(fromCurrency, toCurrency, threshold, condition, DEFAULT_NOTIFICATION_METHOD);
     toast({
       title: "Alert Created",
       description: `You'll be notified when ${fromCurrency}/${toCurrency} goes ${condition} ${threshold.toFixed(2)}.`,
