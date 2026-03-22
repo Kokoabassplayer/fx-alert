@@ -40,7 +40,7 @@ interface CurrentRateDisplayProps {
   pairAnalysisData: PairAnalysisData | null; // New prop
 }
 
-const REFRESH_INTERVAL_MS = 12 * 60 * 60 * 1000; // 12 hours - rates update daily at ~16:00 CET
+const REFRESH_INTERVAL_MS = 15 * 60 * 1000; // 15 minutes
 
 const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
   alertPrefs,

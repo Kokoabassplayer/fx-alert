@@ -2,7 +2,7 @@
 
 ## Core Features:
 
-- Real-Time Rate Display: Displays current exchange rate, auto-refreshes data at intervals, and allows manual refresh.
+- Daily Rate Display: Displays current exchange rate, auto-refreshes data at intervals, and allows manual refresh.
 - Threshold Indicator: Sets and persists a buy/sell signal threshold, visually highlights rates that meet criteria.
 - Historical Chart: Shows historical rate trends through a visual chart representation.
 

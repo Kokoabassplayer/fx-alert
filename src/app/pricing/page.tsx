@@ -6,7 +6,7 @@ import { APP_CONFIG } from '@/lib/constants';
 
 export const metadata: Metadata = {
   title: 'Pricing - FX Alert | Premium Exchange Rate Alerts',
-  description: 'Get email and SMS alerts when exchange rates hit your target levels. Free browser notifications, Premium email alerts, or Pro SMS notifications.',
+  description: 'Get daily email and SMS alerts when exchange rates hit your target levels. Rates update once per day from the European Central Bank.',
 };
 
 const plans = [
@@ -18,7 +18,7 @@ const plans = [
     icon: Bell,
     features: [
       'Browser notifications only',
-      'Real-time rate display',
+      'Daily rate display with manual refresh',
       'Historical charts (up to 10 years)',
       'Rate band classification',
       'AI-powered analysis',
@@ -57,7 +57,7 @@ const plans = [
     features: [
       'Everything in Premium',
       'SMS rate alerts',
-      'Real-time push notifications',
+      'Daily push notifications',
       'Advanced trend indicators',
       'Historical data export (CSV/Excel)',
       'API access (1,000 calls/month)',
@@ -85,7 +85,7 @@ const features = [
   {
     icon: Zap,
     title: 'SMS Alerts',
-    description: 'Instant SMS notifications for critical rate movements. Perfect for time-sensitive exchanges.',
+    description: 'Daily SMS notifications when rates hit your target. Rates update once per day.',
   },
   {
     icon: BarChart3,
