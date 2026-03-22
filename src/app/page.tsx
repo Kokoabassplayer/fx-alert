@@ -2,7 +2,7 @@
 "use client";
 
 import type { FC } from 'react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TrendingUp, ExternalLink, Award } from 'lucide-react';
@@ -14,21 +14,51 @@ import { useLocalStorage } from "@/hooks/use-local-storage";
 import type { AlertPrefs } from '@/lib/bands';
 import { DEFAULT_ALERT_PREFS } from '@/lib/bands';
 import { affiliateLinks } from '@/lib/affiliate-links';
+import {
+  trackAffiliateClick,
+  trackCurrencyChange,
+  trackAnalysisPeriodChange,
+} from '@/lib/analytics';
+
+// Period options with lookup map for O(1) label access
+const PERIOD_OPTIONS = [
+  { label: "1 Year", value: 365 },
+  { label: "3 Years", value: 365 * 3 },
+  { label: "5 Years", value: 365 * 5 },
+  { label: "10 Years", value: 365 * 10 },
+  { label: "Max Available", value: -1 },
+] as const;
+const PERIOD_LABEL_MAP = new Map(PERIOD_OPTIONS.map(p => [p.value, p.label]));
 
 
 const UsdThbMonitorPage: FC = () => {
   const [alertPrefs, setAlertPrefs] = useLocalStorage<AlertPrefs>("alertPrefs", DEFAULT_ALERT_PREFS);
   const [selectedFromCurrency, setSelectedFromCurrency] = useState<string>('USD');
   const [selectedToCurrency, setSelectedToCurrency] = useState<string>('THB');
-
-  const periodOptions = [
-    { label: "1 Year", value: 365 },
-    { label: "3 Years", value: 365 * 3 },
-    { label: "5 Years", value: 365 * 5 },
-    { label: "10 Years", value: 365 * 10 },
-    { label: "Max Available", value: -1 },
-  ];
   const [selectedPeriodDays, setSelectedPeriodDays] = useState<number>(365 * 5);
+
+  // Consolidated currency tracking with useCallback for stability
+  const handleCurrencyChange = useCallback((from: string, to: string, prevFrom: string, prevTo: string) => {
+    trackCurrencyChange(from, to, prevFrom, prevTo);
+  }, []);
+
+  const handleFromCurrencyChange = useCallback((newFrom: string) => {
+    handleCurrencyChange(newFrom, selectedToCurrency, selectedFromCurrency, selectedToCurrency);
+    setSelectedFromCurrency(newFrom);
+  }, [selectedToCurrency, selectedFromCurrency, handleCurrencyChange]);
+
+  const handleToCurrencyChange = useCallback((newTo: string) => {
+    handleCurrencyChange(selectedFromCurrency, newTo, selectedFromCurrency, selectedToCurrency);
+    setSelectedToCurrency(newTo);
+  }, [selectedFromCurrency, selectedFromCurrency, handleCurrencyChange]);
+
+  // Period change with O(1) label lookup
+  const handlePeriodChange = useCallback((newPeriodDays: number, previousPeriodDays: number) => {
+    const periodLabel = PERIOD_LABEL_MAP.get(newPeriodDays) || String(newPeriodDays);
+    const previousLabel = PERIOD_LABEL_MAP.get(previousPeriodDays);
+    trackAnalysisPeriodChange(periodLabel, previousLabel);
+    setSelectedPeriodDays(newPeriodDays);
+  }, []);
 
   const [pairAnalysisData, setPairAnalysisData] = useState<PairAnalysisData | null>(null);
   const [isAnalysisLoading, setIsAnalysisLoading] = useState<boolean>(true);
@@ -71,13 +101,13 @@ const UsdThbMonitorPage: FC = () => {
         <Label htmlFor="period-select" className="text-sm">Analysis Period:</Label>
         <Select
           value={String(selectedPeriodDays)}
-          onValueChange={(stringValue) => setSelectedPeriodDays(Number(stringValue))}
+          onValueChange={(stringValue) => handlePeriodChange(Number(stringValue), selectedPeriodDays)}
         >
           <SelectTrigger id="period-select" className="w-[150px] sm:w-[180px]">
             <SelectValue placeholder="Select period" />
           </SelectTrigger>
           <SelectContent>
-            {periodOptions.map(option => (
+            {PERIOD_OPTIONS.map(option => (
               <SelectItem key={option.value} value={String(option.value)}>
                 {option.label}
               </SelectItem>
@@ -92,8 +122,8 @@ const UsdThbMonitorPage: FC = () => {
           onAlertPrefsChange={setAlertPrefs}
           fromCurrency={selectedFromCurrency}
           toCurrency={selectedToCurrency}
-          onFromCurrencyChange={setSelectedFromCurrency}
-          onToCurrencyChange={setSelectedToCurrency}
+          onFromCurrencyChange={handleFromCurrencyChange}
+          onToCurrencyChange={handleToCurrencyChange}
           pairAnalysisData={pairAnalysisData}
         />
         <HistoryChartDisplay
@@ -151,6 +181,7 @@ const UsdThbMonitorPage: FC = () => {
               className="group relative flex items-start gap-3 p-3 rounded-lg border border-border/50 bg-card/50 hover:bg-card hover:border-primary/30 hover:shadow-md hover:shadow-primary/5 transition-all duration-200"
               target="_blank"
               rel="noopener noreferrer"
+              onClick={() => trackAffiliateClick(link.id, link.title, link.category || 'General', link.url, link.isAffiliate || false)}
             >
               <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center group-hover:from-primary/20 group-hover:to-primary/10 transition-colors">
                 <TrendingUp className="w-5 h-5 text-primary" />
