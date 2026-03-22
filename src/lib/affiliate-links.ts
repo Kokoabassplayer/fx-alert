@@ -1,6 +1,8 @@
 /**
  * Affiliate links for recommended services
- * Replace URLs with your actual affiliate referral links
+ *
+ * Links with isAffiliate: true are real affiliate tracking links
+ * Links with isAffiliate: false are direct platform links (to be replaced with affiliate links later)
  */
 
 export interface AffiliateLink {
@@ -13,6 +15,7 @@ export interface AffiliateLink {
   category?: string;
   targetCurrencies?: string[]; // Currencies this service is most relevant for
   commission?: string; // Internal tracking of commission structure
+  isAffiliate?: boolean; // true = real affiliate link, false = direct platform link
 }
 
 export const affiliateLinks: AffiliateLink[] = [
@@ -20,6 +23,7 @@ export const affiliateLinks: AffiliateLink[] = [
     id: 'exness-forex',
     title: 'Exness',
     url: 'https://one.exnessonelink.com/a/9xyjc6wmdk',
+    isAffiliate: true,
     description: 'Multi-regulated broker with tight spreads & instant withdrawals. Great for THB trading pairs.',
     icon: 'TrendingUp',
     badge: 'Recommended',
@@ -30,53 +34,63 @@ export const affiliateLinks: AffiliateLink[] = [
   {
     id: 'ic-markets',
     title: 'IC Markets',
-    url: 'https://one.icmarkets-partners.com/?returnUrl=a/7024',
+    url: 'https://www.icmarkets.com/',
+    isAffiliate: false,
     description: 'Raw spreads with low commissions. Ideal for scalpers and day traders.',
     icon: 'BarChart3',
     category: 'Forex & CFDs',
     targetCurrencies: ['THB', 'USD', 'EUR', 'AUD'],
-    commission: 'CPA: $50-200',
+    // TODO: Get affiliate link from https://www.icmarkets.com/partners/
+    // commission: 'CPA: $50-200',
   },
   {
     id: 'wise-transfer',
     title: 'Wise',
-    url: 'https://wise.prf.hn/click/camref:1101l3vz1/destination:https://wise.com/',
+    url: 'https://wise.com/',
+    isAffiliate: false,
     description: 'Low-fee international transfers with the mid-market exchange rate. No hidden markup.',
     icon: 'Send',
     badge: 'Best for Transfers',
     category: 'Currency Transfer',
     targetCurrencies: ['THB', 'USD', 'EUR', 'GBP', 'SGD'],
-    commission: 'CPA: $5-20',
+    // TODO: Get affiliate link from https://wise.com/affiliate-program
+    // commission: 'CPA: $5-20',
   },
   {
     id: 'remitly',
     title: 'Remitly',
-    url: 'https://track.remitly.com/aff_c?offer_id=1&aff_id=123',
+    url: 'https://www.remitly.com/',
+    isAffiliate: false,
     description: 'Fast transfers to Thailand with competitive exchange rates. Express delivery available.',
     icon: 'Zap',
     category: 'Currency Transfer',
     targetCurrencies: ['THB', 'USD', 'EUR', 'GBP', 'AUD'],
-    commission: 'CPA: $10-30',
+    // TODO: Get affiliate link from https://www.remitly.com/affiliate
+    // commission: 'CPA: $10-30',
   },
   {
     id: 'pepperstone',
     title: 'Pepperstone',
-    url: 'https://pepperstone.com/?ref=123',
+    url: 'https://pepperstone.com/',
+    isAffiliate: false,
     description: 'Award-winning forex broker with 24/7 support and competitive spreads.',
     icon: 'TrendingUp',
     category: 'Forex & CFDs',
     targetCurrencies: ['THB', 'USD', 'EUR', 'GBP'],
-    commission: 'CPA: $50-150',
+    // TODO: Get affiliate link from https://www.pepperstone.com/partners/
+    // commission: 'CPA: $50-150',
   },
   {
     id: 'xm-global',
     title: 'XM Global',
-    url: 'https://clicks.tradecalculator.xyz/?a=123',
+    url: 'https://www.xm.com/',
+    isAffiliate: false,
     description: 'No requotes, 99.35% of trades executed in less than one second.',
     icon: 'Activity',
     category: 'Forex & CFDs',
     targetCurrencies: ['THB', 'USD', 'EUR'],
-    commission: 'CPA: $50-200',
+    // TODO: Get affiliate link from https://www.xm.com/partners
+    // commission: 'CPA: $50-200',
   },
 ];
 
@@ -88,4 +102,14 @@ export function getAffiliateLinksForCurrency(fromCurrency: string, toCurrency: s
     if (!link.targetCurrencies) return true;
     return link.targetCurrencies.includes(toCurrency) || link.targetCurrencies.includes(fromCurrency);
   });
+}
+
+/**
+ * Get affiliate status for all links (useful for admin/debugging)
+ * Shows which links are real affiliate vs direct platform links
+ */
+export function getAffiliateStatus(): Array<{ id: string; title: string; isAffiliate: boolean; url: string }> {
+  return affiliateLinks.map(({ id, title, isAffiliate = false, url }) => ({
+    id, title, isAffiliate, url
+  }));
 }
