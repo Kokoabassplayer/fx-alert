@@ -6,6 +6,23 @@
       "**/.*",
       "**/node_modules/**"
     ],
-    "cleanUrls": true
+    "cleanUrls": true,
+    "redirects": [
+      {
+        "source": "/login.html",
+        "destination": "/alerts",
+        "type": 301
+      },
+      {
+        "source": "/privacy.html",
+        "destination": "/privacy",
+        "type": 301
+      },
+      {
+        "source": "/terms.html",
+        "destination": "/terms",
+        "type": 301
+      }
+    ]
   }
 }
