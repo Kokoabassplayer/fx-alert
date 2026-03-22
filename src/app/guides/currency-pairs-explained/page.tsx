@@ -248,7 +248,7 @@ export default function CurrencyPairsExplainedPage() {
           Monitor USD/THB Rates Live
         </h3>
         <p className="text-sm text-muted-foreground mb-4">
-          Track USD/THB exchange rates in real-time with FX Alert.
+          Track USD/THB exchange rates daily with FX Alert.
         </p>
         <div className="flex flex-wrap justify-center gap-3">
           <Link

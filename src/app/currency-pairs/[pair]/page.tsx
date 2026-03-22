@@ -243,7 +243,7 @@ export default async function CurrencyPairPage({ params }: CurrencyPairPageProps
           Start Tracking {meta.from}/{meta.to} Rates
         </h3>
         <p className="text-sm text-muted-foreground mb-4">
-          Get real-time analysis, historical trends, and rate alerts for this currency pair.
+          Get daily analysis, historical trends, and rate alerts for this currency pair.
         </p>
         <div className="flex flex-wrap justify-center gap-3">
           <Link

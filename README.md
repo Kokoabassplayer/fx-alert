@@ -8,7 +8,7 @@ the selected currency pair.
 
 ## Features
 
-- Real-time rate display with manual refresh
+- Daily rate display with manual refresh
 - Threshold indicator for buy/sell ranges
 - Historical trend chart
 - AI generated trend and distribution summary

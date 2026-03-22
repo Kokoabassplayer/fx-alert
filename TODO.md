@@ -156,4 +156,69 @@
 
 ---
 
+## 🚨 CRITICAL: API Frequency Constraint
+
+### Frankfurter API Limitations
+**Update Frequency:** ONCE per weekday around 10:00 PM Thai time (4:00 PM CET)
+
+**Supported Currencies:** 32 currencies (all update simultaneously)
+
+**What this means:**
+- The exchange rate data updates daily, not in real-time
+- Promise of "real-time alerts" is **misleading** and must be fixed
+- App polls every 15 minutes to catch updates as soon as available
+- SMS alerts are NOT practical with daily data updates
+
+### Polling Strategy
+| Setting | Value |
+|---------|-------|
+| Polling interval | 15 minutes |
+| API calls per day | ~96 (if tab open 24hrs) |
+| Data freshness | ~15 minutes after API update |
+| Update window | Weekdays ~10:00 PM Thai time |
+
+### Honest Alert Frequency
+| Alert Type | Actual Frequency |
+|------------|------------------|
+| Browser push | Within ~15 min of API update (weekdays) |
+| Email alerts | Daily digest (future) |
+| SMS alerts | ❌ NOT RECOMMENDED (not worth cost for daily updates) |
+
+### ⚠️ Fix Required: Update Misleading Claims
+
+**Files to edit:**
+1. `src/app/pricing/page.tsx` - Remove "real-time" claims
+2. `src/app/about/page.tsx` - Update "Real-Time Exchange Rates" section
+3. `README.md` - Fix feature description
+4. Any marketing copy promising instant/real-time alerts
+
+**Replacement language:**
+- "Real-time" → "Daily rate updates"
+- "Instant SMS" → Remove SMS tier
+- "Real-time push notifications" → "Daily notifications"
+
+---
+
+## ✅ Zero-Cost Email Alert Plan (Future)
+
+### Service: Resend (Free Tier: 3,000 emails/month)
+
+**Setup Required:**
+1. Sign up: https://resend.com/signup
+2. Get API key from dashboard
+3. Add to `.env.local`: `RESEND_API_KEY=re_...`
+
+**Implementation Needed:**
+- [ ] Create email template for rate alerts
+- [ ] Create GitHub Actions cron job (runs daily after API updates)
+- [ ] Check user alerts against new daily rate
+- [ ] Send emails to users whose thresholds are hit
+
+**Honest User Communication:**
+- "Get notified DAILY when rates hit your target"
+- "Daily rate summaries delivered to your inbox"
+- NOT "instant" or "real-time"
+
+---
+
 **Remember:** Replace placeholder affiliate URLs ASAP to start earning commissions!

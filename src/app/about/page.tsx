@@ -35,9 +35,9 @@ export default function AboutPage() {
               <TrendingUp className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <h3 className="text-sm font-medium text-foreground mb-1">Real-Time Exchange Rates</h3>
+              <h3 className="text-sm font-medium text-foreground mb-1">Daily Exchange Rates</h3>
               <p className="text-xs text-muted-foreground">
-                Up-to-date rates from the Frankfurter API for 160+ currencies worldwide.
+                Daily rates from the Frankfurter API (European Central Bank data) for 160+ currencies. Rates update once per weekday.
               </p>
             </div>
           </div>
@@ -172,7 +172,8 @@ export default function AboutPage() {
           <div>
             <h3 className="text-sm font-medium text-foreground">Frankfurter API</h3>
             <p className="text-xs text-muted-foreground mt-1">
-              Current and historical exchange rates from the European Central Bank. No registration required.
+              Daily rates from the European Central Bank for 32 currencies. Updates weekdays around 10:00 PM Thai time.
+              App refreshes every 15 minutes to catch new data.
             </p>
           </div>
           <div>

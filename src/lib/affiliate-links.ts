@@ -20,7 +20,7 @@ export const affiliateLinks: AffiliateLink[] = [
     id: 'exness-forex',
     title: 'Exness',
     url: 'https://one.exnessonelink.com/a/9xyjc6wmdk',
-    description: 'Multi-regulated broker with tight spreads & instant withdrawals. Great for THB trading pairs.',
+    description: 'Multi-regulated broker with tight spreads & fast withdrawals. Great for THB trading pairs.',
     icon: 'TrendingUp',
     badge: 'Recommended',
     category: 'Forex & CFDs',

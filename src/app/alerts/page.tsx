@@ -86,15 +86,6 @@ export default function AlertsPage() {
     fetchCurrentRates();
   }, [fetchCurrentRates]);
 
-  // Auto-refresh rates every 60 seconds
-  useEffect(() => {
-    const interval = setInterval(() => {
-      fetchCurrentRates();
-    }, 60000);
-
-    return () => clearInterval(interval);
-  }, [fetchCurrentRates]);
-
   // Handle alert creation
   const handleCreateAlert = (
     fromCurrency: string,
@@ -177,7 +168,10 @@ export default function AlertsPage() {
               </p>
               <p className="text-xs text-muted-foreground">
                 Alerts are stored in your browser's local storage. Keep this tab open to receive notifications.
-                Rates are checked automatically every 60 seconds.
+                Rates refresh every 15 minutes. Use "Check Alerts" to verify your thresholds.
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Note: Exchange rate data from Frankfurter API updates once per weekday around 10:00 PM Thai time.
               </p>
             </div>
           </div>
