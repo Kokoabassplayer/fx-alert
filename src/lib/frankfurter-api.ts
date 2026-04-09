@@ -6,9 +6,11 @@
  * It's based on data from the European Central Bank and supports CORS for browser requests.
  *
  * Note: Rates are updated daily (European Central Bank closing rates).
- * API: https://api.frankfurter.app
- * Docs: https://api.frankfurter.app/
+ * API: https://api.frankfurter.dev/v1
+ * Docs: https://frankfurter.dev/
  */
+
+export const FRANKFURTER_API_BASE_URL = 'https://api.frankfurter.dev/v1';
 
 export interface FrankfurterRateResult {
   rate: number;
@@ -44,7 +46,7 @@ export async function fetchFrankfurterRate(
   to: string
 ): Promise<FrankfurterRateResult | null> {
   try {
-    const url = `https://api.frankfurter.app/latest?from=${from}&to=${to}`;
+    const url = `${FRANKFURTER_API_BASE_URL}/latest?from=${from}&to=${to}`;
 
     const response = await fetch(url, {
       cache: 'no-store',
