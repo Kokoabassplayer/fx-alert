@@ -1,6 +1,6 @@
-import { fetchFrankfurterRate, type FrankfurterRateResult } from './frankfurter-api';
+import { fetchFrankfurterRate, FRANKFURTER_API_BASE_URL } from './frankfurter-api';
 
-const API_BASE_URL = "https://api.frankfurter.app";
+const API_BASE_URL = FRANKFURTER_API_BASE_URL;
 
 export interface CurrentRateResponse {
   amount: number;
