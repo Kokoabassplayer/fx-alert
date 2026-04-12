@@ -44,7 +44,9 @@ const NewsletterSignup: FC<NewsletterSignupProps> = ({ className = '', source = 
       });
 
       if (response.ok) {
-        trackNewsletterSignup(email, SOURCE_MAP[source]);
+        trackNewsletterSignup(email, SOURCE_MAP[source]).catch(() => {
+          // Analytics tracking failure should not affect UX
+        });
         setStatus('success');
         setMessage('Thank you! You\'ll receive weekly FX rate forecasts soon.');
         setEmail('');

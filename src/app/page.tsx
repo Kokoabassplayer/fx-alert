@@ -18,6 +18,7 @@ import {
   trackAffiliateClick,
   trackCurrencyChange,
   trackAnalysisPeriodChange,
+  trackBandRecommendation,
 } from '@/lib/analytics';
 
 // Period options with lookup map for O(1) label access
@@ -93,6 +94,28 @@ const UsdThbMonitorPage: FC = () => {
 
     loadPairAnalysis();
   }, [selectedFromCurrency, selectedToCurrency, selectedPeriodDays]);
+
+  // Track band recommendation when analysis data is ready
+  useEffect(() => {
+    if (pairAnalysisData?.threshold_bands && selectedFromCurrency && selectedToCurrency) {
+      const opportuneBand = pairAnalysisData.threshold_bands.find(
+        b => b.level === 'OPPORTUNE' || b.level === 'NEUTRAL'
+      );
+      if (opportuneBand) {
+        const midRate =
+          opportuneBand.range.min !== null && opportuneBand.range.max !== null
+            ? (opportuneBand.range.min + opportuneBand.range.max) / 2
+            : 0;
+        trackBandRecommendation(
+          selectedFromCurrency,
+          selectedToCurrency,
+          midRate,
+          opportuneBand.level,
+          opportuneBand.action_brief
+        );
+      }
+    }
+  }, [pairAnalysisData, selectedFromCurrency, selectedToCurrency]);
 
   return (
     <div className="w-full max-w-4xl mx-auto px-4 sm:px-6 py-8">

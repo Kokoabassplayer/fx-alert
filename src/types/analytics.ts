@@ -3,6 +3,8 @@
  * Based on GA4 custom event recommendations
  */
 
+import type { BandName } from '@/lib/bands';
+
 // Base event interface
 export interface AnalyticsEvent {
   name: string;
@@ -47,10 +49,10 @@ export interface NewsletterSignupEvent {
   source?: 'homepage' | 'newsletter_page' | 'footer';
 }
 
-// Page view event (for SPA navigation)
-export interface PageViewEvent {
+// Content view event (for SPA navigation)
+export interface ContentViewEvent {
   page_name: string;
-  page_type: 'home' | 'about' | 'pricing' | 'alerts' | 'guides' | 'newsletter' | 'faq' | 'privacy' | 'terms';
+  page_type: 'home' | 'about' | 'pricing' | 'alerts' | 'guides' | 'newsletter' | 'faq' | 'privacy' | 'terms' | 'currency_pair' | 'other';
   previous_page?: string;
 }
 
@@ -73,6 +75,6 @@ export interface BandRecommendationEvent {
   from_currency: string;
   to_currency: string;
   current_rate: number;
-  band: 'EXTREME_LOW' | 'LOW' | 'NEUTRAL' | 'HIGH' | 'EXTREME_HIGH';
+  band: BandName;
   recommendation: string;
 }

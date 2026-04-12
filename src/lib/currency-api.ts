@@ -1,4 +1,5 @@
 import { fetchFrankfurterRate, FRANKFURTER_API_BASE_URL } from './frankfurter-api';
+import { trackError } from './analytics';
 
 const API_BASE_URL = FRANKFURTER_API_BASE_URL;
 
@@ -88,7 +89,9 @@ export async function fetchCurrentRate(from: string, to: string): Promise<Curren
     return data as CurrentRateResponse;
 
   } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
     console.error(`Generic error fetching current rate for ${from} to ${to}:`, error);
+    trackError(message, `fetchCurrentRate:${from}-${to}`);
     return null;
   }
 }
@@ -202,7 +205,9 @@ export async function fetchRateHistory(from: string, to: string, days: number = 
       
     return formattedData;
   } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
     console.error(`Error fetching ${from}-${to} rate history:`, error);
+    trackError(message, `fetchRateHistory:${from}-${to}`);
     return [];
   }
 }
@@ -277,7 +282,9 @@ export async function fetchAvailableCurrencies(): Promise<{ [key: string]: strin
     }
     return data as { [key: string]: string };
   } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
     console.error("Generic error fetching available currencies:", error);
+    trackError(message, 'fetchAvailableCurrencies');
     return null;
   }
 }

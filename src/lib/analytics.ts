@@ -1,10 +1,10 @@
 /**
  * Centralized analytics tracking utility
  * Uses Google Analytics 4 (GA4) with gtag
+ * All events are consent-aware: they only fire if the user has granted consent.
  */
 
-// GA4 Measurement ID
-const GA_MEASUREMENT_ID = 'G-KZMXLJQHEQ';
+import { hasConsent } from './consent';
 
 // Debug mode for development
 const IS_DEV = process.env.NODE_ENV === 'development';
@@ -19,13 +19,23 @@ function debugLog(eventName: string, params: Record<string, any>): void {
 }
 
 /**
- * Safe gtag call with error handling
+ * Consent-aware gtag call.
+ * Only sends events to GA4 if user has granted consent.
+ * In dev mode, always logs to console for debugging.
  */
 function safeGtag(eventName: string, params?: Record<string, any>): void {
   try {
+    debugLog(eventName, params || {});
+
+    if (!hasConsent()) {
+      if (IS_DEV) {
+        console.warn('[Analytics] Event blocked (no consent):', eventName);
+      }
+      return;
+    }
+
     if (typeof window !== 'undefined' && (window as any).gtag) {
       (window as any).gtag('event', eventName, params || {});
-      debugLog(eventName, params || {});
     } else if (IS_DEV) {
       console.warn('[Analytics] gtag not available', { eventName, params });
     }
@@ -38,11 +48,6 @@ function safeGtag(eventName: string, params?: Record<string, any>): void {
 
 /**
  * Track affiliate link clicks
- * @param serviceId - Unique service identifier (e.g., 'exness-forex')
- * @param serviceName - Display name (e.g., 'Exness')
- * @param category - Service category (e.g., 'Forex & CFDs')
- * @param url - The URL being linked to
- * @param isAffiliate - Whether this is a real affiliate link
  */
 export function trackAffiliateClick(
   serviceId: string,
@@ -62,10 +67,6 @@ export function trackAffiliateClick(
 
 /**
  * Track currency pair changes
- * @param fromCurrency - Source currency code (e.g., 'USD')
- * @param toCurrency - Target currency code (e.g., 'THB')
- * @param previousFrom - Previous source currency (optional)
- * @param previousTo - Previous target currency (optional)
  */
 export function trackCurrencyChange(
   fromCurrency: string,
@@ -87,8 +88,6 @@ export function trackCurrencyChange(
 
 /**
  * Track analysis period changes
- * @param period - Selected period (e.g., '5 Years')
- * @param previousPeriod - Previous period (optional)
  */
 export function trackAnalysisPeriodChange(period: string, previousPeriod?: string): void {
   const params: Record<string, string> = {
@@ -102,11 +101,6 @@ export function trackAnalysisPeriodChange(period: string, previousPeriod?: strin
 
 /**
  * Track alert creation
- * @param fromCurrency - Source currency
- * @param toCurrency - Target currency
- * @param threshold - Rate threshold value
- * @param direction - 'above' or 'below'
- * @param method - Notification method (optional)
  */
 export function trackAlertCreated(
   fromCurrency: string,
@@ -126,13 +120,24 @@ export function trackAlertCreated(
 }
 
 /**
- * Track newsletter signups
- * @param email - User's email (will be hashed before sending)
- * @param source - Where the signup occurred (optional)
+ * Track newsletter signups with SHA-256 hashed email
  */
-export function trackNewsletterSignup(email: string, source?: 'homepage' | 'newsletter_page' | 'footer'): void {
-  // Hash email before sending (basic privacy)
-  const hashedEmail = btoa(email.toLowerCase().trim());
+export async function trackNewsletterSignup(
+  email: string,
+  source?: 'homepage' | 'newsletter_page' | 'footer'
+): Promise<void> {
+  // Hash email with SHA-256 for privacy
+  let hashedEmail = '';
+  try {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(email.toLowerCase().trim());
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    hashedEmail = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  } catch {
+    // Fallback: skip email if hashing fails (e.g. insecure context)
+    hashedEmail = 'hash_unavailable';
+  }
 
   safeGtag('newsletter_signup', {
     method: 'form',
@@ -142,17 +147,14 @@ export function trackNewsletterSignup(email: string, source?: 'homepage' | 'news
 }
 
 /**
- * Track page views for SPA navigation
- * @param pageName - Page name or path
- * @param pageType - Type of page
- * @param previousPage - Previous page (optional)
+ * Track SPA content views (renamed from page_view to avoid GA4 collision)
  */
-export function trackPageView(
+export function trackContentView(
   pageName: string,
-  pageType: 'home' | 'about' | 'pricing' | 'alerts' | 'guides' | 'newsletter' | 'faq' | 'privacy' | 'terms',
+  pageType: 'home' | 'about' | 'pricing' | 'alerts' | 'guides' | 'newsletter' | 'faq' | 'privacy' | 'terms' | 'currency_pair' | 'other',
   previousPage?: string
 ): void {
-  safeGtag('page_view', {
+  safeGtag('content_view', {
     page_name: pageName,
     page_type: pageType,
     previous_page: previousPage || '(direct)',
@@ -161,9 +163,6 @@ export function trackPageView(
 
 /**
  * Track guide page views
- * @param guideSlug - URL slug of the guide
- * @param guideTitle - Title of the guide
- * @param category - Guide category (optional)
  */
 export function trackGuideView(guideSlug: string, guideTitle: string, category?: string): void {
   safeGtag('guide_view', {
@@ -175,9 +174,6 @@ export function trackGuideView(guideSlug: string, guideTitle: string, category?:
 
 /**
  * Track generic feature usage
- * @param featureName - Name of the feature
- * @param action - Action performed
- * @param value - Optional value associated with the action
  */
 export function trackFeatureUsage(featureName: string, action: string, value?: string | number): void {
   const params: Record<string, string> = {
@@ -193,34 +189,27 @@ export function trackFeatureUsage(featureName: string, action: string, value?: s
 }
 
 /**
- * Track band recommendation display
- * @param fromCurrency - Source currency
- * @param toCurrency - Target currency
- * @param currentRate - Current exchange rate
- * @param band - The band classification
- * @param recommendation - The recommendation text
+ * Track band recommendation display.
  */
 export function trackBandRecommendation(
   fromCurrency: string,
   toCurrency: string,
   currentRate: number,
-  band: 'EXTREME_LOW' | 'LOW' | 'NEUTRAL' | 'HIGH' | 'EXTREME_HIGH',
+  band: string,
   recommendation: string
 ): void {
   safeGtag('band_recommendation', {
     from_currency: fromCurrency,
     to_currency: toCurrency,
     currency_pair: `${fromCurrency}/${toCurrency}`,
-    current_rate: currentRate.toString(),
+    current_rate: currentRate,
     band,
-    recommendation: recommendation.substring(0, 100), // Truncate long recommendations
+    recommendation: recommendation.substring(0, 100),
   });
 }
 
 /**
  * Track errors for monitoring
- * @param errorMessage - Description of the error
- * @param errorSource - Where the error occurred
  */
 export function trackError(errorMessage: string, errorSource: string): void {
   safeGtag('error', {
@@ -232,7 +221,7 @@ export function trackError(errorMessage: string, errorSource: string): void {
 // ==================== Utility Functions ====================
 
 /**
- * Get the current gtag data layer (useful for debugging)
+ * Get the current gtag data layer (for debugging)
  */
 export function getDataLayer(): unknown[] | null {
   if (typeof window !== 'undefined' && (window as any).dataLayer) {
