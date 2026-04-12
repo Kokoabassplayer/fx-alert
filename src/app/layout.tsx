@@ -8,6 +8,8 @@ import { SiteFooter } from '@/components/site-footer';
 import { mainNavLinks } from '@/components/nav-links';
 import { ThemeProvider } from '@/components/theme-provider';
 import { StructuredData, fxAlertOrganizationSchema, webSiteSchema, financialProductSchema } from '@/components/structured-data';
+import { ConsentBanner } from '@/components/ConsentBanner';
+import { AnalyticsProvider } from '@/components/AnalyticsProvider';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -83,6 +85,9 @@ export default function RootLayout({
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
             gtag('js', new Date());
+            gtag('consent', 'default', {
+              'analytics_storage': 'denied'
+            });
             gtag('config', 'G-KZMXLJQHEQ');
           `}
         </Script>
@@ -103,6 +108,8 @@ export default function RootLayout({
             <SiteFooter />
           </div>
           <Toaster />
+          <AnalyticsProvider />
+          <ConsentBanner />
         </ThemeProvider>
       </body>
     </html>
