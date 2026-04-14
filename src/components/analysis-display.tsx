@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { type PairAnalysisData } from '@/lib/dynamic-analysis'; // generatePairAnalysis no longer needed here
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Terminal, Info } from 'lucide-react'; // Added Info icon
+import { useIsMobile } from "@/hooks/use-is-mobile";
 
 interface AnalysisDisplayProps {
   fromCurrency: string | null;
@@ -24,6 +25,7 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
   isAnalysisLoading,
   analysisError
 }) => {
+  const isMobile = useIsMobile();
 
   if (isAnalysisLoading) {
     return (
@@ -80,113 +82,166 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
   return (
     <div className="space-y-6">
       {/* Trend Summary Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle>{fromCurrency} / {toCurrency} Trend Summary</CardTitle>
-          {stats.sample_period && stats.sample_days && (
-             <CardDescription>
+      {isMobile ? (
+        <details open className="rounded-lg border overflow-hidden">
+          <summary className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50 transition-colors">
+            <span className="text-sm font-semibold text-primary">
+              {fromCurrency} / {toCurrency} Trend Summary
+            </span>
+          </summary>
+          <div className="px-4 pb-4">
+            {stats.sample_period && stats.sample_days && (
+              <p className="text-xs text-muted-foreground mb-2">
                 Based on data from {stats.sample_period} ({stats.sample_days} days).
-             </CardDescription>
-          )}
-        </CardHeader>
-        <CardContent>
-          {trend_summary.length > 0 ? (
-            <ul className="list-disc pl-5 space-y-1">
-              {trend_summary.map((trend, index) => (
-                <li key={index}>
-                  <strong>{trend.period}:</strong> {trend.description}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p>No trend summary available.</p>
-          )}
-        </CardContent>
-      </Card>
+              </p>
+            )}
+            {trend_summary.length > 0 ? (
+              <ul className="list-disc pl-5 space-y-1 text-sm">
+                {trend_summary.map((trend, index) => (
+                  <li key={index}>
+                    <strong>{trend.period}:</strong> {trend.description}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted-foreground">No trend summary available.</p>
+            )}
+          </div>
+        </details>
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle>{fromCurrency} / {toCurrency} Trend Summary</CardTitle>
+            {stats.sample_period && stats.sample_days && (
+              <CardDescription>
+                Based on data from {stats.sample_period} ({stats.sample_days} days).
+              </CardDescription>
+            )}
+          </CardHeader>
+          <CardContent>
+            {trend_summary.length > 0 ? (
+              <ul className="list-disc pl-5 space-y-1">
+                {trend_summary.map((trend, index) => (
+                  <li key={index}>
+                    <strong>{trend.period}:</strong> {trend.description}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p>No trend summary available.</p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Distribution Statistics Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Distribution Statistics</CardTitle>
-          <CardDescription>
-            Statistical overview of the {fromCurrency}/{toCurrency} exchange rate.
-            Sample period: {stats.sample_period || 'N/A'} ({stats.sample_days || 0} days).
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              {/* Elements on same line: HTML prohibits text nodes (whitespace) as children of <tr> */}
-              <TableRow><TableHead>Statistic</TableHead><TableHead className="text-right">Value ({toCurrency}/{fromCurrency})</TableHead></TableRow>
-            </TableHeader>
-            <TableBody>
-              <TableRow>
-                <TableCell>Mean (Average)</TableCell>
-                <TableCell className="text-right">{formatRate(stats.mean)}</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell>Median (50th Percentile)</TableCell>
-                <TableCell className="text-right">{formatRate(stats.median)}</TableCell>
-              </TableRow>
-               <TableRow>
-                <TableCell>Minimum Rate</TableCell>
-                <TableCell className="text-right">{formatRate(stats.min)}</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell>Maximum Rate</TableCell>
-                <TableCell className="text-right">{formatRate(stats.max)}</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell>10th Percentile (P10)</TableCell>
-                <TableCell className="text-right">{formatRate(stats.p10)}</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell>25th Percentile (P25)</TableCell>
-                <TableCell className="text-right">{formatRate(stats.p25)}</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell>75th Percentile (P75)</TableCell>
-                <TableCell className="text-right">{formatRate(stats.p75)}</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell>90th Percentile (P90)</TableCell>
-                <TableCell className="text-right">{formatRate(stats.p90)}</TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      {isMobile ? (
+        <details className="rounded-lg border overflow-hidden">
+          <summary className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50 transition-colors">
+            <span className="text-sm font-semibold text-primary">Distribution Statistics</span>
+          </summary>
+          <div className="px-4 pb-4 space-y-2">
+            <p className="text-xs text-muted-foreground mb-3">
+              {stats.sample_period || "N/A"} ({stats.sample_days || 0} days)
+            </p>
+            {[
+              ["Mean (Average)", formatRate(stats.mean)],
+              ["Median (50th Pct)", formatRate(stats.median)],
+              ["Minimum Rate", formatRate(stats.min)],
+              ["Maximum Rate", formatRate(stats.max)],
+              ["10th Percentile", formatRate(stats.p10)],
+              ["25th Percentile", formatRate(stats.p25)],
+              ["75th Percentile", formatRate(stats.p75)],
+              ["90th Percentile", formatRate(stats.p90)],
+            ].map(([label, value]) => (
+              <div key={label} className="flex justify-between items-center py-1.5 border-b border-border/40 last:border-0">
+                <span className="text-sm text-muted-foreground">{label}</span>
+                <span className="text-sm font-mono font-medium">{value}</span>
+              </div>
+            ))}
+          </div>
+        </details>
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle>Distribution Statistics</CardTitle>
+            <CardDescription>
+              Statistical overview of the {fromCurrency}/{toCurrency} exchange rate.
+              Sample period: {stats.sample_period || 'N/A'} ({stats.sample_days || 0} days).
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow><TableHead>Statistic</TableHead><TableHead className="text-right">Value ({toCurrency}/{fromCurrency})</TableHead></TableRow>
+              </TableHeader>
+              <TableBody>
+                <TableRow><TableCell>Mean (Average)</TableCell><TableCell className="text-right">{formatRate(stats.mean)}</TableCell></TableRow>
+                <TableRow><TableCell>Median (50th Percentile)</TableCell><TableCell className="text-right">{formatRate(stats.median)}</TableCell></TableRow>
+                <TableRow><TableCell>Minimum Rate</TableCell><TableCell className="text-right">{formatRate(stats.min)}</TableCell></TableRow>
+                <TableRow><TableCell>Maximum Rate</TableCell><TableCell className="text-right">{formatRate(stats.max)}</TableCell></TableRow>
+                <TableRow><TableCell>10th Percentile (P10)</TableCell><TableCell className="text-right">{formatRate(stats.p10)}</TableCell></TableRow>
+                <TableRow><TableCell>25th Percentile (P25)</TableCell><TableCell className="text-right">{formatRate(stats.p25)}</TableCell></TableRow>
+                <TableRow><TableCell>75th Percentile (P75)</TableCell><TableCell className="text-right">{formatRate(stats.p75)}</TableCell></TableRow>
+                <TableRow><TableCell>90th Percentile (P90)</TableCell><TableCell className="text-right">{formatRate(stats.p90)}</TableCell></TableRow>
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Actionable Thresholds Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Actionable Thresholds</CardTitle>
-          <CardDescription>
-            Key exchange rate levels for {fromCurrency}/{toCurrency} based on historical data.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              {/* Elements on same line: HTML prohibits text nodes (whitespace) as children of <tr> */}
-              <TableRow><TableHead>Level</TableHead><TableHead>Range ({fromCurrency}/{toCurrency})</TableHead><TableHead>Probability</TableHead><TableHead>Brief</TableHead><TableHead>Reasoning</TableHead></TableRow>
-            </TableHeader>
-            <TableBody>
-              {threshold_bands.map((band) => (
-                <TableRow key={band.level}>
-                  <TableCell className="font-semibold">{band.level.replace(/_/g, ' ')}</TableCell>
-                  <TableCell>
-                    {formatRate(band.range.min)} - {formatRate(band.range.max)}
-                  </TableCell>
-                  <TableCell>{formatPercent(band.probability)}</TableCell>
-                  <TableCell>{band.action_brief}</TableCell>
-                  <TableCell>{band.reason}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      {isMobile ? (
+        <details className="rounded-lg border overflow-hidden">
+          <summary className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50 transition-colors">
+            <span className="text-sm font-semibold text-primary">Actionable Thresholds</span>
+          </summary>
+          <div className="px-4 pb-4 space-y-3">
+            {threshold_bands.map((band) => (
+              <div key={band.level} className="rounded-lg border p-3">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-xs font-semibold uppercase tracking-wide">
+                    {band.level.replace(/_/g, " ")}
+                  </span>
+                  <span className="text-xs text-muted-foreground">{formatPercent(band.probability)}</span>
+                </div>
+                <p className="text-sm font-medium text-primary">{band.action_brief}</p>
+                <p className="text-xs text-muted-foreground mt-1">{band.reason}</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Range: {formatRate(band.range.min)} — {formatRate(band.range.max)}
+                </p>
+              </div>
+            ))}
+          </div>
+        </details>
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle>Actionable Thresholds</CardTitle>
+            <CardDescription>
+              Key exchange rate levels for {fromCurrency}/{toCurrency} based on historical data.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow><TableHead>Level</TableHead><TableHead>Range ({fromCurrency}/{toCurrency})</TableHead><TableHead>Probability</TableHead><TableHead>Brief</TableHead><TableHead>Reasoning</TableHead></TableRow>
+              </TableHeader>
+              <TableBody>
+                {threshold_bands.map((band) => (
+                  <TableRow key={band.level}>
+                    <TableCell className="font-semibold">{band.level.replace(/_/g, ' ')}</TableCell>
+                    <TableCell>{formatRate(band.range.min)} - {formatRate(band.range.max)}</TableCell>
+                    <TableCell>{formatPercent(band.probability)}</TableCell>
+                    <TableCell>{band.action_brief}</TableCell>
+                    <TableCell>{band.reason}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };
