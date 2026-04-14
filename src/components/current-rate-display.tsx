@@ -38,6 +38,10 @@ interface CurrentRateDisplayProps {
   onFromCurrencyChange: (newFrom: string) => void;
   onToCurrencyChange: (newTo: string) => void;
   pairAnalysisData: PairAnalysisData | null; // New prop
+  // New: callbacks to expose internal state for mobile layout
+  onRateDataChange?: (data: RealTimeRateResponse | null) => void;
+  onBandChange?: (band: ThresholdBand | null) => void;
+  onCurrenciesChange?: (currencies: Record<string, string> | null) => void;
 }
 
 const REFRESH_INTERVAL_MS = 15 * 60 * 1000; // 15 minutes
@@ -50,6 +54,9 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
   onFromCurrencyChange,
   onToCurrencyChange,
   pairAnalysisData, // Destructure new prop
+  onRateDataChange,
+  onBandChange,
+  onCurrenciesChange,
 }) => {
   const [currentRateData, setCurrentRateData] = useState<RealTimeRateResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true); // For the current rate fetch itself
@@ -71,6 +78,7 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
       const currencies = await fetchAvailableCurrencies();
       if (currencies) {
         setAvailableCurrencies(currencies);
+        onCurrenciesChange?.(currencies);
         if (!currencies[toCurrency] || fromCurrency === toCurrency) {
           const validKeys = Object.keys(currencies);
           if (validKeys.length > 0) {
@@ -113,6 +121,7 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
     const data = await fetchRealTimeRate(currentFrom, currentTo);
     if (data) {
       setCurrentRateData(data);
+      onRateDataChange?.(data);
     } else {
       toast({
         title: "Error Fetching Rate",
@@ -177,8 +186,10 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
       // This can happen if rate is an extreme outlier not covered by p10-p90 ranges if bands are strictly percentile based.
       // Our current dynamic bands cover min to max.
       setCurrentDynamicBand(foundBand);
+      onBandChange?.(foundBand);
     } else {
       setCurrentDynamicBand(null);
+      onBandChange?.(null);
     }
   }, [currentRateData, toCurrency, pairAnalysisData]);
 
