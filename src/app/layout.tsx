@@ -27,7 +27,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: 'FX Alert - USD to THB Exchange Rate Monitor & Forex Insights',
   description:
-    'Monitor USD to THB exchange rates with historical trends, AI-powered analysis, and smart rate bands. Get actionable insights for better currency exchange timing.',
+    'Find the best time to exchange USD to THB with historical rate analysis, smart band alerts, and free guides on sending money to Thailand. Data updated daily.',
   keywords: ['USD to THB', 'exchange rate', 'forex', 'THB', 'baht', 'currency converter', 'FX rates', 'foreign exchange'],
   authors: [{ name: 'FX Alert' }],
   creator: 'FX Alert',
@@ -45,7 +45,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: 'FX Alert - USD to THB Exchange Rate Monitor & Forex Insights',
-    description: 'Monitor USD to THB exchange rates with historical trends, AI-powered analysis, and smart rate bands.',
+    description: 'Find the best time to exchange USD to THB with historical rate analysis, smart band alerts, and free guides on sending money to Thailand.',
     url: siteUrl,
     siteName: 'FX Alert',
     locale: 'en_US',
@@ -62,7 +62,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'FX Alert - USD to THB Exchange Rate Monitor',
-    description: 'Monitor USD to THB exchange rates with historical trends, AI-powered analysis, and smart rate bands.',
+    description: 'Find the best time to exchange USD to THB with historical rate analysis and smart band alerts.',
     images: ['/og-image.png'],
   },
 };

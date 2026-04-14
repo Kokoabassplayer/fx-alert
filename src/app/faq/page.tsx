@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { LegalLayout } from '@/components/legal-layout';
+import { StructuredData, faqPageSchema } from '@/components/structured-data';
 import { APP_CONFIG } from '@/lib/constants';
 
 export const metadata: Metadata = {
@@ -147,6 +148,7 @@ export default function FAQPage() {
       title="Frequently Asked Questions"
       description={metadata.description || ''}
     >
+      <StructuredData data={faqPageSchema(faqs.flatMap(section => section.questions.map(q => ({ question: q.q, answer: q.a }))))} />
       <section className="mb-6">
         <p className="text-sm text-muted-foreground leading-relaxed">
           Find answers to common questions about FX Alert. Can't find what you're looking for?
