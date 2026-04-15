@@ -3,6 +3,7 @@
 
 import type { FC } from 'react';
 import { useState, useEffect, useCallback } from 'react';
+import { useIsMobile } from "@/hooks/use-is-mobile";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TrendingUp, ExternalLink, Award } from 'lucide-react';
@@ -38,6 +39,7 @@ const PERIOD_LABEL_MAP = new Map(PERIOD_OPTIONS.map(p => [p.value, p.label]));
 
 
 const UsdThbMonitorPage: FC = () => {
+  const isMobile = useIsMobile();
   const [alertPrefs, setAlertPrefs] = useLocalStorage<AlertPrefs>("alertPrefs", DEFAULT_ALERT_PREFS);
   const [selectedFromCurrency, setSelectedFromCurrency] = useState<string>('USD');
   const [selectedToCurrency, setSelectedToCurrency] = useState<string>('THB');
@@ -127,10 +129,9 @@ const UsdThbMonitorPage: FC = () => {
     }
   }, [pairAnalysisData, selectedFromCurrency, selectedToCurrency]);
 
-  return (
-    <>
-      {/* ========== MOBILE LAYOUT (md:hidden) ========== */}
-      <div className="md:hidden">
+  if (isMobile) {
+    return (
+      <div>
         {/* Sticky Rate Bar */}
         <MobileStickyBar
           rateData={mobileRateData}
@@ -232,9 +233,12 @@ const UsdThbMonitorPage: FC = () => {
           </details>
         </div>
       </div>
+    );
+  }
 
-      {/* ========== DESKTOP LAYOUT (hidden md:block) ========== */}
-      <div className="hidden md:block w-full max-w-4xl mx-auto px-4 sm:px-6 py-8">
+  // ========== DESKTOP LAYOUT ==========
+  return (
+    <div className="w-full max-w-4xl mx-auto px-4 sm:px-6 py-8">
         {/* Analysis Period Selector */}
         <div className="flex items-center space-x-2 mb-6">
           <Label htmlFor="period-select" className="text-sm">Analysis Period:</Label>
@@ -357,8 +361,7 @@ const UsdThbMonitorPage: FC = () => {
           </div>
         </div>
       </div>
-    </>
-  );
-}
+    );
+  };
 
 export default UsdThbMonitorPage;

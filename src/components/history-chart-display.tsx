@@ -89,6 +89,11 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({
   const isMobile = useIsMobile();
   const [tappedPoint, setTappedPoint] = useState<{ date: string; rate: number } | null>(null);
   const [chartData, setChartData] = useState<FormattedHistoricalRate[]>([]);
+
+  // Clear tapped point when dataset changes (currency pair or period)
+  useEffect(() => {
+    setTappedPoint(null);
+  }, [fromCurrency, toCurrency, selectedPeriodDays]);
   const [isLoading, setIsLoading] = useState(false); // For historical data fetch
   const { toast } = useToast();
   // const [selectedPeriod, setSelectedPeriod] = useState<string>("90"); // Remove internal period state

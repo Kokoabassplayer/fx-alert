@@ -12,28 +12,28 @@ interface HeroBandCardProps {
 
 const getBandBorderColor = (level: string): string => {
   if (level.includes("EXTREME_LOW")) return "border-red-500/50";
+  if (level.includes("EXTREME_HIGH")) return "border-purple-500/50";
   if (level.includes("LOW")) return "border-orange-500/50";
   if (level.includes("NEUTRAL")) return "border-gray-400/50";
   if (level.includes("HIGH")) return "border-blue-500/50";
-  if (level.includes("EXTREME_HIGH")) return "border-purple-500/50";
   return "border-border";
 };
 
 const getBandBgColor = (level: string): string => {
   if (level.includes("EXTREME_LOW")) return "bg-red-500/5";
+  if (level.includes("EXTREME_HIGH")) return "bg-purple-500/5";
   if (level.includes("LOW")) return "bg-orange-500/5";
   if (level.includes("NEUTRAL")) return "bg-gray-500/5";
   if (level.includes("HIGH")) return "bg-blue-500/5";
-  if (level.includes("EXTREME_HIGH")) return "bg-purple-500/5";
   return "bg-card";
 };
 
 const getBadgeClassForLevel = (level: string): string => {
   if (level.includes("EXTREME_LOW")) return "bg-red-500 text-white";
+  if (level.includes("EXTREME_HIGH")) return "bg-purple-500 text-white";
   if (level.includes("LOW")) return "bg-orange-500 text-white";
   if (level.includes("NEUTRAL")) return "bg-gray-500 text-white";
   if (level.includes("HIGH")) return "bg-blue-500 text-white";
-  if (level.includes("EXTREME_HIGH")) return "bg-purple-500 text-white";
   return "bg-gray-400 text-white";
 };
 

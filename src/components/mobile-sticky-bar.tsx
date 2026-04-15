@@ -25,19 +25,19 @@ interface MobileStickyBarProps {
 
 const getBadgeClassForLevel = (level: string): string => {
   if (level.includes("EXTREME_LOW")) return "bg-red-500 text-white";
+  if (level.includes("EXTREME_HIGH")) return "bg-purple-500 text-white";
   if (level.includes("LOW")) return "bg-orange-500 text-white";
   if (level.includes("NEUTRAL")) return "bg-gray-500 text-white";
   if (level.includes("HIGH")) return "bg-blue-500 text-white";
-  if (level.includes("EXTREME_HIGH")) return "bg-purple-500 text-white";
   return "bg-gray-400 text-white";
 };
 
 const getBandIndicator = (level: string): { symbol: string; color: string } => {
   if (level.includes("EXTREME_LOW")) return { symbol: "▼▼", color: "text-red-500" };
+  if (level.includes("EXTREME_HIGH")) return { symbol: "▲▲", color: "text-purple-500" };
   if (level.includes("LOW")) return { symbol: "▼", color: "text-orange-500" };
   if (level.includes("NEUTRAL")) return { symbol: "●", color: "text-gray-500" };
   if (level.includes("HIGH")) return { symbol: "▲", color: "text-blue-500" };
-  if (level.includes("EXTREME_HIGH")) return { symbol: "▲▲", color: "text-purple-500" };
   return { symbol: "●", color: "text-gray-400" };
 };
 
