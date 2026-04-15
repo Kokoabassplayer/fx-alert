@@ -286,7 +286,7 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
               </SelectTrigger>
               <SelectContent>
                 {availableCurrencies && Object.entries(availableCurrencies).map(([code, name]) => (
-                  <SelectItem key={code} value={code} disabled={code === toCurrency && Object.keys(availableCurrencies || {}).length > 1}>
+                  <SelectItem key={code} value={code} textValue={code} disabled={code === toCurrency && Object.keys(availableCurrencies || {}).length > 1}>
                     {code} - {name}
                   </SelectItem>
                 ))}
@@ -312,7 +312,7 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
               </SelectTrigger>
               <SelectContent>
                 {availableCurrencies && Object.entries(availableCurrencies).map(([code, name]) => (
-                  <SelectItem key={code} value={code} disabled={code === fromCurrency && Object.keys(availableCurrencies || {}).length > 1}>
+                  <SelectItem key={code} value={code} textValue={code} disabled={code === fromCurrency && Object.keys(availableCurrencies || {}).length > 1}>
                     {code} - {name}
                   </SelectItem>
                 ))}

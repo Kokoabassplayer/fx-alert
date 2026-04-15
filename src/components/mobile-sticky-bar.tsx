@@ -78,15 +78,16 @@ export function MobileStickyBar({
             <SelectTrigger className="h-7 w-[68px] text-xs border-border/50">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent className="min-w-[100px]">
+            <SelectContent className="min-w-[180px]">
               {availableCurrencies &&
                 Object.entries(availableCurrencies).map(([code, name]) => (
                   <SelectItem
                     key={code}
                     value={code}
+                    textValue={code}
                     disabled={code === toCurrency}
                   >
-                    {code}
+                    {code} - {name}
                   </SelectItem>
                 ))}
             </SelectContent>
@@ -96,15 +97,16 @@ export function MobileStickyBar({
             <SelectTrigger className="h-7 w-[68px] text-xs border-border/50">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent className="min-w-[100px]">
+            <SelectContent className="min-w-[180px]">
               {availableCurrencies &&
                 Object.entries(availableCurrencies).map(([code, name]) => (
                   <SelectItem
                     key={code}
                     value={code}
+                    textValue={code}
                     disabled={code === fromCurrency}
                   >
-                    {code}
+                    {code} - {name}
                   </SelectItem>
                 ))}
             </SelectContent>
