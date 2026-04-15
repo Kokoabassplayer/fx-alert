@@ -3,7 +3,6 @@
 
 import type { FC } from 'react';
 import { useState, useEffect, useCallback } from 'react';
-import { useIsMobile } from "@/hooks/use-is-mobile";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TrendingUp, ExternalLink, Award } from 'lucide-react';
@@ -39,7 +38,6 @@ const PERIOD_LABEL_MAP = new Map(PERIOD_OPTIONS.map(p => [p.value, p.label]));
 
 
 const UsdThbMonitorPage: FC = () => {
-  const isMobile = useIsMobile();
   const [alertPrefs, setAlertPrefs] = useLocalStorage<AlertPrefs>("alertPrefs", DEFAULT_ALERT_PREFS);
   const [selectedFromCurrency, setSelectedFromCurrency] = useState<string>('USD');
   const [selectedToCurrency, setSelectedToCurrency] = useState<string>('THB');
@@ -132,8 +130,8 @@ const UsdThbMonitorPage: FC = () => {
   return (
     <>
       {/* Data source: always mounted to fetch rate/currency/band data.
-          Hidden on mobile via CSS to avoid duplicate API calls from a second visible component. */}
-      <div className={isMobile ? "hidden" : ""}>
+          Visible on desktop, hidden on mobile via CSS. */}
+      <div className="hidden md:block">
         <CurrentRateDisplay
           alertPrefs={alertPrefs}
           onAlertPrefsChange={setAlertPrefs}
@@ -148,8 +146,8 @@ const UsdThbMonitorPage: FC = () => {
         />
       </div>
 
-      {isMobile ? (
-      <div>
+      {/* ========== MOBILE LAYOUT ========== */}
+      <div className="md:hidden">
         {/* Sticky Rate Bar */}
         <MobileStickyBar
           rateData={mobileRateData}
@@ -172,7 +170,7 @@ const UsdThbMonitorPage: FC = () => {
           />
 
           {/* Period Pills */}
-          <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 scrollbar-none">
+          <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
             {PERIOD_OPTIONS.map(option => (
               <button
                 key={option.value}
@@ -251,9 +249,9 @@ const UsdThbMonitorPage: FC = () => {
           </details>
         </div>
       </div>
-    ) : (
-    // ========== DESKTOP LAYOUT ==========
-    <div className="w-full max-w-4xl mx-auto px-4 sm:px-6 py-8">
+
+      {/* ========== DESKTOP LAYOUT ========== */}
+      <div className="hidden md:block w-full max-w-4xl mx-auto px-4 sm:px-6 py-8">
         {/* Analysis Period Selector */}
         <div className="flex items-center space-x-2 mb-6">
           <Label htmlFor="period-select" className="text-sm">Analysis Period:</Label>
@@ -364,7 +362,6 @@ const UsdThbMonitorPage: FC = () => {
           </div>
         </div>
       </div>
-    )}
     </>
   );
 }

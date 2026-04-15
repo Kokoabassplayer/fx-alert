@@ -94,6 +94,14 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({
   useEffect(() => {
     setTappedPoint(null);
   }, [fromCurrency, toCurrency, selectedPeriodDays]);
+
+  // Default tapped point to the latest data point for mobile
+  useEffect(() => {
+    if (chartData.length > 0 && !tappedPoint) {
+      const last = chartData[chartData.length - 1];
+      setTappedPoint({ date: last.date, rate: last.rate });
+    }
+  }, [chartData]);
   const [isLoading, setIsLoading] = useState(false); // For historical data fetch
   const { toast } = useToast();
   // const [selectedPeriod, setSelectedPeriod] = useState<string>("90"); // Remove internal period state

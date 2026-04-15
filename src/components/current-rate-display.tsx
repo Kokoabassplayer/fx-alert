@@ -28,6 +28,7 @@ import {
     type BandDefinition // May still be used for toast structure or as a fallback
 } from "@/lib/bands";
 import { type PairAnalysisData, type ThresholdBand } from '@/lib/dynamic-analysis'; // Import new types
+import { getBadgeClassSoft } from '@/lib/band-styles';
 
 interface CurrentRateDisplayProps {
   alertPrefs: AlertPrefs;
@@ -347,7 +348,7 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
             {currentDynamicBand && !isLoading && rate !== undefined ? (
               <>
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                  <Badge className={`px-3 py-1 text-xs sm:text-sm ${getBadgeClassForLevel(currentDynamicBand.level)}`}>
+                  <Badge className={`px-3 py-1 text-xs sm:text-sm ${getBadgeClassSoft(currentDynamicBand.level)}`}>
                     {currentDynamicBand.level.replace(/_/g, ' ')}
                   </Badge>
                   <div className="text-left sm:text-right mt-1 sm:mt-0">
@@ -408,15 +409,6 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
       */}
     </Card>
   );
-};
-
-// Helper function for badge styling based on dynamic level (can be expanded)
-const getBadgeClassForLevel = (level: string): string => {
-  if (level.includes("EXTREME_LOW")) return "bg-red-100 text-red-800 border-red-300";
-  if (level.includes("LOW")) return "bg-orange-100 text-orange-800 border-orange-300";
-  if (level.includes("HIGH")) return "bg-blue-100 text-blue-800 border-blue-300";
-  if (level.includes("EXTREME_HIGH")) return "bg-purple-100 text-purple-800 border-purple-300";
-  return "bg-gray-100 text-gray-800 border-gray-300"; // NEUTRAL or other
 };
 
 export default CurrentRateDisplay;

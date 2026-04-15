@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/select";
 import type { ThresholdBand } from "@/lib/dynamic-analysis";
 import type { RealTimeRateResponse } from "@/lib/currency-api";
+import { getBadgeClassBold, getBandIndicator } from "@/lib/band-styles";
 
 interface MobileStickyBarProps {
   rateData: RealTimeRateResponse | null;
@@ -21,24 +22,6 @@ interface MobileStickyBarProps {
   currentBand: ThresholdBand | null;
   availableCurrencies: Record<string, string> | null;
 }
-
-const getBadgeClassForLevel = (level: string): string => {
-  if (level.includes("EXTREME_LOW")) return "bg-red-500 text-white";
-  if (level.includes("EXTREME_HIGH")) return "bg-purple-500 text-white";
-  if (level.includes("LOW")) return "bg-orange-500 text-white";
-  if (level.includes("NEUTRAL")) return "bg-gray-500 text-white";
-  if (level.includes("HIGH")) return "bg-blue-500 text-white";
-  return "bg-gray-400 text-white";
-};
-
-const getBandIndicator = (level: string): { symbol: string; color: string } => {
-  if (level.includes("EXTREME_LOW")) return { symbol: "▼▼", color: "text-red-500" };
-  if (level.includes("EXTREME_HIGH")) return { symbol: "▲▲", color: "text-purple-500" };
-  if (level.includes("LOW")) return { symbol: "▼", color: "text-orange-500" };
-  if (level.includes("NEUTRAL")) return { symbol: "●", color: "text-gray-500" };
-  if (level.includes("HIGH")) return { symbol: "▲", color: "text-blue-500" };
-  return { symbol: "●", color: "text-gray-400" };
-};
 
 export function MobileStickyBar({
   rateData,
@@ -52,7 +35,7 @@ export function MobileStickyBar({
 }: MobileStickyBarProps) {
   const rate = rateData?.rate;
   const displayRate = rate !== undefined ? rate.toFixed(4) : "—";
-  const bandIndicator = currentBand ? getBandIndicator(currentBand.level) : null;
+  const bandSymbol = currentBand ? getBandIndicator(currentBand.level) : null;
 
   return (
     <div className="sticky top-16 z-40 bg-background/95 backdrop-blur border-b border-border/40 px-4 py-2">
@@ -65,8 +48,8 @@ export function MobileStickyBar({
             <span className="text-xl font-bold truncate">{displayRate}</span>
           )}
           {currentBand && (
-            <Badge className={`px-1.5 py-0 text-[10px] ${getBadgeClassForLevel(currentBand.level)}`}>
-              {bandIndicator?.symbol} {currentBand.level.replace(/_/g, " ")}
+            <Badge className={`px-1.5 py-0 text-[10px] ${getBadgeClassBold(currentBand.level)}`}>
+              {bandSymbol} {currentBand.level.replace(/_/g, " ")}
             </Badge>
           )}
         </div>
