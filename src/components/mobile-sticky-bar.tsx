@@ -56,7 +56,7 @@ export function MobileStickyBar({
   const bandIndicator = currentBand ? getBandIndicator(currentBand.level) : null;
 
   return (
-    <div className="md:hidden sticky top-16 z-40 bg-background/95 backdrop-blur border-b border-border/40 px-4 py-2">
+    <div className="sticky top-16 z-40 bg-background/95 backdrop-blur border-b border-border/40 px-4 py-2">
       <div className="flex items-center justify-between gap-3">
         {/* Rate + Band */}
         <div className="flex items-center gap-2 min-w-0">
@@ -75,10 +75,10 @@ export function MobileStickyBar({
         {/* Currency Switcher */}
         <div className="flex items-center gap-1.5 flex-shrink-0">
           <Select value={fromCurrency} onValueChange={onFromCurrencyChange}>
-            <SelectTrigger className="h-7 w-[58px] text-xs border-border/50">
+            <SelectTrigger className="h-7 w-[68px] text-xs border-border/50">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="min-w-[100px]">
               {availableCurrencies &&
                 Object.entries(availableCurrencies).map(([code, name]) => (
                   <SelectItem
@@ -93,10 +93,10 @@ export function MobileStickyBar({
           </Select>
           <span className="text-muted-foreground text-xs">→</span>
           <Select value={toCurrency} onValueChange={onToCurrencyChange}>
-            <SelectTrigger className="h-7 w-[58px] text-xs border-border/50">
+            <SelectTrigger className="h-7 w-[68px] text-xs border-border/50">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="min-w-[100px]">
               {availableCurrencies &&
                 Object.entries(availableCurrencies).map(([code, name]) => (
                   <SelectItem
