@@ -129,8 +129,26 @@ const UsdThbMonitorPage: FC = () => {
     }
   }, [pairAnalysisData, selectedFromCurrency, selectedToCurrency]);
 
-  if (isMobile) {
-    return (
+  return (
+    <>
+      {/* Data source: always mounted to fetch rate/currency/band data.
+          Hidden on mobile via CSS to avoid duplicate API calls from a second visible component. */}
+      <div className={isMobile ? "hidden" : ""}>
+        <CurrentRateDisplay
+          alertPrefs={alertPrefs}
+          onAlertPrefsChange={setAlertPrefs}
+          fromCurrency={selectedFromCurrency}
+          toCurrency={selectedToCurrency}
+          onFromCurrencyChange={handleFromCurrencyChange}
+          onToCurrencyChange={handleToCurrencyChange}
+          pairAnalysisData={pairAnalysisData}
+          onRateDataChange={setMobileRateData}
+          onBandChange={setMobileCurrentBand}
+          onCurrenciesChange={setMobileCurrencies}
+        />
+      </div>
+
+      {isMobile ? (
       <div>
         {/* Sticky Rate Bar */}
         <MobileStickyBar
@@ -233,11 +251,8 @@ const UsdThbMonitorPage: FC = () => {
           </details>
         </div>
       </div>
-    );
-  }
-
-  // ========== DESKTOP LAYOUT ==========
-  return (
+    ) : (
+    // ========== DESKTOP LAYOUT ==========
     <div className="w-full max-w-4xl mx-auto px-4 sm:px-6 py-8">
         {/* Analysis Period Selector */}
         <div className="flex items-center space-x-2 mb-6">
@@ -260,18 +275,6 @@ const UsdThbMonitorPage: FC = () => {
         </div>
 
         <div className="space-y-6">
-          <CurrentRateDisplay
-            alertPrefs={alertPrefs}
-            onAlertPrefsChange={setAlertPrefs}
-            fromCurrency={selectedFromCurrency}
-            toCurrency={selectedToCurrency}
-            onFromCurrencyChange={handleFromCurrencyChange}
-            onToCurrencyChange={handleToCurrencyChange}
-            pairAnalysisData={pairAnalysisData}
-            onRateDataChange={setMobileRateData}
-            onBandChange={setMobileCurrentBand}
-            onCurrenciesChange={setMobileCurrencies}
-          />
           <HistoryChartDisplay
             alertPrefs={alertPrefs}
             fromCurrency={selectedFromCurrency}
@@ -361,7 +364,9 @@ const UsdThbMonitorPage: FC = () => {
           </div>
         </div>
       </div>
-    );
-  };
+    )}
+    </>
+  );
+}
 
 export default UsdThbMonitorPage;
