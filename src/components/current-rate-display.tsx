@@ -18,7 +18,6 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select";
 
 import {
@@ -282,7 +281,7 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
               }}
             >
               <SelectTrigger className="w-full sm:w-[120px]">
-                <SelectValue placeholder="From" />
+                <span>{fromCurrency}</span>
               </SelectTrigger>
               <SelectContent>
                 {availableCurrencies && Object.entries(availableCurrencies).map(([code, name]) => (
@@ -308,7 +307,7 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
               }}
             >
               <SelectTrigger className="w-full sm:w-[120px]">
-                <SelectValue placeholder="To" />
+                <span>{toCurrency}</span>
               </SelectTrigger>
               <SelectContent>
                 {availableCurrencies && Object.entries(availableCurrencies).map(([code, name]) => (

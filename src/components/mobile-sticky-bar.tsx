@@ -7,7 +7,6 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select";
 import type { ThresholdBand } from "@/lib/dynamic-analysis";
 import type { RealTimeRateResponse } from "@/lib/currency-api";
@@ -76,7 +75,7 @@ export function MobileStickyBar({
         <div className="flex items-center gap-1.5 flex-shrink-0">
           <Select value={fromCurrency} onValueChange={onFromCurrencyChange}>
             <SelectTrigger className="h-7 w-[68px] text-xs border-border/50">
-              <SelectValue />
+              <span>{fromCurrency}</span>
             </SelectTrigger>
             <SelectContent className="min-w-[180px]">
               {availableCurrencies &&
@@ -95,7 +94,7 @@ export function MobileStickyBar({
           <span className="text-muted-foreground text-xs">→</span>
           <Select value={toCurrency} onValueChange={onToCurrencyChange}>
             <SelectTrigger className="h-7 w-[68px] text-xs border-border/50">
-              <SelectValue />
+              <span>{toCurrency}</span>
             </SelectTrigger>
             <SelectContent className="min-w-[180px]">
               {availableCurrencies &&
