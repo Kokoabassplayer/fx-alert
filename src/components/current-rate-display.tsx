@@ -18,7 +18,6 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select";
 
 import {
@@ -29,6 +28,7 @@ import {
     type BandDefinition // May still be used for toast structure or as a fallback
 } from "@/lib/bands";
 import { type PairAnalysisData, type ThresholdBand } from '@/lib/dynamic-analysis'; // Import new types
+import { getBadgeClassSoft } from '@/lib/band-styles';
 
 interface CurrentRateDisplayProps {
   alertPrefs: AlertPrefs;
@@ -38,6 +38,10 @@ interface CurrentRateDisplayProps {
   onFromCurrencyChange: (newFrom: string) => void;
   onToCurrencyChange: (newTo: string) => void;
   pairAnalysisData: PairAnalysisData | null; // New prop
+  // New: callbacks to expose internal state for mobile layout
+  onRateDataChange?: (data: RealTimeRateResponse | null) => void;
+  onBandChange?: (band: ThresholdBand | null) => void;
+  onCurrenciesChange?: (currencies: Record<string, string> | null) => void;
 }
 
 const REFRESH_INTERVAL_MS = 15 * 60 * 1000; // 15 minutes
@@ -50,6 +54,9 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
   onFromCurrencyChange,
   onToCurrencyChange,
   pairAnalysisData, // Destructure new prop
+  onRateDataChange,
+  onBandChange,
+  onCurrenciesChange,
 }) => {
   const [currentRateData, setCurrentRateData] = useState<RealTimeRateResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true); // For the current rate fetch itself
@@ -71,6 +78,7 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
       const currencies = await fetchAvailableCurrencies();
       if (currencies) {
         setAvailableCurrencies(currencies);
+        onCurrenciesChange?.(currencies);
         if (!currencies[toCurrency] || fromCurrency === toCurrency) {
           const validKeys = Object.keys(currencies);
           if (validKeys.length > 0) {
@@ -113,6 +121,7 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
     const data = await fetchRealTimeRate(currentFrom, currentTo);
     if (data) {
       setCurrentRateData(data);
+      onRateDataChange?.(data);
     } else {
       toast({
         title: "Error Fetching Rate",
@@ -177,8 +186,10 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
       // This can happen if rate is an extreme outlier not covered by p10-p90 ranges if bands are strictly percentile based.
       // Our current dynamic bands cover min to max.
       setCurrentDynamicBand(foundBand);
+      onBandChange?.(foundBand);
     } else {
       setCurrentDynamicBand(null);
+      onBandChange?.(null);
     }
   }, [currentRateData, toCurrency, pairAnalysisData]);
 
@@ -271,11 +282,11 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
               }}
             >
               <SelectTrigger className="w-full sm:w-[120px]">
-                <SelectValue placeholder="From" />
+                <span>{fromCurrency}</span>
               </SelectTrigger>
               <SelectContent>
                 {availableCurrencies && Object.entries(availableCurrencies).map(([code, name]) => (
-                  <SelectItem key={code} value={code} disabled={code === toCurrency && Object.keys(availableCurrencies || {}).length > 1}>
+                  <SelectItem key={code} value={code} textValue={code} disabled={code === toCurrency && Object.keys(availableCurrencies || {}).length > 1}>
                     {code} - {name}
                   </SelectItem>
                 ))}
@@ -297,11 +308,11 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
               }}
             >
               <SelectTrigger className="w-full sm:w-[120px]">
-                <SelectValue placeholder="To" />
+                <span>{toCurrency}</span>
               </SelectTrigger>
               <SelectContent>
                 {availableCurrencies && Object.entries(availableCurrencies).map(([code, name]) => (
-                  <SelectItem key={code} value={code} disabled={code === fromCurrency && Object.keys(availableCurrencies || {}).length > 1}>
+                  <SelectItem key={code} value={code} textValue={code} disabled={code === fromCurrency && Object.keys(availableCurrencies || {}).length > 1}>
                     {code} - {name}
                   </SelectItem>
                 ))}
@@ -337,7 +348,7 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
             {currentDynamicBand && !isLoading && rate !== undefined ? (
               <>
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                  <Badge className={`px-3 py-1 text-xs sm:text-sm ${getBadgeClassForLevel(currentDynamicBand.level)}`}>
+                  <Badge className={`px-3 py-1 text-xs sm:text-sm ${getBadgeClassSoft(currentDynamicBand.level)}`}>
                     {currentDynamicBand.level.replace(/_/g, ' ')}
                   </Badge>
                   <div className="text-left sm:text-right mt-1 sm:mt-0">
@@ -398,15 +409,6 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
       */}
     </Card>
   );
-};
-
-// Helper function for badge styling based on dynamic level (can be expanded)
-const getBadgeClassForLevel = (level: string): string => {
-  if (level.includes("EXTREME_LOW")) return "bg-red-100 text-red-800 border-red-300";
-  if (level.includes("LOW")) return "bg-orange-100 text-orange-800 border-orange-300";
-  if (level.includes("HIGH")) return "bg-blue-100 text-blue-800 border-blue-300";
-  if (level.includes("EXTREME_HIGH")) return "bg-purple-100 text-purple-800 border-purple-300";
-  return "bg-gray-100 text-gray-800 border-gray-300"; // NEUTRAL or other
 };
 
 export default CurrentRateDisplay;

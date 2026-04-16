@@ -59,6 +59,19 @@ export function SiteFooter() {
         <p className="text-xs text-muted-foreground text-center">
           © {new Date().getFullYear()} FX Alert. All rights reserved.
         </p>
+
+        {/* Mobile disclaimers (hidden on desktop since homepage shows them inline) */}
+        <details className="md:hidden mt-4 text-xs text-muted-foreground">
+          <summary className="cursor-pointer hover:text-foreground transition-colors text-center">
+            Disclaimers
+          </summary>
+          <ul className="mt-2 space-y-1 list-disc list-inside text-left max-w-md mx-auto">
+            <li>For informational purposes only. Not financial advice.</li>
+            <li>Always conduct your own research and consult a qualified financial advisor.</li>
+            <li>Not liable for any losses arising from use of this tool.</li>
+            <li>Past performance is not indicative of future results.</li>
+          </ul>
+        </details>
       </div>
     </footer>
   );

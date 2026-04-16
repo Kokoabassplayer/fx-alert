@@ -3,7 +3,7 @@
 "use client";
 
 import type { FC } from 'react';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -20,6 +20,7 @@ import {
 } from "@/lib/bands";
 import { type PairAnalysisData, type ThresholdBand as DynamicThresholdBand } from '@/lib/dynamic-analysis'; // Import PairAnalysisData
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useIsMobile } from "@/hooks/use-is-mobile";
 
 
 interface HistoryChartDisplayProps {
@@ -85,11 +86,36 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({
   pairAnalysisData,
   selectedPeriodDays, // Destructure new prop
 }) => {
+  const isMobile = useIsMobile();
+  const [tappedPoint, setTappedPoint] = useState<{ date: string; rate: number } | null>(null);
   const [chartData, setChartData] = useState<FormattedHistoricalRate[]>([]);
+
+  // Clear tapped point when dataset changes (currency pair or period)
+  useEffect(() => {
+    setTappedPoint(null);
+  }, [fromCurrency, toCurrency, selectedPeriodDays]);
+
+  // Default tapped point to the latest data point for mobile
+  useEffect(() => {
+    if (chartData.length > 0 && !tappedPoint) {
+      const last = chartData[chartData.length - 1];
+      setTappedPoint({ date: last.date, rate: last.rate });
+    }
+  }, [chartData]);
   const [isLoading, setIsLoading] = useState(false); // For historical data fetch
   const { toast } = useToast();
   // const [selectedPeriod, setSelectedPeriod] = useState<string>("90"); // Remove internal period state
   const [chartBands, setChartBands] = useState<BandDefinition[]>([]); // For dynamic chart bands
+
+  const handleChartClick = useCallback((payload: any) => {
+    if (isMobile && payload && payload.activePayload && payload.activePayload.length > 0) {
+      const dataPoint = payload.activePayload[0];
+      setTappedPoint({
+        date: dataPoint.payload.date,
+        rate: dataPoint.value,
+      });
+    }
+  }, [isMobile]);
 
   // periodInDays is now directly from selectedPeriodDays prop
   // const periodInDays = useMemo(() => {
@@ -277,6 +303,18 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({
         </div>
       </CardHeader>
       <CardContent className="pt-6 pb-2 bg-background">
+        {/* Mobile: tap-to-inspect info bar */}
+        {isMobile && chartData && chartData.length > 0 && (
+          <div className="flex justify-between items-center px-4 py-1 text-sm text-muted-foreground border-b border-border/40">
+            <span className="text-xs">Tap chart to inspect</span>
+            {tappedPoint && (
+              <span className="text-xs">
+                <span className="font-semibold text-primary">{tappedPoint.rate.toFixed(4)}</span>
+                <span className="ml-1.5">{tappedPoint.date}</span>
+              </span>
+            )}
+          </div>
+        )}
         {(isLoading && (!chartData || chartData.length === 0)) ? (
           <div className="h-[350px] flex items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -289,8 +327,8 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({
             }
           </div>
         ) : (
-          <ResponsiveContainer width="100%" height={350}>
-            <LineChart data={chartData} margin={{ top: 5, right: 30, left: 25, bottom: 5 }}>
+          <ResponsiveContainer width="100%" height={isMobile ? 200 : 350}>
+            <LineChart data={chartData} margin={{ top: 5, right: isMobile ? 10 : 30, left: isMobile ? 5 : 25, bottom: 5 }} onClick={isMobile ? handleChartClick : undefined}>
               <XAxis
                 dataKey="date"
                 tickFormatter={(value) => {
@@ -309,12 +347,12 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({
               <YAxis
                 domain={yAxisDomain}
                 tickFormatter={(value) => typeof value === 'number' ? value.toFixed(toCurrency === 'JPY' ? 3 : 4) : ''} // More precision for JPY like pairs
-                tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+                tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
                 tickLine={{ stroke: 'hsl(var(--border))' }}
                 axisLine={{ strokeWidth: 1, stroke: 'hsl(var(--border))' }}
                 allowDataOverflow={true}
-                width={80} // Increased width for potentially longer rate numbers
-                label={{
+                width={isMobile ? 48 : 80} // Increased width for potentially longer rate numbers
+                label={isMobile ? undefined : {
                     value: `${toCurrency}/${fromCurrency}`,
                     angle: -90,
                     position: 'insideLeft',
@@ -368,7 +406,7 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({
                       fillOpacity={1} 
                       strokeOpacity={1} 
                       ifOverflow="visible" 
-                      label={<BandLabel value={band.displayName} textColorCssVar={band.colorConfig.chartSettings.labelTextColorVar} />}
+                      label={isMobile ? undefined : <BandLabel value={band.displayName} textColorCssVar={band.colorConfig.chartSettings.labelTextColorVar} />}
                     />
                   );
                 })}
@@ -379,11 +417,49 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({
                 stroke="hsl(var(--primary))"
                 strokeWidth={2}
                 dot={{ r: 0 }}
-                activeDot={{ r: 5, stroke: 'hsl(var(--background))', strokeWidth: 2, fill: 'hsl(var(--primary))' }}
+                activeDot={{
+                  r: isMobile ? 8 : 5,
+                  stroke: 'hsl(var(--background))',
+                  strokeWidth: 2,
+                  fill: 'hsl(var(--primary))',
+                }}
                 name={`${toCurrency}/${fromCurrency} Rate`}
               />
             </LineChart>
           </ResponsiveContainer>
+        )}
+        {/* Mobile: band color bar */}
+        {isMobile && chartBands.length > 0 && (
+          <div className="flex h-1 mx-4 mt-1 rounded-full overflow-hidden">
+            {chartBands.map((band) => {
+              const bandNameKey = band.name as BandName;
+              if (alertPrefs[bandNameKey] === false) return null;
+              return (
+                <div
+                  key={band.name}
+                  className="first:rounded-l-full last:rounded-r-full"
+                  style={{
+                    flex: band.probability ? parseFloat(band.probability) : 1,
+                    background: band.colorConfig.chartSettings.fillVar,
+                  }}
+                />
+              );
+            })}
+          </div>
+        )}
+        {/* Mobile: band legend */}
+        {isMobile && chartBands.length > 0 && (
+          <div className="flex gap-3 px-4 py-2 overflow-x-auto text-[10px] text-muted-foreground">
+            {chartBands.map((band) => (
+              <span key={band.name} className="flex items-center gap-1 whitespace-nowrap">
+                <span
+                  className="inline-block w-2 h-2 rounded-sm"
+                  style={{ background: band.colorConfig.chartSettings.fillVar }}
+                />
+                {band.displayName}
+              </span>
+            ))}
+          </div>
         )}
       </CardContent>
     </Card>
