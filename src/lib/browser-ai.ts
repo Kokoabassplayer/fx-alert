@@ -152,14 +152,18 @@ ${text}
   const result = await withTimeout(
     generatorInstance(prompt, {
       max_new_tokens: 80,
-      temperature: 0.1,
-      do_sample: false,
+      temperature: 0.7,
+      top_p: 0.9,
+      do_sample: true,
     }),
     60_000,
     'Text generation timed out (60s)'
   );
 
-  const generated = result[0]?.generated_text?.split('<|im_start|>assistant')[1]?.trim() || '';
+  // SmolLM2 strips special tokens from output — extract text after 'assistant'
+  const full = result[0]?.generated_text || '';
+  const parts = full.split('assistant');
+  const generated = parts.length > 1 ? parts[parts.length - 1].trim() : '';
   return generated;
 }
 
