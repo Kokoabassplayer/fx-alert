@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 };
 
 const freeFeatures = [
-  { feature: 'Live exchange rates', detail: 'Real-time rates from the European Central Bank' },
+  { feature: 'Exchange rates', detail: 'Rates from the European Central Bank, updated daily' },
   { feature: 'Rate alerts', detail: 'Browser notifications when rates hit your target' },
   { feature: 'Historical charts', detail: 'Up to 10+ years of rate history with band overlays' },
   { feature: 'Band analysis', detail: '5-tier classification (Extreme to Rich) based on percentiles' },
