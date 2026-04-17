@@ -35,12 +35,16 @@ export default function AlertsPage() {
       new Set(alerts.map(a => `${a.fromCurrency}/${a.toCurrency}`))
     );
 
-    for (const pair of pairs) {
-      const [from, to] = pair.split('/');
-      const data = await fetchCurrentRate(from, to);
-      if (data && data.rates[to]) {
-        rates[pair] = data.rates[to];
-      }
+    const entries = await Promise.all(
+      pairs.map(async (pair) => {
+        const [from, to] = pair.split('/');
+        const data = await fetchCurrentRate(from, to);
+        return [pair, data?.rates[to]] as const;
+      })
+    );
+
+    for (const [pair, rate] of entries) {
+      if (rate != null) rates[pair] = rate;
     }
 
     setCurrentRates(rates);

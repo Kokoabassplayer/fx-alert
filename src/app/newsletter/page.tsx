@@ -110,7 +110,7 @@ export default function NewsletterPage() {
             <div className="p-4 rounded-lg bg-card/30 border border-border/50">
               <h3 className="text-sm font-medium text-foreground mb-1">Is it really free?</h3>
               <p className="text-xs text-muted-foreground">
-                Yes! The newsletter is completely free. We monetize through affiliate partnerships with trusted services.
+                Yes! Joining the waitlist is completely free. We'll notify you when email rate alerts launch.
               </p>
             </div>
             <div className="p-4 rounded-lg bg-card/30 border border-border/50">
@@ -128,7 +128,7 @@ export default function NewsletterPage() {
             <div className="p-4 rounded-lg bg-card/30 border border-border/50">
               <h3 className="text-sm font-medium text-foreground mb-1">Is my data safe?</h3>
               <p className="text-xs text-muted-foreground">
-                Yes. We use your email only for sending the newsletter. We never sell or share your data.
+                Yes. We use your email only for rate alert notifications. We never sell or share your data.
               </p>
             </div>
           </div>
