@@ -145,7 +145,6 @@ const UsdThbMonitorPage: FC = () => {
           onBandChange={setMobileCurrentBand}
           onCurrenciesChange={setMobileCurrencies}
         />
-        {/* Alerts CTA Card (desktop only) */}
         <Link
           href="/alerts"
           className="block rounded-xl bg-gradient-to-br from-primary to-primary/80 p-6 text-primary-foreground hover:shadow-lg hover:shadow-primary/20 transition-all duration-200"
