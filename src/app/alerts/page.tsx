@@ -88,35 +88,35 @@ export default function AlertsPage() {
   useEffect(() => {
     if (activeAlerts.length === 0) return;
 
-    const POLL_INTERVAL = 30 * 60 * 1000; // 30 minutes
+    const POLL_INTERVAL = 30 * 60 * 1000;
 
     const poll = async () => {
-      const results = await checkAlerts(activeAlerts);
-      const triggered = getTriggeredAlerts(results);
+      try {
+        const results = await checkAlerts(activeAlerts);
+        const triggered = getTriggeredAlerts(results);
 
-      if (triggered.length > 0) {
-        triggered.forEach(({ alert, currentRate }) => {
-          const pair = `${alert.fromCurrency}/${alert.toCurrency}`;
-          toast({
-            title: "🔔 Alert Triggered!",
-            description: `${pair} is ${currentRate.toFixed(2)} (${alert.condition} ${alert.threshold.toFixed(2)})`,
-            variant: "default",
+        if (triggered.length > 0) {
+          triggered.forEach(({ alert, currentRate }) => {
+            const pair = `${alert.fromCurrency}/${alert.toCurrency}`;
+            toast({
+              title: "🔔 Alert Triggered!",
+              description: `${pair} is ${currentRate.toFixed(2)} (${alert.condition} ${alert.threshold.toFixed(2)})`,
+              variant: "default",
+            });
           });
+        }
+
+        const rates: Record<string, number> = {};
+        results.forEach(({ alert, currentRate }) => {
+          const pair = `${alert.fromCurrency}/${alert.toCurrency}`;
+          rates[pair] = currentRate;
         });
+        setCurrentRates(rates);
+        setLastCheckTime(new Date());
+      } catch (err) {
+        console.warn('Auto-poll failed:', err);
       }
-
-      // Update current rates
-      const rates: Record<string, number> = {};
-      results.forEach(({ alert, currentRate }) => {
-        const pair = `${alert.fromCurrency}/${alert.toCurrency}`;
-        rates[pair] = currentRate;
-      });
-      setCurrentRates(rates);
-      setLastCheckTime(new Date());
     };
-
-    // Initial check
-    poll();
 
     const intervalId = setInterval(poll, POLL_INTERVAL);
     return () => clearInterval(intervalId);
