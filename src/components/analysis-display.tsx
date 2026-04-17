@@ -30,7 +30,6 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
 }) => {
   const isMobile = useIsMobile();
 
-  // Generate insight directly from data — instant, no async needed
   let insight: string | null = null;
   if (pairAnalysisData && fromCurrency && toCurrency) {
     const { trend_summary, distribution_statistics } = pairAnalysisData;
@@ -48,7 +47,6 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
       sampleDays: stats.sample_days,
     });
   }
-
 
   if (isAnalysisLoading) {
     return (

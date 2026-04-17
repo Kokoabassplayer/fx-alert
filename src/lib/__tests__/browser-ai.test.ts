@@ -1,202 +1,71 @@
-import { formatAnalysisPrompt, checkAIAvailability, generateInsight } from '../browser-ai';
-import type { AIStatus } from '../browser-ai';
+import { generateTemplateInsight } from '../browser-ai';
 
-describe('formatAnalysisPrompt', () => {
-  test('formats complete data into multi-line prompt string', () => {
-    const result = formatAnalysisPrompt({
-      fromCurrency: 'USD',
-      toCurrency: 'THB',
-      currentRate: 34.1234,
-      band: 'OPPORTUNE',
-      trendSummary: ['7d: rising', '30d: falling'],
-      stats: {
-        mean: 34.0,
-        median: 33.9,
-        min: 33.1,
-        max: 35.2,
-        sample_days: 90,
-      },
-    });
-
-    expect(result).toContain('Currency pair: USD/THB');
-    expect(result).toContain('Current rate: 34.1234');
-    expect(result).toContain('Band: OPPORTUNE');
-    expect(result).toContain('Trends: 7d: rising; 30d: falling');
-    expect(result).toContain('Mean: 34.0000');
-    expect(result).toContain('Median: 33.9000');
-    expect(result).toContain('Range: 33.1000 - 35.2000');
-    expect(result).toContain('Sample: 90 days');
-  });
-
-  test('omits fields when values are null', () => {
-    const result = formatAnalysisPrompt({
-      fromCurrency: 'EUR',
-      toCurrency: 'JPY',
-      currentRate: null,
-      band: null,
-      trendSummary: [],
-      stats: {
-        mean: null,
-        median: null,
-        min: null,
-        max: null,
-      },
-    });
-
-    expect(result).toBe('Currency pair: EUR/JPY');
-  });
-
-  test('includes current rate but omits band when band is null', () => {
-    const result = formatAnalysisPrompt({
-      fromCurrency: 'GBP',
-      toCurrency: 'USD',
-      currentRate: 1.27,
-      band: null,
-      trendSummary: [],
-      stats: { mean: null, median: null, min: null, max: null },
-    });
-
-    expect(result).toContain('Current rate: 1.2700');
-    expect(result).not.toContain('Band:');
-  });
-
-  test('includes trend summary joined by semicolons', () => {
-    const result = formatAnalysisPrompt({
-      fromCurrency: 'AUD',
-      toCurrency: 'CAD',
-      currentRate: null,
-      band: null,
-      trendSummary: ['7d: stable', '30d: rising', '90d: volatile'],
-      stats: { mean: null, median: null, min: null, max: null },
-    });
-
-    expect(result).toContain('Trends: 7d: stable; 30d: rising; 90d: volatile');
-  });
-
-  test('includes range only when both min and max are present', () => {
-    const result = formatAnalysisPrompt({
-      fromCurrency: 'USD',
-      toCurrency: 'EUR',
-      currentRate: null,
-      band: null,
-      trendSummary: [],
-      stats: { mean: null, median: null, min: 1.05, max: null },
-    });
-
-    expect(result).not.toContain('Range:');
-  });
-
-  test('includes sample_days only when provided', () => {
-    const result = formatAnalysisPrompt({
-      fromCurrency: 'USD',
-      toCurrency: 'EUR',
-      currentRate: null,
-      band: null,
-      trendSummary: [],
-      stats: { mean: null, median: null, min: null, max: null },
-    });
-
-    expect(result).not.toContain('Sample:');
-  });
-});
-
-describe('checkAIAvailability', () => {
-  test('returns false when window is undefined (SSR)', async () => {
-    const result = await checkAIAvailability();
-    // In jsdom test env, window is defined, so this tests the real path
-    // For true SSR we'd need to mock, but this covers the code path
-    expect(typeof result).toBe('boolean');
-  });
-
-  test('returns true when WebAssembly is available', async () => {
-    // jsdom has WebAssembly, so this should return true
-    const result = await checkAIAvailability();
-    expect(result).toBe(true);
-  });
-});
-
-describe('generateInsight', () => {
-  let progressCalls: Array<{ status: AIStatus; progress?: number; message?: string }>;
-
-  const onProgress = (status: AIStatus, progress?: number, message?: string) => {
-    progressCalls.push({ status, progress, message });
+describe('generateTemplateInsight', () => {
+  const baseData = {
+    from: 'USD',
+    to: 'THB',
+    currentRate: 31.98,
+    mean: 34.08,
+    median: 33.90,
+    min: 31.0,
+    max: 38.38,
+    trendSummary: ['2024-08-12 to 2026-04-16: Fell by 6.7% from previous period to an average of 32.9192.'],
+    sampleDays: 1282,
   };
 
-  beforeEach(() => {
-    progressCalls = [];
+  test('produces insight with real impact numbers', () => {
+    const result = generateTemplateInsight(baseData);
+    expect(result).toContain('31.98');
+    expect(result).toContain('34.08');
+    expect(result).toMatch(/\d+\.\d+%/);
+    expect(result).toMatch(/\d+ fewer THB/);
   });
 
-  afterEach(() => {
-    // Always clean up Summarizer mock
-    delete (self as any).Summarizer;
+  test('says "below" when current rate is below mean', () => {
+    const result = generateTemplateInsight(baseData);
+    expect(result).toContain('below');
+    expect(result).toContain('fewer');
   });
 
-  test('returns chrome-ai engine when Chrome Summarizer succeeds', async () => {
-    const mockSummarizer = {
-      summarize: jest.fn().mockResolvedValue('The USD/THB pair is trending upward.'),
-      destroy: jest.fn(),
-    };
-    (self as any).Summarizer = {
-      capabilities: jest.fn().mockResolvedValue({ available: 'readily' }),
-      create: jest.fn().mockResolvedValue(mockSummarizer),
-    };
-
-    const result = await generateInsight('Currency pair: USD/THB\nMean: 34.0', onProgress);
-
-    expect(result.insight).toBe('The USD/THB pair is trending upward.');
-    expect(result.engine).toBe('chrome-ai');
-    expect(progressCalls[0].status).toBe('checking');
+  test('says "above" when current rate is above mean', () => {
+    const result = generateTemplateInsight({ ...baseData, currentRate: 36.0 });
+    expect(result).toContain('above');
+    expect(result).toContain('more THB');
   });
 
-  test('returns none when Chrome AI returns empty and Transformers.js is unavailable', async () => {
-    // Chrome AI exists but returns empty string from summarize
-    const mockSummarizer = {
-      summarize: jest.fn().mockResolvedValue(''),
-      destroy: jest.fn(),
-    };
-    (self as any).Summarizer = {
-      capabilities: jest.fn().mockResolvedValue({ available: 'readily' }),
-      create: jest.fn().mockResolvedValue(mockSummarizer),
-    };
+  test('gives declining trend advice when trend mentions fell/declined/dropped', () => {
+    const result = generateTemplateInsight(baseData);
+    expect(result).toContain('declining');
+  });
 
-    // Transformers.js will fail because the singleton is already set from previous tests
-    // and we can't easily reset it — this test validates the Chrome empty → fallback path
-    const result = await generateInsight('test data', onProgress);
+  test('gives rising trend advice when trend mentions rose/risen/increased', () => {
+    const result = generateTemplateInsight({
+      ...baseData,
+      currentRate: 36.0,
+      trendSummary: ['Recent period: Rose by 3.8% to an average of 35.30.'],
+    });
+    expect(result).toContain('rising');
+  });
 
-    // Either Transformers.js works (unlikely in test) or it falls back to none
-    expect(result.engine).toBeDefined();
-    expect(typeof result.insight).toBe('string');
-  }, 15000);
+  test('handles no trend data gracefully', () => {
+    const result = generateTemplateInsight({ ...baseData, trendSummary: [] });
+    expect(result).toContain('31.98');
+    expect(result.length).toBeGreaterThan(50);
+  });
 
-  test('calls onProgress with error status on exception', async () => {
-    // Chrome AI capabilities throws, but capabilities() rejection is caught
-    // by isChromeAIAvailable() which returns false — so Transformers.js runs
-    // To force error path, we need capabilities to return 'readily' but create to throw
-    (self as any).Summarizer = {
-      capabilities: jest.fn().mockResolvedValue({ available: 'readily' }),
-      create: jest.fn().mockRejectedValue(new Error('Create failed')),
-    };
+  test('handles no sample days', () => {
+    const result = generateTemplateInsight({ ...baseData, sampleDays: undefined });
+    expect(result).toContain('historical average');
+    expect(result).not.toContain('NaN');
+  });
 
-    const result = await generateInsight('test', onProgress);
-
-    expect(result.insight).toBe('');
-    expect(result.engine).toBe('none');
-    expect(progressCalls.some(c => c.status === 'error')).toBe(true);
-  }, 15000);
-
-  test('Chrome Summarizer destroy is called after successful summarize', async () => {
-    const mockDestroy = jest.fn();
-    const mockSummarizer = {
-      summarize: jest.fn().mockResolvedValue('Summary text'),
-      destroy: mockDestroy,
-    };
-    (self as any).Summarizer = {
-      capabilities: jest.fn().mockResolvedValue({ available: 'readily' }),
-      create: jest.fn().mockResolvedValue(mockSummarizer),
-    };
-
-    await generateInsight('data', onProgress);
-
-    expect(mockDestroy).toHaveBeenCalled();
+  test('never produces NaN in output', () => {
+    const result = generateTemplateInsight({
+      from: 'EUR', to: 'JPY',
+      currentRate: 150.5, mean: 140.0,
+      median: 142.0, min: 130.0, max: 160.0,
+      trendSummary: ['Fell by 2% recently.'],
+    });
+    expect(result).not.toContain('NaN');
   });
 });
