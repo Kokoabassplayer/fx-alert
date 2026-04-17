@@ -27,8 +27,7 @@ const NewsletterSignup: FC<NewsletterSignupProps> = ({ className = '', source = 
     e.preventDefault();
     setStatus('loading');
 
-    // Using Formspree for email capture (replace with your form ID)
-    const formId = 'xanwndoq'; // Replace with your actual Formspree form ID
+    const formId = 'xanwndoq';
     const formData = new FormData();
     formData.append('email', email);
     formData.append('source', source);
