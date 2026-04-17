@@ -232,14 +232,14 @@ export default function AlertsPage() {
         <CardContent className="p-6 text-center">
           <Mail className="w-8 h-8 text-primary mx-auto mb-3" />
           <h3 className="text-base font-semibold text-foreground mb-2">
-            Want Email Notifications?
+            Want Email Alerts?
           </h3>
           <p className="text-xs text-muted-foreground mb-4">
-            Join our newsletter to receive weekly rate summaries and key market updates directly in your inbox.
+            Join the waitlist to be notified when we launch email-based rate alerts.
           </p>
           <Link href="/newsletter">
             <Button variant="outline" size="sm">
-              Subscribe to Newsletter
+              Join Waitlist
             </Button>
           </Link>
         </CardContent>
