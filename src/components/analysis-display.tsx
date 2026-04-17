@@ -2,13 +2,12 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Sparkles, Download } from 'lucide-react';
-import { generateInsight, formatAnalysisPrompt, type AIStatus } from '@/lib/browser-ai';
+import { generateTemplateInsight } from '@/lib/browser-ai';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { type PairAnalysisData } from '@/lib/dynamic-analysis';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Terminal, Info } from 'lucide-react';
+import { Terminal, Info, Lightbulb } from 'lucide-react';
 import { useIsMobile } from "@/hooks/use-is-mobile";
 
 interface AnalysisDisplayProps {
@@ -31,61 +30,28 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
 }) => {
   const isMobile = useIsMobile();
 
-  // AI Insight state — must be before any early returns (Rules of Hooks)
-  const [aiInsight, setAiInsight] = useState<string | null>(null);
-  const [aiStatus, setAiStatus] = useState<AIStatus>('unavailable');
-  const [aiProgress, setAiProgress] = useState(0);
-  const [aiMessage, setAiMessage] = useState('');
-  const [aiEngine, setAiEngine] = useState<string>('');
+  // Insight state — must be before any early returns (Rules of Hooks)
+  const [insight, setInsight] = useState<string | null>(null);
 
-  // Manual trigger for AI generation
-  const runAI = async () => {
+  // Generate insight instantly from data (no AI model needed)
+  const generateInsight = () => {
     if (!pairAnalysisData || !fromCurrency || !toCurrency) return;
-
-    const { trend_summary, distribution_statistics, threshold_bands } = pairAnalysisData;
+    const { trend_summary, distribution_statistics } = pairAnalysisData;
     const stats = distribution_statistics;
     const trendDescriptions = trend_summary.map(t => `${t.period}: ${t.description}`);
 
-    const prompt = formatAnalysisPrompt({
-      fromCurrency,
-      toCurrency,
-      currentRate: stats.mean,
-      band: threshold_bands[2]?.level || null,
-      trendSummary: trendDescriptions,
-      stats: {
-        mean: stats.mean,
-        median: stats.median,
-        min: stats.min,
-        max: stats.max,
-        sample_days: stats.sample_days,
-      },
-    });
-
-    setAiStatus('checking');
-
-    const result = await generateInsight(prompt, (status, progress, message) => {
-      setAiStatus(status);
-      if (progress !== undefined) setAiProgress(progress);
-      if (message) setAiMessage(message);
-    }, {
+    const result = generateTemplateInsight({
       from: fromCurrency,
       to: toCurrency,
-      currentRate: currentRate ?? stats.mean,
-      mean: stats.mean,
+      currentRate: currentRate ?? stats.mean ?? 0,
+      mean: stats.mean ?? 0,
       median: stats.median,
       min: stats.min,
       max: stats.max,
       trendSummary: trendDescriptions,
       sampleDays: stats.sample_days,
     });
-
-    if (result.insight) {
-      setAiInsight(result.insight);
-      setAiEngine(result.engine);
-      setAiStatus('ready');
-    } else {
-      setAiStatus('error');
-    }
+    setInsight(result);
   };
 
 
@@ -143,84 +109,33 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* AI Insight Card — always visible with contextual content */}
+      {/* Rate Insight Card */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-primary" />
-            AI Insight
+            <Lightbulb className="w-5 h-5 text-primary" />
+            Rate Insight
           </CardTitle>
           <CardDescription>
-            {aiStatus === 'ready'
-              ? `${fromCurrency}/${toCurrency} analysis powered by ${aiEngine === 'chrome-ai' ? 'built-in AI' : aiEngine === 'transformers-js' ? 'browser AI' : 'data analysis'}`
-              : `${fromCurrency}/${toCurrency} analysis`}
+            {fromCurrency}/{toCurrency} analysis
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {/* Idle state: show opt-in button */}
-          {aiStatus === 'unavailable' && (
+          {!insight ? (
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground">
                 Get an instant analysis of this currency pair — real impact on your money with actionable advice.
               </p>
               <button
-                onClick={runAI}
+                onClick={generateInsight}
                 className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
               >
-                <Sparkles className="w-4 h-4" />
+                <Lightbulb className="w-4 h-4" />
                 Get Insight
               </button>
             </div>
-          )}
-
-          {aiStatus === 'checking' && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Sparkles className="w-4 h-4 animate-pulse" />
-              Checking AI availability...
-            </div>
-          )}
-          {aiStatus === 'downloading' && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Download className="w-4 h-4 animate-pulse" />
-                {aiMessage || 'Downloading AI model...'}
-              </div>
-              <div className="w-full bg-muted rounded-full h-1.5">
-                <div
-                  className="bg-primary h-1.5 rounded-full transition-all duration-300"
-                  style={{ width: `${aiProgress}%` }}
-                />
-              </div>
-            </div>
-          )}
-          {aiStatus === 'initializing' && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Sparkles className="w-4 h-4 animate-pulse" />
-              Initializing AI model... (this may take a moment)
-            </div>
-          )}
-          {aiStatus === 'generating' && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Sparkles className="w-4 h-4 animate-pulse" />
-              Generating insight...
-            </div>
-          )}
-          {aiStatus === 'ready' && aiInsight && (
-            <p className="text-sm text-foreground leading-relaxed">{aiInsight}</p>
-          )}
-          {aiStatus === 'error' && (
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">
-                AI insight couldn't be generated for this pair. This may be due to browser limitations or insufficient memory.
-              </p>
-              <button
-                onClick={runAI}
-                className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-md border border-border hover:bg-muted transition-colors"
-              >
-                <Sparkles className="w-3 h-3" />
-                Try Again
-              </button>
-            </div>
+          ) : (
+            <p className="text-sm text-foreground leading-relaxed">{insight}</p>
           )}
         </CardContent>
       </Card>
