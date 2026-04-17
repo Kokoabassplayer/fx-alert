@@ -19,7 +19,6 @@ interface AnalysisDisplayProps {
   analysisError: string | null;
 }
 
-// Note: TrendPeriod, DistributionStatistics, ThresholdBand are part of PairAnalysisData
 const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
   fromCurrency,
   toCurrency,

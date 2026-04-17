@@ -48,12 +48,9 @@ export default function AlertsPage() {
     setIsChecking(false);
   }, [alerts]);
 
-  // Check alerts and show notifications for triggered ones
-  const checkForTriggeredAlerts = useCallback(async () => {
-    if (activeAlerts.length === 0) return;
-
-    setIsChecking(true);
-    const results = await checkAlerts(activeAlerts);
+  // Run alert checks, show toasts for triggered ones, update rates
+  const runAlertCheck = useCallback(async (alerts: RateAlert[]) => {
+    const results = await checkAlerts(alerts);
     const triggered = getTriggeredAlerts(results);
 
     if (triggered.length > 0) {
@@ -65,15 +62,8 @@ export default function AlertsPage() {
           variant: "default",
         });
       });
-    } else {
-      toast({
-        title: "No triggered alerts",
-        description: "None of your active alerts have been triggered.",
-        variant: "default",
-      });
     }
 
-    // Update current rates
     const rates: Record<string, number> = {};
     results.forEach(({ alert, currentRate }) => {
       const pair = `${alert.fromCurrency}/${alert.toCurrency}`;
@@ -81,8 +71,25 @@ export default function AlertsPage() {
     });
     setCurrentRates(rates);
     setLastCheckTime(new Date());
+
+    return triggered.length > 0;
+  }, [toast]);
+
+  // Check alerts and show notifications for triggered ones
+  const checkForTriggeredAlerts = useCallback(async () => {
+    if (activeAlerts.length === 0) return;
+
+    setIsChecking(true);
+    const hasTriggered = await runAlertCheck(activeAlerts);
+    if (!hasTriggered) {
+      toast({
+        title: "No triggered alerts",
+        description: "None of your active alerts have been triggered.",
+        variant: "default",
+      });
+    }
     setIsChecking(false);
-  }, [activeAlerts, toast]);
+  }, [activeAlerts, toast, runAlertCheck]);
 
   // Auto-poll active alerts every 30 minutes while tab is open
   useEffect(() => {
@@ -92,27 +99,7 @@ export default function AlertsPage() {
 
     const poll = async () => {
       try {
-        const results = await checkAlerts(activeAlerts);
-        const triggered = getTriggeredAlerts(results);
-
-        if (triggered.length > 0) {
-          triggered.forEach(({ alert, currentRate }) => {
-            const pair = `${alert.fromCurrency}/${alert.toCurrency}`;
-            toast({
-              title: "🔔 Alert Triggered!",
-              description: `${pair} is ${currentRate.toFixed(2)} (${alert.condition} ${alert.threshold.toFixed(2)})`,
-              variant: "default",
-            });
-          });
-        }
-
-        const rates: Record<string, number> = {};
-        results.forEach(({ alert, currentRate }) => {
-          const pair = `${alert.fromCurrency}/${alert.toCurrency}`;
-          rates[pair] = currentRate;
-        });
-        setCurrentRates(rates);
-        setLastCheckTime(new Date());
+        await runAlertCheck(activeAlerts);
       } catch (err) {
         console.warn('Auto-poll failed:', err);
       }
@@ -120,7 +107,7 @@ export default function AlertsPage() {
 
     const intervalId = setInterval(poll, POLL_INTERVAL);
     return () => clearInterval(intervalId);
-  }, [activeAlerts, toast]);
+  }, [activeAlerts, runAlertCheck]);
 
   // Fetch rates on mount and when alerts change
   useEffect(() => {
