@@ -84,6 +84,44 @@ export default function AlertsPage() {
     setIsChecking(false);
   }, [activeAlerts, toast]);
 
+  // Auto-poll active alerts every 30 minutes while tab is open
+  useEffect(() => {
+    if (activeAlerts.length === 0) return;
+
+    const POLL_INTERVAL = 30 * 60 * 1000; // 30 minutes
+
+    const poll = async () => {
+      const results = await checkAlerts(activeAlerts);
+      const triggered = getTriggeredAlerts(results);
+
+      if (triggered.length > 0) {
+        triggered.forEach(({ alert, currentRate }) => {
+          const pair = `${alert.fromCurrency}/${alert.toCurrency}`;
+          toast({
+            title: "🔔 Alert Triggered!",
+            description: `${pair} is ${currentRate.toFixed(2)} (${alert.condition} ${alert.threshold.toFixed(2)})`,
+            variant: "default",
+          });
+        });
+      }
+
+      // Update current rates
+      const rates: Record<string, number> = {};
+      results.forEach(({ alert, currentRate }) => {
+        const pair = `${alert.fromCurrency}/${alert.toCurrency}`;
+        rates[pair] = currentRate;
+      });
+      setCurrentRates(rates);
+      setLastCheckTime(new Date());
+    };
+
+    // Initial check
+    poll();
+
+    const intervalId = setInterval(poll, POLL_INTERVAL);
+    return () => clearInterval(intervalId);
+  }, [activeAlerts, toast]);
+
   // Fetch rates on mount and when alerts change
   useEffect(() => {
     fetchCurrentRates();
@@ -172,7 +210,7 @@ export default function AlertsPage() {
               </p>
               <p className="text-xs text-muted-foreground">
                 Alerts are stored in your browser's local storage. Keep this tab open to receive notifications.
-                Rates refresh every 15 minutes. Use "Check Alerts" to verify your thresholds.
+                Active alerts are checked automatically every 30 minutes. You can also check manually anytime.
               </p>
               <p className="text-xs text-muted-foreground mt-1">
                 Note: Exchange rate data from Frankfurter API updates once per weekday around 10:00 PM Thai time.
@@ -203,7 +241,7 @@ export default function AlertsPage() {
             className="gap-2"
           >
             <Bell className="w-4 h-4" />
-            Check Alerts
+            Check Now
           </Button>
         </div>
         <AlertForm onSubmit={handleCreateAlert} />
