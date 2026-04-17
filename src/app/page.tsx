@@ -226,6 +226,7 @@ const UsdThbMonitorPage: FC = () => {
               <AnalysisDisplay
                 fromCurrency={selectedFromCurrency}
                 toCurrency={selectedToCurrency}
+                currentRate={mobileRateData?.rate ?? null}
                 pairAnalysisData={pairAnalysisData}
                 isAnalysisLoading={isAnalysisLoading}
                 analysisError={analysisError}
@@ -304,6 +305,7 @@ const UsdThbMonitorPage: FC = () => {
           <AnalysisDisplay
             fromCurrency={selectedFromCurrency}
             toCurrency={selectedToCurrency}
+            currentRate={mobileRateData?.rate ?? null}
             pairAnalysisData={pairAnalysisData}
             isAnalysisLoading={isAnalysisLoading}
             analysisError={analysisError}

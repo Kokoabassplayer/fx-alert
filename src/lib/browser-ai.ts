@@ -127,7 +127,7 @@ async function generateWithTransformersJS(
 
       initPromise = pipeline(
         'text-generation',
-        'onnx-community/SmolLM2-135M-Instruct-ONNX',
+        'onnx-community/SmolLM2-360M-Instruct-ONNX',
         options
       );
     }
@@ -135,24 +135,32 @@ async function generateWithTransformersJS(
     onProgress('initializing', 100, `Initializing AI model on ${backendLabel}...`);
     generatorInstance = await withTimeout(
       initPromise,
-      180_000, // 3 min — generous for first-time WASM init
+      180_000,
       `Model initialization timed out (${backendLabel})`
     );
   }
 
   onProgress('generating', 100, 'Generating insight...');
 
+  // Build a constrained prompt that grounds the model in the actual data
+  const lines = text.split('\n');
+  const pairLine = lines[0] || '';
+  const pair = pairLine.replace('Currency pair: ', '');
+
   const prompt = `<|im_start|>user
-Summarize in 2-3 short sentences what this exchange rate data means for someone converting currencies:
+Here is real exchange rate data. Only use these facts in your answer. Do not make up numbers.
+
 ${text}
+
+Using ONLY the numbers above, write 2-3 short sentences about the current rate for ${pair}. Mention if it is above or below average and what that means for conversion.
 <|im_end|>
 <|im_start|>assistant
-`;
+Based on the data, `;
 
   const result = await withTimeout(
     generatorInstance(prompt, {
-      max_new_tokens: 80,
-      temperature: 0.7,
+      max_new_tokens: 120,
+      temperature: 0.3,
       top_p: 0.9,
       do_sample: true,
     }),
@@ -160,17 +168,20 @@ ${text}
     'Text generation timed out (60s)'
   );
 
-  // SmolLM2 strips special tokens from output — extract text after 'assistant'
+  // SmolLM2 strips special tokens — extract text after 'assistant'
   const full = result[0]?.generated_text || '';
   const parts = full.split('assistant');
-  const generated = parts.length > 1 ? parts[parts.length - 1].trim() : '';
+  const raw = parts.length > 1 ? parts[parts.length - 1].trim() : '';
+  // Prepend the grounding prefix since model continues from it
+  const generated = raw ? `Based on the data, ${raw.replace(/^Based on the data,?\s*/i, '')}` : '';
   return generated;
 }
 
 // Main entry point: generate AI insight from analysis data
 export async function generateInsight(
   analysisText: string,
-  onProgress: AIProgressCallback
+  onProgress: AIProgressCallback,
+  context?: { from: string; to: string; currentRate: number | null; mean: number | null; trendSummary: string[] }
 ): Promise<AIInsightResult> {
   try {
     // Try Chrome Summarizer first (instant, no download)
@@ -184,7 +195,39 @@ export async function generateInsight(
     }
 
     // Fall back to Transformers.js (WebGPU or WASM)
-    const insight = await generateWithTransformersJS(analysisText, onProgress);
+    // Build a grounded prompt using structured data to reduce hallucination
+    let prompt: string;
+    if (context?.currentRate != null && context?.mean != null) {
+      const { from, to, currentRate, mean, trendSummary } = context;
+      const relation = currentRate < mean ? 'BELOW' : 'ABOVE';
+      const meaning = currentRate < mean
+        ? `${from} buys fewer ${to} than usual`
+        : `${from} buys more ${to} than usual`;
+      const trends = trendSummary.length > 0 ? trendSummary.join('; ') : 'no significant trend';
+
+      prompt = `<|im_start|>user
+Exchange rate data for ${from}/${to}:
+- Current rate: ${currentRate.toFixed(4)} ${to} per 1 ${from}
+- Historical average: ${mean.toFixed(4)} ${to} per 1 ${from}
+- The current rate ${currentRate.toFixed(2)} is ${relation} the average ${mean.toFixed(2)}, meaning ${meaning}
+- Recent trends: ${trends}
+
+Write 2-3 short sentences about whether now is a good time to convert ${from} to ${to}. Use the numbers above. The rate is ${relation.toLowerCase()} average.
+<|im_end|>
+<|im_start|>assistant
+`;
+    } else {
+      // Fallback for Chrome AI path — raw text prompt
+      prompt = `<|im_start|>user
+${analysisText}
+
+Write 2-3 short sentences summarizing this exchange rate data for someone converting currencies.
+<|im_end|>
+<|im_start|>assistant
+`;
+    }
+
+    const insight = await generateWithTransformersJS(prompt, onProgress);
     if (insight) {
       return { insight, engine: 'transformers-js' };
     }

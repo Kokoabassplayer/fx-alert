@@ -1,7 +1,7 @@
 // src/components/analysis-display.tsx
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Sparkles, Download } from 'lucide-react';
 import { generateInsight, formatAnalysisPrompt, type AIStatus } from '@/lib/browser-ai';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,6 +14,7 @@ import { useIsMobile } from "@/hooks/use-is-mobile";
 interface AnalysisDisplayProps {
   fromCurrency: string | null;
   toCurrency: string | null;
+  currentRate: number | null;
   pairAnalysisData: PairAnalysisData | null;
   isAnalysisLoading: boolean;
   analysisError: string | null;
@@ -23,6 +24,7 @@ interface AnalysisDisplayProps {
 const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
   fromCurrency,
   toCurrency,
+  currentRate,
   pairAnalysisData,
   isAnalysisLoading,
   analysisError
@@ -65,6 +67,12 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
       setAiStatus(status);
       if (progress !== undefined) setAiProgress(progress);
       if (message) setAiMessage(message);
+    }, {
+      from: fromCurrency,
+      to: toCurrency,
+      currentRate: currentRate ?? stats.mean,
+      mean: stats.mean,
+      trendSummary: trendDescriptions,
     });
 
     if (result.insight) {
@@ -159,7 +167,7 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
                 Generate AI Insight
               </button>
               <p className="text-xs text-muted-foreground">
-                Downloads a small AI model (~85MB) on first use. Best on desktop with WebGPU.
+                Downloads an AI model (~200MB) on first use. Best on desktop with WebGPU.
               </p>
             </div>
           )}
