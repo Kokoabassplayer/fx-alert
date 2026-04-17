@@ -3,6 +3,7 @@
 
 import type { FC } from 'react';
 import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TrendingUp, ExternalLink, Award } from 'lucide-react';
@@ -144,6 +145,27 @@ const UsdThbMonitorPage: FC = () => {
           onBandChange={setMobileCurrentBand}
           onCurrenciesChange={setMobileCurrencies}
         />
+        {/* Alerts CTA Card (desktop only) */}
+        <Link
+          href="/alerts"
+          className="block rounded-xl bg-gradient-to-br from-primary to-primary/80 p-6 text-primary-foreground hover:shadow-lg hover:shadow-primary/20 transition-all duration-200"
+        >
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <h3 className="text-lg font-semibold mb-1">
+                {pairAnalysisData?.distribution_statistics.mean
+                  ? `${selectedFromCurrency}/${selectedToCurrency} averages ${pairAnalysisData.distribution_statistics.mean.toFixed(2)}. Get notified when it hits your target.`
+                  : 'Set rate alerts and get notified instantly'}
+              </h3>
+              <p className="text-sm text-primary-foreground/80">
+                Free browser alerts · No signup required · Set up in 30 seconds
+              </p>
+            </div>
+            <div className="flex-shrink-0 px-5 py-2.5 rounded-lg bg-background text-primary font-semibold text-sm hover:bg-background/90 transition-colors">
+              Set Up Free Alerts →
+            </div>
+          </div>
+        </Link>
       </div>
 
       {/* ========== MOBILE LAYOUT ========== */}
