@@ -29,6 +29,69 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
 }) => {
   const isMobile = useIsMobile();
 
+  // AI Insight state — must be before any early returns (Rules of Hooks)
+  const [aiInsight, setAiInsight] = useState<string | null>(null);
+  const [aiStatus, setAiStatus] = useState<AIStatus>('unavailable');
+  const [aiProgress, setAiProgress] = useState(0);
+  const [aiMessage, setAiMessage] = useState('');
+  const [aiEngine, setAiEngine] = useState<string>('');
+
+  useEffect(() => {
+    if (!pairAnalysisData || !fromCurrency || !toCurrency) {
+      setAiStatus('unavailable');
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadInsight = async () => {
+      const available = await checkAIAvailability();
+      if (!available || cancelled) {
+        setAiStatus('unavailable');
+        return;
+      }
+
+      const { trend_summary, distribution_statistics, threshold_bands } = pairAnalysisData;
+      const stats = distribution_statistics;
+      const trendDescriptions = trend_summary.map(t => `${t.period}: ${t.description}`);
+
+      const prompt = formatAnalysisPrompt({
+        fromCurrency,
+        toCurrency,
+        currentRate: stats.mean,
+        band: threshold_bands[2]?.level || null,
+        trendSummary: trendDescriptions,
+        stats: {
+          mean: stats.mean,
+          median: stats.median,
+          min: stats.min,
+          max: stats.max,
+          sample_days: stats.sample_days,
+        },
+      });
+
+      const result = await generateInsight(prompt, (status, progress, message) => {
+        if (!cancelled) {
+          setAiStatus(status);
+          if (progress !== undefined) setAiProgress(progress);
+          if (message) setAiMessage(message);
+        }
+      });
+
+      if (!cancelled && result.insight) {
+        setAiInsight(result.insight);
+        setAiEngine(result.engine);
+        setAiStatus('ready');
+      } else if (!cancelled) {
+        setAiStatus('unavailable');
+      }
+    };
+
+    loadInsight();
+
+    return () => { cancelled = true; };
+  }, [fromCurrency, toCurrency, pairAnalysisData]);
+
   if (isAnalysisLoading) {
     return (
       <Card>
@@ -38,7 +101,7 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center py-10">
-            <Terminal className="h-8 w-8 animate-spin" /> {/* Using Terminal as a spinner */}
+            <Terminal className="h-8 w-8 animate-spin" />
             <p className="ml-2">Please wait while we generate the currency pair analysis.</p>
           </div>
         </CardContent>
@@ -80,63 +143,6 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
   const formatRate = (rate: number | null | undefined) => rate?.toFixed(4) || 'N/A';
   const formatPercent = (value: number | null | undefined) => value !== null && value !== undefined ? `≈ ${(value * 100).toFixed(1)} %` : 'N/A';
 
-  // AI Insight state
-  const [aiInsight, setAiInsight] = useState<string | null>(null);
-  const [aiStatus, setAiStatus] = useState<AIStatus>('unavailable');
-  const [aiProgress, setAiProgress] = useState(0);
-  const [aiMessage, setAiMessage] = useState('');
-  const [aiEngine, setAiEngine] = useState<string>('');
-
-  useEffect(() => {
-    if (!pairAnalysisData || !fromCurrency || !toCurrency) return;
-
-    let cancelled = false;
-
-    const loadInsight = async () => {
-      const available = await checkAIAvailability();
-      if (!available || cancelled) {
-        setAiStatus('unavailable');
-        return;
-      }
-
-      const trendDescriptions = trend_summary.map(t => `${t.period}: ${t.description}`);
-
-      const prompt = formatAnalysisPrompt({
-        fromCurrency,
-        toCurrency,
-        currentRate: stats.mean,
-        band: threshold_bands[2]?.level || null,
-        trendSummary: trendDescriptions,
-        stats: {
-          mean: stats.mean,
-          median: stats.median,
-          min: stats.min,
-          max: stats.max,
-          sample_days: stats.sample_days,
-        },
-      });
-
-      const result = await generateInsight(prompt, (status, progress, message) => {
-        if (!cancelled) {
-          setAiStatus(status);
-          if (progress !== undefined) setAiProgress(progress);
-          if (message) setAiMessage(message);
-        }
-      });
-
-      if (!cancelled && result.insight) {
-        setAiInsight(result.insight);
-        setAiEngine(result.engine);
-        setAiStatus('ready');
-      } else if (!cancelled) {
-        setAiStatus('unavailable');
-      }
-    };
-
-    loadInsight();
-
-    return () => { cancelled = true; };
-  }, [fromCurrency, toCurrency, pairAnalysisData]);
 
   return (
     <div className="space-y-6">
