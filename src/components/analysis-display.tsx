@@ -35,62 +35,74 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
   const [aiProgress, setAiProgress] = useState(0);
   const [aiMessage, setAiMessage] = useState('');
   const [aiEngine, setAiEngine] = useState<string>('');
+  const [hasChromeAI, setHasChromeAI] = useState(false);
 
+  // Check Chrome AI availability on mount (instant check, no download)
   useEffect(() => {
-    if (!pairAnalysisData || !fromCurrency || !toCurrency) {
-      setAiStatus('unavailable');
-      return;
-    }
+    if (!pairAnalysisData || !fromCurrency || !toCurrency) return;
 
     let cancelled = false;
 
-    const loadInsight = async () => {
-      const available = await checkAIAvailability();
-      if (!available || cancelled) {
-        setAiStatus('unavailable');
-        return;
-      }
-
-      const { trend_summary, distribution_statistics, threshold_bands } = pairAnalysisData;
-      const stats = distribution_statistics;
-      const trendDescriptions = trend_summary.map(t => `${t.period}: ${t.description}`);
-
-      const prompt = formatAnalysisPrompt({
-        fromCurrency,
-        toCurrency,
-        currentRate: stats.mean,
-        band: threshold_bands[2]?.level || null,
-        trendSummary: trendDescriptions,
-        stats: {
-          mean: stats.mean,
-          median: stats.median,
-          min: stats.min,
-          max: stats.max,
-          sample_days: stats.sample_days,
-        },
-      });
-
-      const result = await generateInsight(prompt, (status, progress, message) => {
-        if (!cancelled) {
-          setAiStatus(status);
-          if (progress !== undefined) setAiProgress(progress);
-          if (message) setAiMessage(message);
+    // Only auto-trigger if Chrome Summarizer is fully ready (no download needed)
+    const checkChromeAI = async () => {
+      try {
+        if (!('Summarizer' in self)) return;
+        const capabilities = await (self.Summarizer as any).capabilities();
+        if (cancelled) return;
+        if (capabilities.available === 'readily') {
+          setHasChromeAI(true);
+          setAiStatus('checking');
+          runAI();
         }
-      });
-
-      if (!cancelled && result.insight) {
-        setAiInsight(result.insight);
-        setAiEngine(result.engine);
-        setAiStatus('ready');
-      } else if (!cancelled) {
-        setAiStatus('unavailable');
+      } catch {
+        // Summarizer API not actually available
       }
+      // For Transformers.js path, user must opt-in (85MB download)
     };
 
-    loadInsight();
-
+    checkChromeAI();
     return () => { cancelled = true; };
   }, [fromCurrency, toCurrency, pairAnalysisData]);
+
+  // Manual trigger for AI generation (used by button click or Chrome AI auto-trigger)
+  const runAI = async () => {
+    if (!pairAnalysisData || !fromCurrency || !toCurrency) return;
+
+    const { trend_summary, distribution_statistics, threshold_bands } = pairAnalysisData;
+    const stats = distribution_statistics;
+    const trendDescriptions = trend_summary.map(t => `${t.period}: ${t.description}`);
+
+    const prompt = formatAnalysisPrompt({
+      fromCurrency,
+      toCurrency,
+      currentRate: stats.mean,
+      band: threshold_bands[2]?.level || null,
+      trendSummary: trendDescriptions,
+      stats: {
+        mean: stats.mean,
+        median: stats.median,
+        min: stats.min,
+        max: stats.max,
+        sample_days: stats.sample_days,
+      },
+    });
+
+    setAiStatus('checking');
+
+    const result = await generateInsight(prompt, (status, progress, message) => {
+      setAiStatus(status);
+      if (progress !== undefined) setAiProgress(progress);
+      if (message) setAiMessage(message);
+    });
+
+    if (result.insight) {
+      setAiInsight(result.insight);
+      setAiEngine(result.engine);
+      setAiStatus('ready');
+    } else {
+      setAiStatus('error');
+    }
+  };
 
   if (isAnalysisLoading) {
     return (
@@ -146,60 +158,90 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* AI Insight Card */}
-      {aiStatus !== 'unavailable' && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-primary" />
-              AI Insight
-            </CardTitle>
-            <CardDescription>
-              {fromCurrency}/{toCurrency} analysis powered by {aiEngine === 'chrome-ai' ? 'built-in AI' : 'browser AI'}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {aiStatus === 'checking' && (
+      {/* AI Insight Card — always visible with contextual content */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-primary" />
+            AI Insight
+          </CardTitle>
+          <CardDescription>
+            {aiStatus === 'ready'
+              ? `${fromCurrency}/${toCurrency} analysis powered by ${aiEngine === 'chrome-ai' ? 'built-in AI' : 'browser AI'}`
+              : `${fromCurrency}/${toCurrency} analysis`}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {/* Idle state: show opt-in button for Transformers.js, or auto-running Chrome AI */}
+          {aiStatus === 'unavailable' && !hasChromeAI && (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Generate an AI-powered summary of this currency pair's analysis. Runs entirely in your browser — no data sent to servers.
+              </p>
+              <button
+                onClick={runAI}
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+              >
+                <Sparkles className="w-4 h-4" />
+                Generate AI Insight
+              </button>
+              <p className="text-xs text-muted-foreground">
+                Downloads a small AI model (~85MB) on first use. Works best on desktop.
+              </p>
+            </div>
+          )}
+
+          {aiStatus === 'checking' && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Sparkles className="w-4 h-4 animate-pulse" />
+              Checking AI availability...
+            </div>
+          )}
+          {aiStatus === 'downloading' && (
+            <div className="space-y-2">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Sparkles className="w-4 h-4 animate-pulse" />
-                Checking AI availability...
+                <Download className="w-4 h-4 animate-pulse" />
+                {aiMessage || 'Downloading AI model...'}
               </div>
-            )}
-            {aiStatus === 'downloading' && (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Download className="w-4 h-4 animate-pulse" />
-                  {aiMessage || 'Downloading AI model...'}
-                </div>
-                <div className="w-full bg-muted rounded-full h-1.5">
-                  <div
-                    className="bg-primary h-1.5 rounded-full transition-all duration-300"
-                    style={{ width: `${aiProgress}%` }}
-                  />
-                </div>
+              <div className="w-full bg-muted rounded-full h-1.5">
+                <div
+                  className="bg-primary h-1.5 rounded-full transition-all duration-300"
+                  style={{ width: `${aiProgress}%` }}
+                />
               </div>
-            )}
-            {aiStatus === 'initializing' && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Sparkles className="w-4 h-4 animate-pulse" />
-                Initializing AI model... (this may take a moment)
-              </div>
-            )}
-            {aiStatus === 'generating' && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Sparkles className="w-4 h-4 animate-pulse" />
-                Generating insight...
-              </div>
-            )}
-            {aiStatus === 'ready' && aiInsight && (
-              <p className="text-sm text-foreground leading-relaxed">{aiInsight}</p>
-            )}
-            {aiStatus === 'error' && (
-              <p className="text-sm text-muted-foreground">AI insight unavailable for this pair.</p>
-            )}
-          </CardContent>
-        </Card>
-      )}
+            </div>
+          )}
+          {aiStatus === 'initializing' && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Sparkles className="w-4 h-4 animate-pulse" />
+              Initializing AI model... (this may take a moment)
+            </div>
+          )}
+          {aiStatus === 'generating' && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Sparkles className="w-4 h-4 animate-pulse" />
+              Generating insight...
+            </div>
+          )}
+          {aiStatus === 'ready' && aiInsight && (
+            <p className="text-sm text-foreground leading-relaxed">{aiInsight}</p>
+          )}
+          {aiStatus === 'error' && (
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">
+                AI insight couldn't be generated for this pair. This may be due to browser limitations or insufficient memory.
+              </p>
+              <button
+                onClick={runAI}
+                className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-md border border-border hover:bg-muted transition-colors"
+              >
+                <Sparkles className="w-3 h-3" />
+                Try Again
+              </button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Trend Summary Section */}
       {isMobile ? (
