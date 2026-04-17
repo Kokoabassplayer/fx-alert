@@ -72,7 +72,11 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
       to: toCurrency,
       currentRate: currentRate ?? stats.mean,
       mean: stats.mean,
+      median: stats.median,
+      min: stats.min,
+      max: stats.max,
       trendSummary: trendDescriptions,
+      sampleDays: stats.sample_days,
     });
 
     if (result.insight) {
@@ -148,7 +152,7 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
           </CardTitle>
           <CardDescription>
             {aiStatus === 'ready'
-              ? `${fromCurrency}/${toCurrency} analysis powered by ${aiEngine === 'chrome-ai' ? 'built-in AI' : 'browser AI'}`
+              ? `${fromCurrency}/${toCurrency} analysis powered by ${aiEngine === 'chrome-ai' ? 'built-in AI' : aiEngine === 'transformers-js' ? 'browser AI' : 'data analysis'}`
               : `${fromCurrency}/${toCurrency} analysis`}
           </CardDescription>
         </CardHeader>
@@ -157,18 +161,15 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
           {aiStatus === 'unavailable' && (
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground">
-                Generate an AI-powered summary of this currency pair's analysis. Runs entirely in your browser — no data sent to servers.
+                Get an instant analysis of this currency pair — real impact on your money with actionable advice.
               </p>
               <button
                 onClick={runAI}
                 className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
               >
                 <Sparkles className="w-4 h-4" />
-                Generate AI Insight
+                Get Insight
               </button>
-              <p className="text-xs text-muted-foreground">
-                Downloads an AI model (~200MB) on first use. Best on desktop with WebGPU.
-              </p>
             </div>
           )}
 

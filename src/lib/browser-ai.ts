@@ -5,7 +5,7 @@ export type AIStatus = 'unavailable' | 'checking' | 'downloading' | 'initializin
 
 export interface AIInsightResult {
   insight: string;
-  engine: 'chrome-ai' | 'transformers-js' | 'none';
+  engine: 'chrome-ai' | 'transformers-js' | 'template' | 'none';
 }
 
 export interface AIProgressCallback {
@@ -172,19 +172,132 @@ Based on the data, `;
   const full = result[0]?.generated_text || '';
   const parts = full.split('assistant');
   const raw = parts.length > 1 ? parts[parts.length - 1].trim() : '';
-  // Prepend the grounding prefix since model continues from it
-  const generated = raw ? `Based on the data, ${raw.replace(/^Based on the data,?\s*/i, '')}` : '';
-  return generated;
+  if (!raw) return '';
+  // Strip any leading prefix the model might echo back
+  const cleaned = raw.replace(/^(Here's the takeaway:?\s*|Based on the data,?\s*)/i, '').trim();
+  return cleaned ? `Here's the takeaway: ${cleaned}` : '';
+}
+
+// Generate a factually correct, actionable insight from structured data — no model needed
+export function generateTemplateInsight(data: {
+  from: string; to: string;
+  currentRate: number; mean: number;
+  median: number | null; min: number | null; max: number | null;
+  trendSummary: string[];
+  sampleDays?: number;
+}): string {
+  const { from, to, currentRate, mean, median, min, max, trendSummary, sampleDays } = data;
+  const diff = currentRate - mean;
+  const pctDiff = Math.abs((diff / mean) * 100).toFixed(1);
+  const perHundred = Math.abs(diff * 100).toFixed(0);
+  const isBelow = diff < 0;
+  const sampleLabel = sampleDays ? `the ${sampleDays.toLocaleString()}-day average` : 'the historical average';
+
+  const lines: string[] = [];
+
+  // Sentence 1: Current state with real impact
+  if (isBelow) {
+    lines.push(
+      `At ${currentRate.toFixed(2)} ${to} per ${from}, the rate is ${pctDiff}% below ${sampleLabel} of ${mean.toFixed(2)} — you'd get roughly ${perHundred} fewer ${to} for every 100 ${from} compared to typical rates.`
+    );
+  } else {
+    lines.push(
+      `At ${currentRate.toFixed(2)} ${to} per ${from}, the rate is ${pctDiff}% above ${sampleLabel} of ${mean.toFixed(2)} — you'd get roughly ${perHundred} more ${to} for every 100 ${from} compared to typical rates.`
+    );
+  }
+
+  // Sentence 2: Trend direction + actionable advice
+  const latestTrend = trendSummary.length > 0 ? trendSummary[trendSummary.length - 1] : null;
+  if (latestTrend) {
+    const trendLower = latestTrend.toLowerCase();
+    if (trendLower.includes('fell') || trendLower.includes('declin') || trendLower.includes('drop')) {
+      if (isBelow) {
+        lines.push(
+          `The rate has been declining recently, so it may stay low — consider waiting if you're converting ${from} to ${to}, or act now if you need ${to} urgently.`
+        );
+      } else {
+        lines.push(
+          `Despite a recent decline, the rate remains above average — a decent time to convert ${from} to ${to} before it potentially drops further.`
+        );
+      }
+    } else if (trendLower.includes('ros') || trendLower.includes('ris') || trendLower.includes('increas')) {
+      if (isBelow) {
+        lines.push(
+          `The rate has been rising recently, so it may recover toward average — if you can wait, converting ${from} to ${to} later could get you more ${to}.`
+        );
+      } else {
+        lines.push(
+          `With rates rising and already above average, now is a strong time to convert ${from} to ${to}.`
+        );
+      }
+    } else {
+      // Stable or other
+      if (isBelow) {
+        lines.push(`The rate has been relatively stable, so waiting may not help — ${median ? `rates above the median of ${median.toFixed(2)} ` : 'higher rates '}have been more common.`);
+      } else {
+        lines.push(`The rate has been relatively stable near current levels — ${median ? `close to the median of ${median.toFixed(2)}` : 'a reasonable time to convert'}.`);
+      }
+    }
+  } else {
+    // No trend data
+    if (isBelow) {
+      lines.push(`If you can wait for a rate closer to the average of ${mean.toFixed(2)}, you'd get more ${to} per ${from}.`);
+    } else {
+      lines.push(`This is a favorable time to convert ${from} to ${to} — rates have been lower ${min ? `(as low as ${min.toFixed(2)})` : ''} in the past.`);
+    }
+  }
+
+  return lines.join(' ');
 }
 
 // Main entry point: generate AI insight from analysis data
 export async function generateInsight(
   analysisText: string,
   onProgress: AIProgressCallback,
-  context?: { from: string; to: string; currentRate: number | null; mean: number | null; trendSummary: string[] }
+  context?: {
+    from: string; to: string;
+    currentRate: number | null; mean: number | null; median: number | null;
+    min: number | null; max: number | null;
+    trendSummary: string[];
+    sampleDays?: number;
+  }
 ): Promise<AIInsightResult> {
   try {
-    // Try Chrome Summarizer first (instant, no download)
+    // If we have structured context, generate a template insight immediately
+    // This is always factually correct and actionable
+    if (context?.currentRate != null && context?.mean != null) {
+      const templateInsight = generateTemplateInsight({
+        from: context.from,
+        to: context.to,
+        currentRate: context.currentRate,
+        mean: context.mean,
+        median: context.median ?? null,
+        min: context.min ?? null,
+        max: context.max ?? null,
+        trendSummary: context.trendSummary,
+        sampleDays: context.sampleDays,
+      });
+
+      // Try Chrome Summarizer only (instant, no download, reliable)
+      try {
+        const chromeAvailable = await isChromeAIAvailable();
+        if (chromeAvailable) {
+          onProgress('checking', 0, 'Using built-in AI...');
+          const aiInsight = await generateWithChromeAI(templateInsight);
+          if (aiInsight && aiInsight.length > 30) {
+            return { insight: aiInsight, engine: 'chrome-ai' };
+          }
+        }
+      } catch {
+        // Chrome AI failed — fall through to template
+      }
+
+      // Return template insight (always works)
+      onProgress('ready', 100, 'Insight ready');
+      return { insight: templateInsight, engine: 'template' };
+    }
+
+    // No structured context — try AI with raw text only
     const chromeAvailable = await isChromeAIAvailable();
     if (chromeAvailable) {
       onProgress('checking', 0, 'Using built-in AI...');
@@ -192,44 +305,6 @@ export async function generateInsight(
       if (insight) {
         return { insight, engine: 'chrome-ai' };
       }
-    }
-
-    // Fall back to Transformers.js (WebGPU or WASM)
-    // Build a grounded prompt using structured data to reduce hallucination
-    let prompt: string;
-    if (context?.currentRate != null && context?.mean != null) {
-      const { from, to, currentRate, mean, trendSummary } = context;
-      const relation = currentRate < mean ? 'BELOW' : 'ABOVE';
-      const meaning = currentRate < mean
-        ? `${from} buys fewer ${to} than usual`
-        : `${from} buys more ${to} than usual`;
-      const trends = trendSummary.length > 0 ? trendSummary.join('; ') : 'no significant trend';
-
-      prompt = `<|im_start|>user
-Exchange rate data for ${from}/${to}:
-- Current rate: ${currentRate.toFixed(4)} ${to} per 1 ${from}
-- Historical average: ${mean.toFixed(4)} ${to} per 1 ${from}
-- The current rate ${currentRate.toFixed(2)} is ${relation} the average ${mean.toFixed(2)}, meaning ${meaning}
-- Recent trends: ${trends}
-
-Write 2-3 short sentences about whether now is a good time to convert ${from} to ${to}. Use the numbers above. The rate is ${relation.toLowerCase()} average.
-<|im_end|>
-<|im_start|>assistant
-`;
-    } else {
-      // Fallback for Chrome AI path — raw text prompt
-      prompt = `<|im_start|>user
-${analysisText}
-
-Write 2-3 short sentences summarizing this exchange rate data for someone converting currencies.
-<|im_end|>
-<|im_start|>assistant
-`;
-    }
-
-    const insight = await generateWithTransformersJS(prompt, onProgress);
-    if (insight) {
-      return { insight, engine: 'transformers-js' };
     }
 
     return { insight: '', engine: 'none' };
