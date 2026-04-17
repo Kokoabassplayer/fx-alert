@@ -132,7 +132,7 @@ const UsdThbMonitorPage: FC = () => {
     <>
       {/* Data source: always mounted to fetch rate/currency/band data.
           Visible on desktop, hidden on mobile via CSS. */}
-      <div className="hidden md:block">
+      <div className="hidden md:block w-full max-w-4xl mx-auto px-4 sm:px-6 pt-8">
         <CurrentRateDisplay
           alertPrefs={alertPrefs}
           onAlertPrefsChange={setAlertPrefs}
