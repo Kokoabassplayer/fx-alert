@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Sparkles, Download } from 'lucide-react';
-import { generateInsight, formatAnalysisPrompt, checkAIAvailability, type AIStatus } from '@/lib/browser-ai';
+import { generateInsight, formatAnalysisPrompt, type AIStatus } from '@/lib/browser-ai';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { type PairAnalysisData } from '@/lib/dynamic-analysis';
@@ -35,36 +35,8 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
   const [aiProgress, setAiProgress] = useState(0);
   const [aiMessage, setAiMessage] = useState('');
   const [aiEngine, setAiEngine] = useState<string>('');
-  const [hasChromeAI, setHasChromeAI] = useState(false);
 
-  // Check Chrome AI availability on mount (instant check, no download)
-  useEffect(() => {
-    if (!pairAnalysisData || !fromCurrency || !toCurrency) return;
-
-    let cancelled = false;
-
-    // Only auto-trigger if Chrome Summarizer is fully ready (no download needed)
-    const checkChromeAI = async () => {
-      try {
-        if (!('Summarizer' in self)) return;
-        const capabilities = await (self.Summarizer as any).capabilities();
-        if (cancelled) return;
-        if (capabilities.available === 'readily') {
-          setHasChromeAI(true);
-          setAiStatus('checking');
-          runAI();
-        }
-      } catch {
-        // Summarizer API not actually available
-      }
-      // For Transformers.js path, user must opt-in (85MB download)
-    };
-
-    checkChromeAI();
-    return () => { cancelled = true; };
-  }, [fromCurrency, toCurrency, pairAnalysisData]);
-
-  // Manual trigger for AI generation (used by button click or Chrome AI auto-trigger)
+  // Manual trigger for AI generation
   const runAI = async () => {
     if (!pairAnalysisData || !fromCurrency || !toCurrency) return;
 
@@ -103,6 +75,7 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
       setAiStatus('error');
     }
   };
+
 
   if (isAnalysisLoading) {
     return (
@@ -172,8 +145,8 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {/* Idle state: show opt-in button for Transformers.js, or auto-running Chrome AI */}
-          {aiStatus === 'unavailable' && !hasChromeAI && (
+          {/* Idle state: show opt-in button */}
+          {aiStatus === 'unavailable' && (
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground">
                 Generate an AI-powered summary of this currency pair's analysis. Runs entirely in your browser — no data sent to servers.
@@ -186,7 +159,7 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
                 Generate AI Insight
               </button>
               <p className="text-xs text-muted-foreground">
-                Downloads a small AI model (~85MB) on first use. Works best on desktop.
+                Downloads a small AI model (~85MB) on first use. Best on desktop with WebGPU.
               </p>
             </div>
           )}

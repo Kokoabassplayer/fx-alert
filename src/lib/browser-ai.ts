@@ -1,5 +1,5 @@
 // src/lib/browser-ai.ts
-// Browser-based AI inference: Chrome Summarizer (primary) + Transformers.js (fallback)
+// AI inference: Chrome Summarizer (primary) + Transformers.js with WebGPU (fallback)
 
 export type AIStatus = 'unavailable' | 'checking' | 'downloading' | 'initializing' | 'generating' | 'ready' | 'error';
 
@@ -12,7 +12,7 @@ export interface AIProgressCallback {
   (status: AIStatus, progress?: number, message?: string): void;
 }
 
-// Timeout helper
+// Timeout helper — properly resolves on success, rejects on timeout
 function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error(message)), ms);
@@ -21,6 +21,17 @@ function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promi
       (err) => { clearTimeout(timer); reject(err); }
     );
   });
+}
+
+// Detect WebGPU availability
+async function hasWebGPU(): Promise<boolean> {
+  if (typeof navigator === 'undefined') return false;
+  try {
+    const adapter = await (navigator as any).gpu?.requestAdapter();
+    return !!adapter;
+  } catch {
+    return false;
+  }
 }
 
 // Format statistical data into a prompt string for the AI
@@ -53,7 +64,7 @@ export function formatAnalysisPrompt(data: {
   return lines.join('\n');
 }
 
-// Check if Chrome Summarizer API is available
+// Check if Chrome Summarizer API is available and ready
 async function isChromeAIAvailable(): Promise<boolean> {
   if (typeof window === 'undefined') return false;
   if (!('Summarizer' in self)) return false;
@@ -81,7 +92,7 @@ async function generateWithChromeAI(text: string): Promise<string> {
 let generatorInstance: any = null;
 let initPromise: Promise<any> | null = null;
 
-// Generate insight using Transformers.js
+// Generate insight using Transformers.js (WebGPU when available, WASM fallback)
 async function generateWithTransformersJS(
   text: string,
   onProgress: AIProgressCallback
@@ -89,36 +100,43 @@ async function generateWithTransformersJS(
   onProgress('checking', 0, 'Loading AI engine...');
 
   if (!generatorInstance) {
-    onProgress('downloading', 10, 'Downloading AI model (one-time, ~85MB)...');
+    const useWebGPU = await hasWebGPU();
+    const backendLabel = useWebGPU ? 'WebGPU' : 'WASM';
+
+    onProgress('downloading', 10, `Downloading AI model (${backendLabel})...`);
 
     const { pipeline } = await import('@huggingface/transformers');
 
-    // Use SmolLM2-135M for faster inference on CPU/WASM
-    // Singleton init — prevent double-loading
     if (!initPromise) {
+      const options: any = {
+        dtype: 'q4',
+        progress_callback: (progress: any) => {
+          if (progress.status === 'progress' && progress.progress) {
+            const pct = Math.round(progress.progress);
+            if (pct >= 100) {
+              onProgress('initializing', 100, `Initializing on ${backendLabel}...`);
+            } else {
+              onProgress('downloading', pct, `Downloading AI model... ${pct}%`);
+            }
+          }
+        },
+      };
+      if (useWebGPU) {
+        options.device = 'webgpu';
+      }
+
       initPromise = pipeline(
         'text-generation',
         'onnx-community/SmolLM2-135M-Instruct-ONNX',
-        {
-          dtype: 'q4',
-          progress_callback: (progress: any) => {
-            if (progress.status === 'progress' && progress.progress) {
-              const pct = Math.round(progress.progress);
-              if (pct >= 100) {
-                onProgress('initializing', 100, 'Initializing AI model...');
-              } else {
-                onProgress('downloading', pct, `Downloading AI model... ${pct}%`);
-              }
-            }
-          },
-        }
+        options
       );
     }
 
+    onProgress('initializing', 100, `Initializing AI model on ${backendLabel}...`);
     generatorInstance = await withTimeout(
       initPromise,
-      120_000,
-      'Model initialization timed out (120s)'
+      180_000, // 3 min — generous for first-time WASM init
+      `Model initialization timed out (${backendLabel})`
     );
   }
 
@@ -137,8 +155,8 @@ ${text}
       temperature: 0.1,
       do_sample: false,
     }),
-    30_000,
-    'Text generation timed out (30s)'
+    60_000,
+    'Text generation timed out (60s)'
   );
 
   const generated = result[0]?.generated_text?.split('<|im_start|>assistant')[1]?.trim() || '';
@@ -151,7 +169,7 @@ export async function generateInsight(
   onProgress: AIProgressCallback
 ): Promise<AIInsightResult> {
   try {
-    // Try Chrome Summarizer first
+    // Try Chrome Summarizer first (instant, no download)
     const chromeAvailable = await isChromeAIAvailable();
     if (chromeAvailable) {
       onProgress('checking', 0, 'Using built-in AI...');
@@ -161,7 +179,7 @@ export async function generateInsight(
       }
     }
 
-    // Fall back to Transformers.js
+    // Fall back to Transformers.js (WebGPU or WASM)
     const insight = await generateWithTransformersJS(analysisText, onProgress);
     if (insight) {
       return { insight, engine: 'transformers-js' };
@@ -175,11 +193,16 @@ export async function generateInsight(
   }
 }
 
-// Check if any AI engine is available (without downloading models)
+// Check if any AI engine is available
 export async function checkAIAvailability(): Promise<boolean> {
   if (typeof window === 'undefined') return false;
-  // Chrome AI is always "available" if the API exists
-  if ('Summarizer' in self) return true;
-  // Transformers.js works in any browser with WASM support
+  // Chrome AI
+  if ('Summarizer' in self) {
+    try {
+      const capabilities = await (self.Summarizer as any).capabilities();
+      if (capabilities.available === 'readily') return true;
+    } catch { /* fall through */ }
+  }
+  // Transformers.js needs WebAssembly or WebGPU
   return typeof WebAssembly !== 'undefined';
 }
