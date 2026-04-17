@@ -1,7 +1,7 @@
 // src/lib/browser-ai.ts
 // Browser-based AI inference: Chrome Summarizer (primary) + Transformers.js (fallback)
 
-export type AIStatus = 'unavailable' | 'checking' | 'downloading' | 'ready' | 'error';
+export type AIStatus = 'unavailable' | 'checking' | 'downloading' | 'initializing' | 'generating' | 'ready' | 'error';
 
 export interface AIInsightResult {
   insight: string;
@@ -10,6 +10,17 @@ export interface AIInsightResult {
 
 export interface AIProgressCallback {
   (status: AIStatus, progress?: number, message?: string): void;
+}
+
+// Timeout helper
+function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+  return new Promise((_, reject) => {
+    const timer = setTimeout(() => reject(new Error(message)), ms);
+    promise.then(
+      (val) => { clearTimeout(timer); return val; },
+      (err) => { clearTimeout(timer); throw err; }
+    );
+  });
 }
 
 // Format statistical data into a prompt string for the AI
@@ -68,6 +79,7 @@ async function generateWithChromeAI(text: string): Promise<string> {
 
 // Singleton for Transformers.js pipeline
 let generatorInstance: any = null;
+let initPromise: Promise<any> | null = null;
 
 // Generate insight using Transformers.js
 async function generateWithTransformersJS(
@@ -77,26 +89,40 @@ async function generateWithTransformersJS(
   onProgress('checking', 0, 'Loading AI engine...');
 
   if (!generatorInstance) {
-    onProgress('downloading', 10, 'Downloading AI model (one-time)...');
+    onProgress('downloading', 10, 'Downloading AI model (one-time, ~85MB)...');
 
     const { pipeline } = await import('@huggingface/transformers');
 
-    generatorInstance = await pipeline(
-      'text-generation',
-      'onnx-community/SmolLM2-360M-Instruct-ONNX',
-      {
-        dtype: 'q4',
-        progress_callback: (progress: any) => {
-          if (progress.status === 'progress' && progress.progress) {
-            const pct = Math.round(progress.progress);
-            onProgress('downloading', pct, `Downloading AI model... ${pct}%`);
-          }
-        },
-      }
+    // Use SmolLM2-135M for faster inference on CPU/WASM
+    // Singleton init — prevent double-loading
+    if (!initPromise) {
+      initPromise = pipeline(
+        'text-generation',
+        'onnx-community/SmolLM2-135M-Instruct-ONNX',
+        {
+          dtype: 'q4',
+          progress_callback: (progress: any) => {
+            if (progress.status === 'progress' && progress.progress) {
+              const pct = Math.round(progress.progress);
+              if (pct >= 100) {
+                onProgress('initializing', 100, 'Initializing AI model...');
+              } else {
+                onProgress('downloading', pct, `Downloading AI model... ${pct}%`);
+              }
+            }
+          },
+        }
+      );
+    }
+
+    generatorInstance = await withTimeout(
+      initPromise,
+      120_000,
+      'Model initialization timed out (120s)'
     );
   }
 
-  onProgress('ready', 100, 'Generating insight...');
+  onProgress('generating', 100, 'Generating insight...');
 
   const prompt = `<|im_start|>user
 Summarize in 2-3 short sentences what this exchange rate data means for someone converting currencies:
@@ -105,11 +131,15 @@ ${text}
 <|im_start|>assistant
 `;
 
-  const result = await generatorInstance(prompt, {
-    max_new_tokens: 100,
-    temperature: 0.3,
-    do_sample: false,
-  });
+  const result = await withTimeout(
+    generatorInstance(prompt, {
+      max_new_tokens: 80,
+      temperature: 0.1,
+      do_sample: false,
+    }),
+    30_000,
+    'Text generation timed out (30s)'
+  );
 
   const generated = result[0]?.generated_text?.split('<|im_start|>assistant')[1]?.trim() || '';
   return generated;

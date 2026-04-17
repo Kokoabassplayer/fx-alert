@@ -179,6 +179,18 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
                 </div>
               </div>
             )}
+            {aiStatus === 'initializing' && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Sparkles className="w-4 h-4 animate-pulse" />
+                Initializing AI model... (this may take a moment)
+              </div>
+            )}
+            {aiStatus === 'generating' && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Sparkles className="w-4 h-4 animate-pulse" />
+                Generating insight...
+              </div>
+            )}
             {aiStatus === 'ready' && aiInsight && (
               <p className="text-sm text-foreground leading-relaxed">{aiInsight}</p>
             )}
