@@ -14,11 +14,11 @@ export interface AIProgressCallback {
 
 // Timeout helper
 function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
-  return new Promise((_, reject) => {
+  return new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error(message)), ms);
     promise.then(
-      (val) => { clearTimeout(timer); return val; },
-      (err) => { clearTimeout(timer); throw err; }
+      (val) => { clearTimeout(timer); resolve(val); },
+      (err) => { clearTimeout(timer); reject(err); }
     );
   });
 }
