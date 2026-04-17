@@ -1,7 +1,7 @@
 // src/components/analysis-display.tsx
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { generateTemplateInsight } from '@/lib/browser-ai';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -30,17 +30,13 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
 }) => {
   const isMobile = useIsMobile();
 
-  // Insight state — must be before any early returns (Rules of Hooks)
-  const [insight, setInsight] = useState<string | null>(null);
-
-  // Generate insight instantly from data (no AI model needed)
-  const generateInsight = () => {
-    if (!pairAnalysisData || !fromCurrency || !toCurrency) return;
+  // Generate insight directly from data — instant, no async needed
+  let insight: string | null = null;
+  if (pairAnalysisData && fromCurrency && toCurrency) {
     const { trend_summary, distribution_statistics } = pairAnalysisData;
     const stats = distribution_statistics;
     const trendDescriptions = trend_summary.map(t => `${t.period}: ${t.description}`);
-
-    const result = generateTemplateInsight({
+    insight = generateTemplateInsight({
       from: fromCurrency,
       to: toCurrency,
       currentRate: currentRate ?? stats.mean ?? 0,
@@ -51,8 +47,7 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
       trendSummary: trendDescriptions,
       sampleDays: stats.sample_days,
     });
-    setInsight(result);
-  };
+  }
 
 
   if (isAnalysisLoading) {
@@ -110,35 +105,22 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
   return (
     <div className="space-y-6">
       {/* Rate Insight Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Lightbulb className="w-5 h-5 text-primary" />
-            Rate Insight
-          </CardTitle>
-          <CardDescription>
-            {fromCurrency}/{toCurrency} analysis
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {!insight ? (
-            <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">
-                Get an instant analysis of this currency pair — real impact on your money with actionable advice.
-              </p>
-              <button
-                onClick={generateInsight}
-                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-              >
-                <Lightbulb className="w-4 h-4" />
-                Get Insight
-              </button>
-            </div>
-          ) : (
+      {insight && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Lightbulb className="w-5 h-5 text-primary" />
+              Rate Insight
+            </CardTitle>
+            <CardDescription>
+              {fromCurrency}/{toCurrency} analysis
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
             <p className="text-sm text-foreground leading-relaxed">{insight}</p>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Trend Summary Section */}
       {isMobile ? (
