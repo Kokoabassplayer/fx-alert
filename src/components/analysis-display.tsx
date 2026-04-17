@@ -1,12 +1,14 @@
 // src/components/analysis-display.tsx
 'use client';
 
-import React from 'react'; // Removed useState, useEffect
+import React, { useState, useEffect } from 'react';
+import { Sparkles, Download } from 'lucide-react';
+import { generateInsight, formatAnalysisPrompt, checkAIAvailability, type AIStatus } from '@/lib/browser-ai';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { type PairAnalysisData } from '@/lib/dynamic-analysis'; // generatePairAnalysis no longer needed here
+import { type PairAnalysisData } from '@/lib/dynamic-analysis';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Terminal, Info } from 'lucide-react'; // Added Info icon
+import { Terminal, Info } from 'lucide-react';
 import { useIsMobile } from "@/hooks/use-is-mobile";
 
 interface AnalysisDisplayProps {
@@ -78,9 +80,109 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
   const formatRate = (rate: number | null | undefined) => rate?.toFixed(4) || 'N/A';
   const formatPercent = (value: number | null | undefined) => value !== null && value !== undefined ? `≈ ${(value * 100).toFixed(1)} %` : 'N/A';
 
+  // AI Insight state
+  const [aiInsight, setAiInsight] = useState<string | null>(null);
+  const [aiStatus, setAiStatus] = useState<AIStatus>('unavailable');
+  const [aiProgress, setAiProgress] = useState(0);
+  const [aiMessage, setAiMessage] = useState('');
+  const [aiEngine, setAiEngine] = useState<string>('');
+
+  useEffect(() => {
+    if (!pairAnalysisData || !fromCurrency || !toCurrency) return;
+
+    let cancelled = false;
+
+    const loadInsight = async () => {
+      const available = await checkAIAvailability();
+      if (!available || cancelled) {
+        setAiStatus('unavailable');
+        return;
+      }
+
+      const trendDescriptions = trend_summary.map(t => `${t.period}: ${t.description}`);
+
+      const prompt = formatAnalysisPrompt({
+        fromCurrency,
+        toCurrency,
+        currentRate: stats.mean,
+        band: threshold_bands[2]?.level || null,
+        trendSummary: trendDescriptions,
+        stats: {
+          mean: stats.mean,
+          median: stats.median,
+          min: stats.min,
+          max: stats.max,
+          sample_days: stats.sample_days,
+        },
+      });
+
+      const result = await generateInsight(prompt, (status, progress, message) => {
+        if (!cancelled) {
+          setAiStatus(status);
+          if (progress !== undefined) setAiProgress(progress);
+          if (message) setAiMessage(message);
+        }
+      });
+
+      if (!cancelled && result.insight) {
+        setAiInsight(result.insight);
+        setAiEngine(result.engine);
+        setAiStatus('ready');
+      } else if (!cancelled) {
+        setAiStatus('unavailable');
+      }
+    };
+
+    loadInsight();
+
+    return () => { cancelled = true; };
+  }, [fromCurrency, toCurrency, pairAnalysisData]);
 
   return (
     <div className="space-y-6">
+      {/* AI Insight Card */}
+      {aiStatus !== 'unavailable' && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-primary" />
+              AI Insight
+            </CardTitle>
+            <CardDescription>
+              {fromCurrency}/{toCurrency} analysis powered by {aiEngine === 'chrome-ai' ? 'built-in AI' : 'browser AI'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {aiStatus === 'checking' && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Sparkles className="w-4 h-4 animate-pulse" />
+                Checking AI availability...
+              </div>
+            )}
+            {aiStatus === 'downloading' && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Download className="w-4 h-4 animate-pulse" />
+                  {aiMessage || 'Downloading AI model...'}
+                </div>
+                <div className="w-full bg-muted rounded-full h-1.5">
+                  <div
+                    className="bg-primary h-1.5 rounded-full transition-all duration-300"
+                    style={{ width: `${aiProgress}%` }}
+                  />
+                </div>
+              </div>
+            )}
+            {aiStatus === 'ready' && aiInsight && (
+              <p className="text-sm text-foreground leading-relaxed">{aiInsight}</p>
+            )}
+            {aiStatus === 'error' && (
+              <p className="text-sm text-muted-foreground">AI insight unavailable for this pair.</p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Trend Summary Section */}
       {isMobile ? (
         <details open className="rounded-lg border overflow-hidden">
