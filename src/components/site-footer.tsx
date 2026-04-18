@@ -50,6 +50,10 @@ export function SiteFooter() {
             Privacy
           </Link>
           <span className="text-muted-foreground">•</span>
+          <Link href="/contact" className="text-muted-foreground hover:text-primary transition-colors">
+            Contact
+          </Link>
+          <span className="text-muted-foreground">•</span>
           <Link href="/terms" className="text-muted-foreground hover:text-primary transition-colors">
             Terms
           </Link>
