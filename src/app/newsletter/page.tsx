@@ -5,30 +5,30 @@ import NewsletterSignup from '@/components/newsletter-signup';
 import { APP_CONFIG } from '@/lib/constants';
 
 export const metadata: Metadata = {
-  title: 'Newsletter - FX Alert | Weekly Exchange Rate Forecasts',
-  description: 'Subscribe to FX Alert newsletter for weekly exchange rate forecasts, market analysis, and timely alerts for USD/THB and other currency pairs.',
+  title: 'Waitlist - FX Alert | Email Rate Alerts',
+  description: 'Join the FX Alert waitlist to be the first to know when we launch email rate alerts for USD/THB and other currency pairs.',
 };
 
 const benefits = [
   {
     icon: TrendingUp,
-    title: 'Weekly Rate Forecasts',
-    description: 'Get AI-powered predictions for major currency pairs every week.',
+    title: 'Rate Movement Alerts',
+    description: 'Get notified when your target currency pairs hit key levels.',
   },
   {
     icon: BarChart3,
-    title: 'Market Analysis',
-    description: 'Understand the factors affecting exchange rates and trends.',
-  },
-  {
-    icon: Shield,
-    title: 'Rate Alerts',
-    description: 'Be notified when rates hit favorable levels for your exchanges.',
+    title: 'Weekly Market Summary',
+    description: 'A concise weekly overview of major exchange rate movements.',
   },
   {
     icon: Bell,
-    title: 'Never Miss an Opportunity',
-    description: 'Timing is everything in currency exchange. We\'ll help you time it right.',
+    title: 'Be First in Line',
+    description: 'Early access to email notifications when we launch.',
+  },
+  {
+    icon: Shield,
+    title: 'No Spam, Ever',
+    description: 'We respect your inbox. Only rate alerts that matter to you.',
   },
 ];
 
@@ -48,10 +48,10 @@ export default function NewsletterPage() {
         {/* Header */}
         <header className="mb-8 text-center">
           <h1 className="text-3xl sm:text-4xl font-bold text-primary mb-2">
-            FX Alert Newsletter
+            Email Rate Alerts — Coming Soon
           </h1>
           <p className="text-sm text-muted-foreground max-w-xl mx-auto">
-            Weekly exchange rate forecasts, market analysis, and timely alerts—delivered free to your inbox.
+            Join the waitlist to be the first to know when we launch email notifications for exchange rate alerts.
           </p>
         </header>
 
@@ -80,17 +80,16 @@ export default function NewsletterPage() {
             {/* Sample Preview */}
             <div className="mt-6 p-4 rounded-lg bg-muted/50 border border-border/50">
               <h3 className="text-sm font-semibold text-foreground mb-2">
-                Sample Newsletter Preview
+                What We're Building
               </h3>
               <div className="text-xs text-muted-foreground space-y-2">
                 <div className="border-b border-border/50 pb-2">
-                  <p className="font-medium text-foreground">📈 USD/THB Weekly Outlook</p>
-                  <p>Current rate: 34.52 (+0.8% from last week)</p>
-                  <p className="mt-1">Band: <span className="text-green-600 font-medium">OPPORTUNE</span></p>
+                  <p className="font-medium text-foreground">🎯 Rate Alert Emails</p>
+                  <p>Get notified via email when USD/THB hits your target rate.</p>
                 </div>
                 <div>
-                  <p className="font-medium text-foreground">🎯 Key Levels This Week</p>
-                  <p>Support: 34.20 | Resistance: 35.10</p>
+                  <p className="font-medium text-foreground">📊 Weekly Summary</p>
+                  <p>A brief weekly overview of rate movements and band changes.</p>
                 </div>
               </div>
             </div>
@@ -111,13 +110,13 @@ export default function NewsletterPage() {
             <div className="p-4 rounded-lg bg-card/30 border border-border/50">
               <h3 className="text-sm font-medium text-foreground mb-1">Is it really free?</h3>
               <p className="text-xs text-muted-foreground">
-                Yes! The newsletter is completely free. We monetize through affiliate partnerships with trusted services.
+                Yes! Joining the waitlist is completely free. We'll notify you when email rate alerts launch.
               </p>
             </div>
             <div className="p-4 rounded-lg bg-card/30 border border-border/50">
               <h3 className="text-sm font-medium text-foreground mb-1">How often will I receive emails?</h3>
               <p className="text-xs text-muted-foreground">
-                Once per week, typically on Sundays. You may also receive special alerts for major rate movements.
+                We're still building the service. By joining the waitlist, you'll be first to know when it launches.
               </p>
             </div>
             <div className="p-4 rounded-lg bg-card/30 border border-border/50">
@@ -129,7 +128,7 @@ export default function NewsletterPage() {
             <div className="p-4 rounded-lg bg-card/30 border border-border/50">
               <h3 className="text-sm font-medium text-foreground mb-1">Is my data safe?</h3>
               <p className="text-xs text-muted-foreground">
-                Yes. We use your email only for sending the newsletter. We never sell or share your data.
+                Yes. We use your email only for rate alert notifications. We never sell or share your data.
               </p>
             </div>
           </div>

@@ -1,31 +1,51 @@
 // src/components/analysis-display.tsx
 'use client';
 
-import React from 'react'; // Removed useState, useEffect
+import React from 'react';
+import { generateTemplateInsight } from '@/lib/browser-ai';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { type PairAnalysisData } from '@/lib/dynamic-analysis'; // generatePairAnalysis no longer needed here
+import { type PairAnalysisData } from '@/lib/dynamic-analysis';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Terminal, Info } from 'lucide-react'; // Added Info icon
+import { Terminal, Info, Lightbulb } from 'lucide-react';
 import { useIsMobile } from "@/hooks/use-is-mobile";
 
 interface AnalysisDisplayProps {
   fromCurrency: string | null;
   toCurrency: string | null;
+  currentRate: number | null;
   pairAnalysisData: PairAnalysisData | null;
   isAnalysisLoading: boolean;
   analysisError: string | null;
 }
 
-// Note: TrendPeriod, DistributionStatistics, ThresholdBand are part of PairAnalysisData
 const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
   fromCurrency,
   toCurrency,
+  currentRate,
   pairAnalysisData,
   isAnalysisLoading,
   analysisError
 }) => {
   const isMobile = useIsMobile();
+
+  let insight: string | null = null;
+  if (pairAnalysisData && fromCurrency && toCurrency) {
+    const { trend_summary, distribution_statistics } = pairAnalysisData;
+    const stats = distribution_statistics;
+    const trendDescriptions = trend_summary.map(t => `${t.period}: ${t.description}`);
+    insight = generateTemplateInsight({
+      from: fromCurrency,
+      to: toCurrency,
+      currentRate: currentRate ?? stats.mean ?? 0,
+      mean: stats.mean ?? 0,
+      median: stats.median,
+      min: stats.min,
+      max: stats.max,
+      trendSummary: trendDescriptions,
+      sampleDays: stats.sample_days,
+    });
+  }
 
   if (isAnalysisLoading) {
     return (
@@ -36,7 +56,7 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center py-10">
-            <Terminal className="h-8 w-8 animate-spin" /> {/* Using Terminal as a spinner */}
+            <Terminal className="h-8 w-8 animate-spin" />
             <p className="ml-2">Please wait while we generate the currency pair analysis.</p>
           </div>
         </CardContent>
@@ -81,6 +101,24 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
 
   return (
     <div className="space-y-6">
+      {/* Rate Insight Card */}
+      {insight && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Lightbulb className="w-5 h-5 text-primary" />
+              Rate Insight
+            </CardTitle>
+            <CardDescription>
+              {fromCurrency}/{toCurrency} analysis
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-foreground leading-relaxed">{insight}</p>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Trend Summary Section */}
       {isMobile ? (
         <details open className="rounded-lg border overflow-hidden">

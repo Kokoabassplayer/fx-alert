@@ -27,8 +27,7 @@ const NewsletterSignup: FC<NewsletterSignupProps> = ({ className = '', source = 
     e.preventDefault();
     setStatus('loading');
 
-    // Using Formspree for email capture (replace with your form ID)
-    const formId = 'xanwndoq'; // Replace with your actual Formspree form ID
+    const formId = 'xanwndoq';
     const formData = new FormData();
     formData.append('email', email);
     formData.append('source', source);
@@ -48,7 +47,7 @@ const NewsletterSignup: FC<NewsletterSignupProps> = ({ className = '', source = 
           // Analytics tracking failure should not affect UX
         });
         setStatus('success');
-        setMessage('Thank you! You\'ll receive weekly FX rate forecasts soon.');
+        setMessage("You're on the list! We'll notify you when email rate alerts launch.");
         setEmail('');
       } else {
         const data = await response.json();
@@ -68,7 +67,7 @@ const NewsletterSignup: FC<NewsletterSignupProps> = ({ className = '', source = 
         <div className="flex items-center gap-2 mb-4">
           <Mail className="w-5 h-5 text-primary" />
           <h3 className="text-sm font-semibold text-foreground">
-            Weekly FX Rate Forecast
+            Join the Waitlist
           </h3>
         </div>
       )}
@@ -77,7 +76,7 @@ const NewsletterSignup: FC<NewsletterSignupProps> = ({ className = '', source = 
         <div className="flex items-start gap-3 py-2">
           <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
           <div>
-            <p className="text-sm font-medium text-foreground">You're subscribed!</p>
+            <p className="text-sm font-medium text-foreground">You're on the list!</p>
             <p className="text-xs text-muted-foreground mt-1">{message}</p>
           </div>
         </div>
@@ -87,10 +86,10 @@ const NewsletterSignup: FC<NewsletterSignupProps> = ({ className = '', source = 
             <div className="text-center mb-4">
               <Mail className="w-10 h-10 text-primary mx-auto mb-3" />
               <h3 className="text-xl font-bold text-foreground mb-2">
-                Weekly FX Rate Forecast
+                Join the Waitlist
               </h3>
               <p className="text-sm text-muted-foreground">
-                Get weekly exchange rate predictions and analysis delivered to your inbox.
+                Be the first to know when we launch email rate alerts.
               </p>
             </div>
           )}
@@ -124,7 +123,7 @@ const NewsletterSignup: FC<NewsletterSignupProps> = ({ className = '', source = 
             ) : (
               <>
                 <Mail className="w-4 h-4" />
-                Subscribe Free
+                Join Waitlist
               </>
             )}
           </button>

@@ -43,3 +43,6 @@ next-env.d.ts
 # firebase
 firebase-debug.log
 firestore-debug.log/.firebase/
+
+# temp build artifacts
+temp_ts_output/

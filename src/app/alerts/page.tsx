@@ -35,12 +35,16 @@ export default function AlertsPage() {
       new Set(alerts.map(a => `${a.fromCurrency}/${a.toCurrency}`))
     );
 
-    for (const pair of pairs) {
-      const [from, to] = pair.split('/');
-      const data = await fetchCurrentRate(from, to);
-      if (data && data.rates[to]) {
-        rates[pair] = data.rates[to];
-      }
+    const entries = await Promise.all(
+      pairs.map(async (pair) => {
+        const [from, to] = pair.split('/');
+        const data = await fetchCurrentRate(from, to);
+        return [pair, data?.rates[to]] as const;
+      })
+    );
+
+    for (const [pair, rate] of entries) {
+      if (rate != null) rates[pair] = rate;
     }
 
     setCurrentRates(rates);
@@ -48,12 +52,9 @@ export default function AlertsPage() {
     setIsChecking(false);
   }, [alerts]);
 
-  // Check alerts and show notifications for triggered ones
-  const checkForTriggeredAlerts = useCallback(async () => {
-    if (activeAlerts.length === 0) return;
-
-    setIsChecking(true);
-    const results = await checkAlerts(activeAlerts);
+  // Run alert checks, show toasts for triggered ones, update rates
+  const runAlertCheck = useCallback(async (alerts: RateAlert[]) => {
+    const results = await checkAlerts(alerts);
     const triggered = getTriggeredAlerts(results);
 
     if (triggered.length > 0) {
@@ -65,15 +66,8 @@ export default function AlertsPage() {
           variant: "default",
         });
       });
-    } else {
-      toast({
-        title: "No triggered alerts",
-        description: "None of your active alerts have been triggered.",
-        variant: "default",
-      });
     }
 
-    // Update current rates
     const rates: Record<string, number> = {};
     results.forEach(({ alert, currentRate }) => {
       const pair = `${alert.fromCurrency}/${alert.toCurrency}`;
@@ -81,8 +75,43 @@ export default function AlertsPage() {
     });
     setCurrentRates(rates);
     setLastCheckTime(new Date());
+
+    return triggered.length > 0;
+  }, [toast]);
+
+  // Check alerts and show notifications for triggered ones
+  const checkForTriggeredAlerts = useCallback(async () => {
+    if (activeAlerts.length === 0) return;
+
+    setIsChecking(true);
+    const hasTriggered = await runAlertCheck(activeAlerts);
+    if (!hasTriggered) {
+      toast({
+        title: "No triggered alerts",
+        description: "None of your active alerts have been triggered.",
+        variant: "default",
+      });
+    }
     setIsChecking(false);
-  }, [activeAlerts, toast]);
+  }, [activeAlerts, toast, runAlertCheck]);
+
+  // Auto-poll active alerts every 30 minutes while tab is open
+  useEffect(() => {
+    if (activeAlerts.length === 0) return;
+
+    const POLL_INTERVAL = 30 * 60 * 1000;
+
+    const poll = async () => {
+      try {
+        await runAlertCheck(activeAlerts);
+      } catch (err) {
+        console.warn('Auto-poll failed:', err);
+      }
+    };
+
+    const intervalId = setInterval(poll, POLL_INTERVAL);
+    return () => clearInterval(intervalId);
+  }, [activeAlerts, runAlertCheck]);
 
   // Fetch rates on mount and when alerts change
   useEffect(() => {
@@ -172,7 +201,7 @@ export default function AlertsPage() {
               </p>
               <p className="text-xs text-muted-foreground">
                 Alerts are stored in your browser's local storage. Keep this tab open to receive notifications.
-                Rates refresh every 15 minutes. Use "Check Alerts" to verify your thresholds.
+                Active alerts are checked automatically every 30 minutes. You can also check manually anytime.
               </p>
               <p className="text-xs text-muted-foreground mt-1">
                 Note: Exchange rate data from Frankfurter API updates once per weekday around 10:00 PM Thai time.
@@ -203,7 +232,7 @@ export default function AlertsPage() {
             className="gap-2"
           >
             <Bell className="w-4 h-4" />
-            Check Alerts
+            Check Now
           </Button>
         </div>
         <AlertForm onSubmit={handleCreateAlert} />
@@ -232,14 +261,14 @@ export default function AlertsPage() {
         <CardContent className="p-6 text-center">
           <Mail className="w-8 h-8 text-primary mx-auto mb-3" />
           <h3 className="text-base font-semibold text-foreground mb-2">
-            Want Email Notifications?
+            Want Email Alerts?
           </h3>
           <p className="text-xs text-muted-foreground mb-4">
-            Join our newsletter to receive weekly rate summaries and key market updates directly in your inbox.
+            Join the waitlist to be notified when we launch email-based rate alerts.
           </p>
           <Link href="/newsletter">
             <Button variant="outline" size="sm">
-              Subscribe to Newsletter
+              Join Waitlist
             </Button>
           </Link>
         </CardContent>

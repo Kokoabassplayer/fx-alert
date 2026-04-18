@@ -47,9 +47,6 @@ FX Alert (codename: RateRefresher) is a Next.js web app that displays foreign ex
 # Start dev server (runs on port 9002 with Turbopack)
 npm run dev
 
-# Start Genkit AI flows (run in second terminal for local AI features)
-npm run genkit:dev
-
 # Build for production (outputs to out/ for Firebase Hosting)
 npm run build
 
@@ -61,6 +58,9 @@ npm run lint
 
 # Deploy to Firebase Hosting
 firebase deploy
+
+# Run tests
+npx jest
 ```
 
 ## Architecture
@@ -77,11 +77,11 @@ firebase deploy
 | `src/lib/currency-api.ts` | Frankfurter API client (current rate, history, currencies) |
 | `src/lib/dynamic-analysis.ts` | Statistical analysis, trend generation, threshold bands |
 | `src/lib/bands.ts` | Band definitions, color configs, rate classification |
-| `src/ai/genkit.ts` | Genkit/Gemini AI configuration |
+| `src/lib/browser-ai.ts` | Template-based rate insight generation |
 | `src/app/page.tsx` | Main page orchestrating all components |
 | `src/components/current-rate-display.tsx` | Rate display with currency selectors |
 | `src/components/history-chart-display.tsx` | Historical chart with band overlays |
-| `src/components/analysis-display.tsx` | AI-generated trend and distribution summary |
+| `src/components/analysis-display.tsx` | Statistical trend and distribution summary with rate insight |
 
 ### Band System
 The app classifies rates into 5 bands based on historical percentiles:
@@ -93,10 +93,10 @@ The app classifies rates into 5 bands based on historical percentiles:
 
 Each band has associated actions, probabilities, and visual styling defined in `bands.ts`.
 
-### AI Integration
-- Uses Google Genkit with Gemini 2.0 Flash model
-- Flows defined in `src/ai/dev.ts` (currently minimal)
-- AI analysis is referenced in footer but generated via OpenAI o3 for current implementation
+### Rate Insights
+- Template-based insight generation in `src/lib/browser-ai.ts`
+- Generates deterministic text from statistical data (mean, median, trends)
+- No external AI model dependency — all computation is client-side
 
 ### UI Components
 - Built with shadcn/ui (Radix UI primitives + Tailwind CSS)
@@ -126,10 +126,11 @@ From `docs/blueprint.md`:
 ## Testing Guidelines
 
 ### Current State
-**No automated tests are currently set up.** Testing is done manually via:
-- Chrome DevTools for console errors and network requests
-- Visual inspection of UI components
-- Manual verification of key user flows
+**Jest is configured with 2 test suites (26 tests).** Tests cover:
+- `src/lib/__tests__/browser-ai.test.ts` — Template insight generation
+- `src/lib/__tests__/affiliate-links.test.ts` — Affiliate link generation
+
+Run tests with `npx jest`.
 
 ### When to Add Unit Tests
 Unit tests are valuable for:

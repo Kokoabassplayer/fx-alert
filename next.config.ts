@@ -1,9 +1,7 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  output: 'export',   // generate static files
-
-  /* the rest of your existing options */
+  output: 'export',
   typescript: { ignoreBuildErrors: true },
   eslint:     { ignoreDuringBuilds: true },
   images: {
