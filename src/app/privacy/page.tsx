@@ -4,7 +4,7 @@ import { APP_CONFIG } from '@/lib/constants';
 
 export const metadata: Metadata = {
   title: 'Privacy Policy - FX Alert',
-  description: 'Learn how FX Alert collects, uses, and protects your data. We do not collect personal information.',
+  description: 'Learn how FX Alert collects, uses, and protects your data. Minimal personal data is collected for newsletter subscriptions.',
 };
 
 export default function PrivacyPolicyPage() {
@@ -55,11 +55,10 @@ export default function PrivacyPolicyPage() {
           <div>
             <h3 className="text-sm font-medium text-foreground mb-1">Personal Data</h3>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              <strong>We do not collect personal identifiable information (PII)</strong> such as:
+              We collect minimal personal data. If you subscribe to our newsletter, your email address is collected and processed by our third-party form provider (Formspree). We do not collect:
             </p>
             <ul className="text-xs text-muted-foreground mt-2 space-y-1 list-disc list-inside">
               <li>Names</li>
-              <li>Email addresses</li>
               <li>Phone numbers</li>
               <li>Physical addresses</li>
               <li>Financial account information</li>
@@ -123,8 +122,8 @@ export default function PrivacyPolicyPage() {
       <section>
         <h2 className="text-lg font-semibold text-foreground mb-2">Your Rights and Choices</h2>
         <p className="text-sm text-muted-foreground leading-relaxed">
-          Since we do not collect personal information, you do not need to request account deletion or data export.
-          However, you can:
+          If you have subscribed to our newsletter, you can request deletion of your email from our mailing list at any time by contacting us.
+          You can also:
         </p>
         <ul className="text-xs text-muted-foreground mt-2 space-y-1 list-disc list-inside">
           <li>Disable cookies in your browser settings (note: this may affect functionality)</li>

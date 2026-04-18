@@ -2,11 +2,18 @@ interface StructuredDataProps {
   data: Record<string, unknown>
 }
 
+/** Sanitize JSON-LD to prevent breaking out of the script tag */
+function safeJsonLd(data: Record<string, unknown>): string {
+  return JSON.stringify(data)
+    .replace(/<\/script/gi, '<\\/script')
+    .replace(/<!--/g, '<\\!--')
+}
+
 export function StructuredData({ data }: StructuredDataProps) {
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
+      dangerouslySetInnerHTML={{ __html: safeJsonLd(data) }}
     />
   )
 }
