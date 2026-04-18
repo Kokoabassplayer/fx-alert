@@ -4,7 +4,7 @@ import { APP_CONFIG } from '@/lib/constants';
 
 export const metadata: Metadata = {
   title: 'Contact Us - FX Alert',
-  description: 'Get in touch with FX Alert. Report bugs, request features, or send us feedback via GitHub Issues.',
+  description: 'Get in touch with FX Alert. Report bugs, request features, or send us feedback via email or GitHub.',
 };
 
 export default function ContactPage() {
@@ -18,6 +18,16 @@ export default function ContactPage() {
         <p className="text-sm text-muted-foreground leading-relaxed">
           Have a question, found a bug, or want to request a feature? Here&apos;s how to reach us.
           We use GitHub Issues to track feedback so nothing gets lost.
+        </p>
+      </section>
+
+      <section>
+        <h2 className="text-lg font-semibold text-foreground mb-2">Email</h2>
+        <p className="text-sm text-muted-foreground leading-relaxed">
+          For general inquiries, reach us at{' '}
+          <a href={`mailto:${APP_CONFIG.EMAIL}`} className="text-primary hover:underline">
+            {APP_CONFIG.EMAIL}
+          </a>.
         </p>
       </section>
 
