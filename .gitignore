@@ -46,3 +46,16 @@ firestore-debug.log/.firebase/
 
 # temp build artifacts
 temp_ts_output/
+
+# playwright mcp
+.playwright-mcp/
+
+# claude / codex plugin data
+.claude/skills/
+.codex/
+
+# superpowers docs
+docs/superpowers/
+
+# test screenshots
+*.png
