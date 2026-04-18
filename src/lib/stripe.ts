@@ -1,17 +1,12 @@
 /**
  * Stripe Configuration
  *
- * This file contains the Stripe configuration for payment processing.
- * Currently a placeholder for future premium subscription implementation.
+ * Placeholder for future premium subscription implementation.
+ * Only contains client-safe configuration (no secret keys).
  *
- * SETUP INSTRUCTIONS:
- * 1. Create a Stripe account at https://stripe.com
- * 2. Get your API keys from https://dashboard.stripe.com/apikeys
- * 3. Add keys to .env.local:
- *    NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
- *    STRIPE_SECRET_KEY=sk_test_...
- * 4. Create products and prices in Stripe Dashboard
- * 5. Update PRICE_IDS below with your actual price IDs
+ * When implementing Stripe integration, server-side operations
+ * (checkout sessions, webhooks) must go through a separate backend
+ * or serverless functions — secret keys cannot be used in a static export.
  */
 
 // Price IDs from Stripe Dashboard (to be configured)
@@ -39,15 +34,9 @@ export const SUBSCRIPTION_PLANS = {
 } as const;
 
 /**
- * Get Stripe publishable key
- * Returns empty string in development if not configured
+ * Get Stripe publishable key (client-safe)
  */
 export function getStripeKey(): string {
-  if (typeof window === 'undefined') {
-    // Server-side: use secret key
-    return process.env.STRIPE_SECRET_KEY || '';
-  }
-  // Client-side: use publishable key
   return process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
 }
 
@@ -55,20 +44,5 @@ export function getStripeKey(): string {
  * Check if Stripe is configured
  */
 export function isStripeConfigured(): boolean {
-  return !!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY &&
-         !!process.env.STRIPE_SECRET_KEY;
+  return !!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
 }
-
-/**
- * Stripe webhook secret for verifying webhook signatures
- * Add to .env.local: STRIPE_WEBHOOK_SECRET=whsec_...
- */
-export const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || '';
-
-/**
- * Success and cancel URLs for checkout
- */
-export const CHECKOUT_URLS = {
-  success: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:9002'}/checkout/success`,
-  cancel: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:9002'}/checkout/cancel`,
-} as const;

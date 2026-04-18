@@ -55,11 +55,10 @@ export default function PrivacyPolicyPage() {
           <div>
             <h3 className="text-sm font-medium text-foreground mb-1">Personal Data</h3>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              <strong>We do not collect personal identifiable information (PII)</strong> such as:
+              We collect minimal personal data. If you subscribe to our newsletter, your email address is collected and processed by our third-party form provider (Formspree). We do not collect:
             </p>
             <ul className="text-xs text-muted-foreground mt-2 space-y-1 list-disc list-inside">
               <li>Names</li>
-              <li>Email addresses</li>
               <li>Phone numbers</li>
               <li>Physical addresses</li>
               <li>Financial account information</li>
