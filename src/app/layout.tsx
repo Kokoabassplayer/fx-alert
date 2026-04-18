@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
-import Script from 'next/script';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { SiteHeader } from '@/components/site-header';
@@ -10,6 +9,7 @@ import { ThemeProvider } from '@/components/theme-provider';
 import { StructuredData, fxAlertOrganizationSchema, webSiteSchema, financialProductSchema } from '@/components/structured-data';
 import { ConsentBanner } from '@/components/ConsentBanner';
 import { AnalyticsProvider } from '@/components/AnalyticsProvider';
+import { Ga4Scripts } from '@/components/Ga4Scripts';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -74,24 +74,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      {/* ②  new <head> with GA4 tag */}
       <head>
         <meta name="google-site-verification" content="K_hyPn_LQJBVsNa0CkeSssg1NjKXQXsSg-IQ7j231DY" />
-        <Script
-          src="https://www.googletagmanager.com/gtag/js?id=G-KZMXLJQHEQ"
-          strategy="afterInteractive"
-        />
-        <Script id="gtag-init" strategy="afterInteractive">
-          {`
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-            gtag('consent', 'default', {
-              'analytics_storage': 'denied'
-            });
-            gtag('config', 'G-KZMXLJQHEQ');
-          `}
-        </Script>
+        <Ga4Scripts />
       </head>
 
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
