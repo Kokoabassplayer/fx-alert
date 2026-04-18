@@ -2,79 +2,71 @@ import type { Metadata } from 'next';
 import { LegalLayout } from '@/components/legal-layout';
 import { APP_CONFIG } from '@/lib/constants';
 
+const GITHUB_ISSUES_BASE = `https://github.com/${APP_CONFIG.GITHUB_REPO}/issues/new`;
+
+const contactSections = [
+  {
+    heading: 'Get in Touch',
+    body: "Have a question, found a bug, or want to request a feature? Here's how to reach us. We use GitHub Issues to track feedback so nothing gets lost.",
+  },
+  {
+    heading: 'Email',
+    body: 'For general inquiries, reach us at',
+    href: `mailto:${APP_CONFIG.EMAIL}`,
+    linkText: APP_CONFIG.EMAIL,
+  },
+  {
+    heading: 'Report a Bug',
+    body: "Found something broken? Open a bug report on GitHub and we'll look into it.",
+    href: `${GITHUB_ISSUES_BASE}?labels=bug&template=bug_report.md&title=%5BBUG%5D+`,
+    linkText: 'Open a Bug Report →',
+    external: true,
+  },
+  {
+    heading: 'Request a Feature',
+    body: "Have an idea that would make FX Alert better? We'd love to hear it.",
+    href: `${GITHUB_ISSUES_BASE}?labels=enhancement&template=feature_request.md&title=%5BFEATURE%5D+`,
+    linkText: 'Request a Feature →',
+    external: true,
+  },
+  {
+    heading: 'General Feedback',
+    body: 'Anything else on your mind? Open a general issue on GitHub.',
+    href: GITHUB_ISSUES_BASE,
+    linkText: 'Open an Issue →',
+    external: true,
+  },
+];
+
 export const metadata: Metadata = {
-  title: 'Contact Us - FX Alert',
-  description: 'Get in touch with FX Alert. Report bugs, request features, or send us feedback via email or GitHub.',
+  title: `Contact Us - ${APP_CONFIG.NAME}`,
+  description: `Get in touch with ${APP_CONFIG.NAME}. Report bugs, request features, or send us feedback via email or GitHub.`,
 };
 
 export default function ContactPage() {
   return (
-    <LegalLayout
-      title="Contact Us"
-      description={metadata.description || ''}
-    >
-      <section>
-        <h2 className="text-lg font-semibold text-foreground mb-2">Get in Touch</h2>
-        <p className="text-sm text-muted-foreground leading-relaxed">
-          Have a question, found a bug, or want to request a feature? Here&apos;s how to reach us.
-          We use GitHub Issues to track feedback so nothing gets lost.
-        </p>
-      </section>
-
-      <section>
-        <h2 className="text-lg font-semibold text-foreground mb-2">Email</h2>
-        <p className="text-sm text-muted-foreground leading-relaxed">
-          For general inquiries, reach us at{' '}
-          <a href={`mailto:${APP_CONFIG.EMAIL}`} className="text-primary hover:underline">
-            {APP_CONFIG.EMAIL}
-          </a>.
-        </p>
-      </section>
-
-      <section>
-        <h2 className="text-lg font-semibold text-foreground mb-2">Report a Bug</h2>
-        <p className="text-sm text-muted-foreground leading-relaxed">
-          Found something broken? Open a bug report on GitHub and we&apos;ll look into it.
-        </p>
-        <a
-          href={`https://github.com/${APP_CONFIG.GITHUB_REPO}/issues/new?labels=bug&template=bug_report.md&title=%5BBUG%5D+`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-block mt-2 text-sm text-primary hover:underline"
-        >
-          Open a Bug Report →
-        </a>
-      </section>
-
-      <section>
-        <h2 className="text-lg font-semibold text-foreground mb-2">Request a Feature</h2>
-        <p className="text-sm text-muted-foreground leading-relaxed">
-          Have an idea that would make FX Alert better? We&apos;d love to hear it.
-        </p>
-        <a
-          href={`https://github.com/${APP_CONFIG.GITHUB_REPO}/issues/new?labels=enhancement&template=feature_request.md&title=%5BFEATURE%5D+`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-block mt-2 text-sm text-primary hover:underline"
-        >
-          Request a Feature →
-        </a>
-      </section>
-
-      <section>
-        <h2 className="text-lg font-semibold text-foreground mb-2">General Feedback</h2>
-        <p className="text-sm text-muted-foreground leading-relaxed">
-          Anything else on your mind? Open a general issue on GitHub.
-        </p>
-        <a
-          href={`https://github.com/${APP_CONFIG.GITHUB_REPO}/issues/new`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-block mt-2 text-sm text-primary hover:underline"
-        >
-          Open an Issue →
-        </a>
-      </section>
+    <LegalLayout title="Contact Us" description={metadata.description ?? ''}>
+      {contactSections.map(({ heading, body, href, linkText, external }) => (
+        <section key={heading}>
+          <h2 className="text-lg font-semibold text-foreground mb-2">{heading}</h2>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            {body}
+            {href && (
+              <>
+                {' '}
+                <a
+                  href={href}
+                  {...(external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+                  className="text-primary hover:underline"
+                >
+                  {linkText}
+                </a>
+                {heading === 'Email' && '.'}
+              </>
+            )}
+          </p>
+        </section>
+      ))}
     </LegalLayout>
   );
 }
