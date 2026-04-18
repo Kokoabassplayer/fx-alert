@@ -7,8 +7,6 @@ export const metadata: Metadata = {
   description: 'Get in touch with FX Alert. Report bugs, request features, or send us feedback via email or GitHub.',
 };
 
-const GITHUB_REPO = 'Kokoabassplayer/fx-alert';
-
 export default function ContactPage() {
   return (
     <LegalLayout
@@ -39,7 +37,7 @@ export default function ContactPage() {
           Found something broken? Open a bug report on GitHub and we&apos;ll look into it.
         </p>
         <a
-          href={`https://github.com/${GITHUB_REPO}/issues/new?labels=bug&template=bug_report.md&title=%5BBUG%5D+`}
+          href={`https://github.com/${APP_CONFIG.GITHUB_REPO}/issues/new?labels=bug&template=bug_report.md&title=%5BBUG%5D+`}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-block mt-2 text-sm text-primary hover:underline"
@@ -54,7 +52,7 @@ export default function ContactPage() {
           Have an idea that would make FX Alert better? We&apos;d love to hear it.
         </p>
         <a
-          href={`https://github.com/${GITHUB_REPO}/issues/new?labels=enhancement&template=feature_request.md&title=%5BFEATURE%5D+`}
+          href={`https://github.com/${APP_CONFIG.GITHUB_REPO}/issues/new?labels=enhancement&template=feature_request.md&title=%5BFEATURE%5D+`}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-block mt-2 text-sm text-primary hover:underline"
@@ -69,7 +67,7 @@ export default function ContactPage() {
           Anything else on your mind? Open a general issue on GitHub.
         </p>
         <a
-          href={`https://github.com/${GITHUB_REPO}/issues/new`}
+          href={`https://github.com/${APP_CONFIG.GITHUB_REPO}/issues/new`}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-block mt-2 text-sm text-primary hover:underline"
