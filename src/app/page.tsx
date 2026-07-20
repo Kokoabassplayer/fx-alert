@@ -26,6 +26,7 @@ import { HeroBandCard } from "@/components/hero-band-card";
 import { ChevronDown } from "lucide-react";
 import type { RealTimeRateResponse } from "@/lib/currency-api";
 import type { ThresholdBand } from "@/lib/dynamic-analysis";
+import { formatRate } from '@/lib/rate-format';
 
 // Period options with lookup map for O(1) label access
 const PERIOD_OPTIONS = [
@@ -153,7 +154,7 @@ const UsdThbMonitorPage: FC = () => {
             <div>
               <h3 className="text-lg font-semibold mb-1">
                 {pairAnalysisData?.distribution_statistics.mean
-                  ? `${selectedFromCurrency}/${selectedToCurrency} averages ${pairAnalysisData.distribution_statistics.mean.toFixed(2)}. Get notified when it hits your target.`
+                  ? `${selectedFromCurrency}/${selectedToCurrency} averages ${formatRate(pairAnalysisData.distribution_statistics.mean)}. Get notified when it hits your target.`
                   : 'Set rate alerts and get notified instantly'}
               </h3>
               <p className="text-sm text-primary-foreground/80">
@@ -189,6 +190,12 @@ const UsdThbMonitorPage: FC = () => {
             toCurrency={selectedToCurrency}
             isLoading={isAnalysisLoading}
           />
+
+          {(selectedFromCurrency === 'THG' || selectedToCurrency === 'THG') && (
+            <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-950/20 dark:text-amber-200">
+              THG is a derived 96.5% Thai gold reference per baht-weight, not a retail buy or sell quote.
+            </p>
+          )}
 
           {/* Period Pills */}
           <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
@@ -316,10 +323,10 @@ const UsdThbMonitorPage: FC = () => {
         <div className="mt-8 mb-6">
           <h2 className="text-sm font-semibold text-foreground mb-1">Data Source & Analysis</h2>
           <p className="text-xs text-muted-foreground">
-            Exchange rate data is sourced from the Frankfurter API. Rate bands, probabilities, and suggestions are based on an analysis of historical USD/THB data (2010-2024) and simulated monthly volatility. See full analysis details below the chart. Exchange rate predictions are inherently uncertain.
+            Fiat rates use Frankfurter v1. XAU gold rates use Frankfurter v2. THG is a derived reference for one 96.5% Thai gold bar baht-weight (15.244 g), calculated from XAU; it is not a Gold Traders Association retail buy or sell price.
           </p>
           <p className="text-xs text-muted-foreground mt-1">
-            Statistical analysis and rate insights generated from historical Frankfurter API data.
+            Rate bands and insights are calculated from the selected pair&apos;s historical Frankfurter data. Exchange-rate and gold-price predictions are inherently uncertain.
           </p>
         </div>
 

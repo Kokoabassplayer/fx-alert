@@ -13,6 +13,7 @@ import { AlertForm } from '@/components/alert-form';
 import { AlertList } from '@/components/alert-list';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { trackAlertCreated } from '@/lib/analytics';
+import { formatRate } from '@/lib/rate-format';
 
 const DEFAULT_NOTIFICATION_METHOD = 'email' as const;
 
@@ -62,7 +63,7 @@ export default function AlertsPage() {
         const pair = `${alert.fromCurrency}/${alert.toCurrency}`;
         toast({
           title: "🔔 Alert Triggered!",
-          description: `${pair} is ${currentRate.toFixed(2)} (${alert.condition} ${alert.threshold.toFixed(2)})`,
+          description: `${pair} is ${formatRate(currentRate)} (${alert.condition} ${formatRate(alert.threshold)})`,
           variant: "default",
         });
       });
@@ -129,7 +130,7 @@ export default function AlertsPage() {
     trackAlertCreated(fromCurrency, toCurrency, threshold, condition, DEFAULT_NOTIFICATION_METHOD);
     toast({
       title: "Alert Created",
-      description: `You'll be notified when ${fromCurrency}/${toCurrency} goes ${condition} ${threshold.toFixed(2)}.`,
+      description: `You'll be notified when ${fromCurrency}/${toCurrency} goes ${condition} ${formatRate(threshold)}.`,
     });
 
     // Fetch current rate for the new pair
@@ -204,7 +205,7 @@ export default function AlertsPage() {
                 Active alerts are checked automatically every 30 minutes. You can also check manually anytime.
               </p>
               <p className="text-xs text-muted-foreground mt-1">
-                Note: Exchange rate data from Frankfurter API updates once per weekday around 10:00 PM Thai time.
+                Note: Fiat rates use Frankfurter v1. XAU uses Frankfurter v2; THG is a derived 96.5% Thai gold reference, not a retail buy or sell quote.
               </p>
             </div>
           </div>

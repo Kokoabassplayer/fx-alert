@@ -11,6 +11,8 @@ import {
 import type { ThresholdBand } from "@/lib/dynamic-analysis";
 import type { RealTimeRateResponse } from "@/lib/currency-api";
 import { getBadgeClassBold, getBandIndicator } from "@/lib/band-styles";
+import { isSupportedRatePair } from "@/lib/rate-assets";
+import { formatRate } from "@/lib/rate-format";
 
 interface MobileStickyBarProps {
   rateData: RealTimeRateResponse | null;
@@ -34,7 +36,7 @@ export function MobileStickyBar({
   availableCurrencies,
 }: MobileStickyBarProps) {
   const rate = rateData?.rate;
-  const displayRate = rate !== undefined ? rate.toFixed(4) : "—";
+  const displayRate = formatRate(rate, "—");
   const bandSymbol = currentBand ? getBandIndicator(currentBand.level) : null;
 
   return (
@@ -67,7 +69,7 @@ export function MobileStickyBar({
                     key={code}
                     value={code}
                     textValue={code}
-                    disabled={code === toCurrency}
+                    disabled={!isSupportedRatePair(code, toCurrency)}
                   >
                     {code} - {name}
                   </SelectItem>
@@ -86,7 +88,7 @@ export function MobileStickyBar({
                     key={code}
                     value={code}
                     textValue={code}
-                    disabled={code === fromCurrency}
+                    disabled={!isSupportedRatePair(fromCurrency, code)}
                   >
                     {code} - {name}
                   </SelectItem>

@@ -16,6 +16,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import type { RateAlert } from '@/lib/alerts-types';
+import { formatRate } from '@/lib/rate-format';
 
 interface AlertListProps {
   alerts: RateAlert[];
@@ -84,18 +85,18 @@ export function AlertList({ alerts, onToggle, onDelete, currentRates }: AlertLis
                     <span className={alert.condition === 'above' ? 'text-green-600' : 'text-amber-600'}>
                       {alert.condition}
                     </span>{' '}
-                    {alert.threshold.toFixed(2)}
+                    {formatRate(alert.threshold)}
                   </p>
                   <p className="text-xs text-muted-foreground truncate">
                     {alert.condition === 'above'
-                      ? `Notify when rate exceeds ${alert.threshold.toFixed(2)}`
-                      : `Notify when rate drops below ${alert.threshold.toFixed(2)}`}
+                      ? `Notify when rate exceeds ${formatRate(alert.threshold)}`
+                      : `Notify when rate drops below ${formatRate(alert.threshold)}`}
                   </p>
 
                   {/* Current Rate Display */}
                   {currentRate !== undefined && (
                     <p className="text-xs text-muted-foreground mt-1">
-                      Current: <span className="font-medium text-foreground">{currentRate.toFixed(2)}</span>
+                      Current: <span className="font-medium text-foreground">{formatRate(currentRate)}</span>
                       {alert.condition === 'above' && currentRate > alert.threshold && (
                         <span className="ml-1 text-green-600">(Above target!)</span>
                       )}

@@ -1,5 +1,6 @@
 // src/lib/browser-ai.ts
 // Template-based rate insight generation from statistical data
+import { formatRate } from './rate-format';
 
 export function generateTemplateInsight(data: {
   from: string; to: string;
@@ -11,7 +12,7 @@ export function generateTemplateInsight(data: {
   const { from, to, currentRate, mean, median, min, max, trendSummary, sampleDays } = data;
   const diff = currentRate - mean;
   const pctDiff = Math.abs((diff / mean) * 100).toFixed(1);
-  const perHundred = Math.abs(diff * 100).toFixed(0);
+  const perHundred = formatRate(Math.abs(diff * 100));
   const isBelow = diff < 0;
   const sampleLabel = sampleDays ? `the ${sampleDays.toLocaleString()}-day average` : 'the historical average';
 
@@ -19,11 +20,11 @@ export function generateTemplateInsight(data: {
 
   if (isBelow) {
     lines.push(
-      `At ${currentRate.toFixed(2)} ${to} per ${from}, the rate is ${pctDiff}% below ${sampleLabel} of ${mean.toFixed(2)} — you'd get roughly ${perHundred} fewer ${to} for every 100 ${from} compared to typical rates.`
+      `At ${formatRate(currentRate)} ${to} per ${from}, the rate is ${pctDiff}% below ${sampleLabel} of ${formatRate(mean)} — you'd get roughly ${perHundred} fewer ${to} for every 100 ${from} compared to typical rates.`
     );
   } else {
     lines.push(
-      `At ${currentRate.toFixed(2)} ${to} per ${from}, the rate is ${pctDiff}% above ${sampleLabel} of ${mean.toFixed(2)} — you'd get roughly ${perHundred} more ${to} for every 100 ${from} compared to typical rates.`
+      `At ${formatRate(currentRate)} ${to} per ${from}, the rate is ${pctDiff}% above ${sampleLabel} of ${formatRate(mean)} — you'd get roughly ${perHundred} more ${to} for every 100 ${from} compared to typical rates.`
     );
   }
 
@@ -45,14 +46,14 @@ export function generateTemplateInsight(data: {
       );
     } else {
       lines.push(isBelow
-        ? `The rate has been relatively stable, so waiting may not help — ${median ? `rates above the median of ${median.toFixed(2)} ` : 'higher rates '}have been more common.`
-        : `The rate has been relatively stable near current levels — ${median ? `close to the median of ${median.toFixed(2)}` : 'a reasonable time to convert'}.`
+        ? `The rate has been relatively stable, so waiting may not help — ${median ? `rates above the median of ${formatRate(median)} ` : 'higher rates '}have been more common.`
+        : `The rate has been relatively stable near current levels — ${median ? `close to the median of ${formatRate(median)}` : 'a reasonable time to convert'}.`
       );
     }
   } else {
     lines.push(isBelow
-      ? `If you can wait for a rate closer to the average of ${mean.toFixed(2)}, you'd get more ${to} per ${from}.`
-      : `This is a favorable time to convert ${from} to ${to} — rates have been lower ${min ? `(as low as ${min.toFixed(2)})` : ''} in the past.`
+      ? `If you can wait for a rate closer to the average of ${formatRate(mean)}, you'd get more ${to} per ${from}.`
+      : `This is a favorable time to convert ${from} to ${to} — rates have been lower ${min ? `(as low as ${formatRate(min)})` : ''} in the past.`
     );
   }
 
