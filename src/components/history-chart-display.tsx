@@ -21,6 +21,7 @@ import {
 import { type PairAnalysisData, type ThresholdBand as DynamicThresholdBand } from '@/lib/dynamic-analysis'; // Import PairAnalysisData
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useIsMobile } from "@/hooks/use-is-mobile";
+import { formatRate, getRateDecimalPlaces } from '@/lib/rate-format';
 
 
 interface HistoryChartDisplayProps {
@@ -142,7 +143,7 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({
           reason: dynamicBand.reason,
           exampleAction: "", // Not available in DynamicThresholdBand
           probability: dynamicBand.probability !== null ? `${(dynamicBand.probability * 100).toFixed(0)}%` : "N/A",
-          rangeDisplay: `${dynamicBand.range.min?.toFixed(4) ?? '...'} - ${dynamicBand.range.max?.toFixed(4) ?? '...'}`,
+          rangeDisplay: `${formatRate(dynamicBand.range.min, '...')} - ${formatRate(dynamicBand.range.max, '...')}`,
           colorConfig: colorConfig,
         };
       });
@@ -196,8 +197,8 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({
       chartBands.forEach(band => {
         const bandNameKey = band.name as BandName; // Assuming band.name is a valid BandName or mapped to one
         if (alertPrefs[bandNameKey] !== false) { // Show if true or undefined (default to show)
-          if (band.minRate !== -Infinity && band.minRate !== undefined) activeBandNumericBoundaries.push(band.minRate);
-          if (band.maxRate !== Infinity && band.maxRate !== undefined) activeBandNumericBoundaries.push(band.maxRate);
+          if (band.minRate !== -Infinity && band.minRate !== undefined && band.minRate !== null) activeBandNumericBoundaries.push(band.minRate);
+          if (band.maxRate !== Infinity && band.maxRate !== undefined && band.maxRate !== null) activeBandNumericBoundaries.push(band.maxRate);
         }
       });
     }
@@ -235,7 +236,7 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({
     padding = isFinite(padding) ? padding : 0.05; // Ensure padding is valid
 
     const typicalValue = (overallMax + overallMin) / 2;
-    const decimals = typicalValue > 50 ? 2 : 4; // Fewer decimals for high-value pairs like JPY
+    const decimals = getRateDecimalPlaces(typicalValue);
 
     return [parseFloat((overallMin - padding).toFixed(decimals)), parseFloat((overallMax + padding).toFixed(decimals))] as [number, number];
 
@@ -255,7 +256,7 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({
       return (
         <div className="bg-background/90 backdrop-blur-sm p-3 border border-border rounded-lg shadow-xl">
           <p className="text-xs text-muted-foreground">{`Date: ${label}`}</p>
-          <p className="text-sm text-primary font-semibold">{`${toCurrency}/${fromCurrency}: ${typeof rateValue === 'number' ? rateValue.toFixed(4) : 'N/A'}`}</p>
+          <p className="text-sm text-primary font-semibold">{`${toCurrency}/${fromCurrency}: ${formatRate(typeof rateValue === 'number' ? rateValue : null)}`}</p>
           {bandForTooltip && (
             <div className="mt-1">
               <Badge className={`${bandForTooltip.colorConfig.badgeClass} text-xs px-2 py-0.5`}>{bandForTooltip.displayName}</Badge>
@@ -309,7 +310,7 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({
             <span className="text-xs">Tap chart to inspect</span>
             {tappedPoint && (
               <span className="text-xs">
-                <span className="font-semibold text-primary">{tappedPoint.rate.toFixed(4)}</span>
+                <span className="font-semibold text-primary">{formatRate(tappedPoint.rate)}</span>
                 <span className="ml-1.5">{tappedPoint.date}</span>
               </span>
             )}
@@ -346,7 +347,7 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({
               />
               <YAxis
                 domain={yAxisDomain}
-                tickFormatter={(value) => typeof value === 'number' ? value.toFixed(toCurrency === 'JPY' ? 3 : 4) : ''} // More precision for JPY like pairs
+                tickFormatter={(value) => typeof value === 'number' ? formatRate(value, '') : ''}
                 tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
                 tickLine={{ stroke: 'hsl(var(--border))' }}
                 axisLine={{ strokeWidth: 1, stroke: 'hsl(var(--border))' }}
@@ -467,4 +468,3 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({
 };
 
 export default HistoryChartDisplay;
-

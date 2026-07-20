@@ -1,5 +1,6 @@
 import { fetchRealTimeRate } from './currency-api';
 import type { RateAlert, AlertCheckResult } from './alerts-types';
+import { formatRate } from './rate-format';
 
 /**
  * Check a single alert against the current rate via Frankfurter API
@@ -71,9 +72,9 @@ export function formatAlertCheckResult(result: AlertCheckResult): string {
   const pair = `${alert.fromCurrency}/${alert.toCurrency}`;
 
   if (triggered) {
-    return `🔔 Alert triggered! ${pair} is ${currentRate.toFixed(2)} (${alert.condition} ${alert.threshold.toFixed(2)})`;
+    return `🔔 Alert triggered! ${pair} is ${formatRate(currentRate)} (${alert.condition} ${formatRate(alert.threshold)})`;
   }
 
   const direction = alert.condition === 'above' ? 'below' : 'above';
-  return `ℹ️ ${pair} is ${currentRate.toFixed(2)}, still ${direction} your target of ${alert.threshold.toFixed(2)}`;
+  return `ℹ️ ${pair} is ${formatRate(currentRate)}, still ${direction} your target of ${formatRate(alert.threshold)}`;
 }

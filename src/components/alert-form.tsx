@@ -19,17 +19,16 @@ import {
 } from '@/components/ui/popover';
 import { Switch } from '@/components/ui/switch';
 import type { AlertCondition } from '@/lib/alerts-types';
+import {
+  COMMON_RATE_ASSETS,
+  getCompatibleFallbackAsset,
+  isSupportedRatePair,
+} from '@/lib/rate-assets';
+import { formatRate } from '@/lib/rate-format';
 
-const COMMON_CURRENCIES = [
-  { code: 'USD', name: 'US Dollar' },
-  { code: 'THB', name: 'Thai Baht' },
-  { code: 'EUR', name: 'Euro' },
-  { code: 'GBP', name: 'British Pound' },
-  { code: 'JPY', name: 'Japanese Yen' },
-  { code: 'SGD', name: 'Singapore Dollar' },
-  { code: 'AUD', name: 'Australian Dollar' },
-  { code: 'CHF', name: 'Swiss Franc' },
-];
+const COMMON_RATE_ASSET_MAP = Object.fromEntries(
+  COMMON_RATE_ASSETS.map(asset => [asset.code, asset.name]),
+);
 
 interface AlertFormProps {
   onSubmit: (
@@ -48,14 +47,14 @@ export function AlertForm({ onSubmit, currentRate, currencyPair }: AlertFormProp
   const [toCurrency, setToCurrency] = useState(currencyPair?.to || 'THB');
   const [condition, setCondition] = useState<AlertCondition>('above');
   const [threshold, setThreshold] = useState(currentRate?.toString() || '');
-  const [sameCurrencyError, setSameCurrencyError] = useState(false);
+  const [pairError, setPairError] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
     // Validate
-    if (fromCurrency === toCurrency) {
-      setSameCurrencyError(true);
+    if (!isSupportedRatePair(fromCurrency, toCurrency)) {
+      setPairError(true);
       return;
     }
 
@@ -71,14 +70,32 @@ export function AlertForm({ onSubmit, currentRate, currencyPair }: AlertFormProp
     setToCurrency('THB');
     setCondition('above');
     setThreshold('');
-    setSameCurrencyError(false);
+    setPairError(false);
     setOpen(false);
   };
 
   const handleThresholdFromCurrent = () => {
     if (currentRate) {
-      setThreshold(currentRate.toFixed(2));
+      setThreshold(String(currentRate));
     }
+  };
+
+  const handleFromCurrencyChange = (newFrom: string) => {
+    setPairError(false);
+    if (!isSupportedRatePair(newFrom, toCurrency)) {
+      const fallback = getCompatibleFallbackAsset(newFrom, COMMON_RATE_ASSET_MAP);
+      if (fallback) setToCurrency(fallback);
+    }
+    setFromCurrency(newFrom);
+  };
+
+  const handleToCurrencyChange = (newTo: string) => {
+    setPairError(false);
+    if (!isSupportedRatePair(fromCurrency, newTo)) {
+      const fallback = getCompatibleFallbackAsset(newTo, COMMON_RATE_ASSET_MAP);
+      if (fallback) setFromCurrency(fallback);
+    }
+    setToCurrency(newTo);
   };
 
   return (
@@ -105,14 +122,14 @@ export function AlertForm({ onSubmit, currentRate, currencyPair }: AlertFormProp
 
           {/* From Currency */}
           <div className="space-y-2">
-            <Label htmlFor="from-currency" className="text-xs">From Currency</Label>
-            <Select value={fromCurrency} onValueChange={setFromCurrency}>
+            <Label htmlFor="from-currency" className="text-xs">From Asset</Label>
+            <Select value={fromCurrency} onValueChange={handleFromCurrencyChange}>
               <SelectTrigger id="from-currency">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {COMMON_CURRENCIES.map(currency => (
-                  <SelectItem key={currency.code} value={currency.code}>
+                {COMMON_RATE_ASSETS.map(currency => (
+                  <SelectItem key={currency.code} value={currency.code} disabled={!isSupportedRatePair(currency.code, toCurrency)}>
                     {currency.code} - {currency.name}
                   </SelectItem>
                 ))}
@@ -122,21 +139,21 @@ export function AlertForm({ onSubmit, currentRate, currencyPair }: AlertFormProp
 
           {/* To Currency */}
           <div className="space-y-2">
-            <Label htmlFor="to-currency" className="text-xs">To Currency</Label>
-            <Select value={toCurrency} onValueChange={setToCurrency}>
+            <Label htmlFor="to-currency" className="text-xs">To Asset</Label>
+            <Select value={toCurrency} onValueChange={handleToCurrencyChange}>
               <SelectTrigger id="to-currency">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {COMMON_CURRENCIES.map(currency => (
-                  <SelectItem key={currency.code} value={currency.code}>
+                {COMMON_RATE_ASSETS.map(currency => (
+                  <SelectItem key={currency.code} value={currency.code} disabled={!isSupportedRatePair(fromCurrency, currency.code)}>
                     {currency.code} - {currency.name}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            {sameCurrencyError && (
-              <p className="text-xs text-destructive">Currencies must be different</p>
+            {pairError && (
+              <p className="text-xs text-destructive">Choose two different, non-equivalent assets.</p>
             )}
           </div>
 
@@ -163,7 +180,7 @@ export function AlertForm({ onSubmit, currentRate, currencyPair }: AlertFormProp
               <Input
                 id="threshold"
                 type="number"
-                step="0.01"
+                step="any"
                 placeholder="35.00"
                 value={threshold}
                 onChange={(e) => setThreshold(e.target.value)}
@@ -184,7 +201,12 @@ export function AlertForm({ onSubmit, currentRate, currencyPair }: AlertFormProp
             </div>
             {currentRate && (
               <p className="text-xs text-muted-foreground">
-                Current rate: {currentRate.toFixed(2)}
+                Current rate: {formatRate(currentRate)}
+              </p>
+            )}
+            {(fromCurrency === 'THG' || toCurrency === 'THG') && (
+              <p className="text-xs text-amber-700 dark:text-amber-300">
+                THG alerts use a derived reference price, not a Thai retail buy or sell quote.
               </p>
             )}
           </div>

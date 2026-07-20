@@ -3,6 +3,7 @@
 import { Badge } from "@/components/ui/badge";
 import type { ThresholdBand } from "@/lib/dynamic-analysis";
 import { getBandBorderColor, getBandBgColor, getBadgeClassBold } from "@/lib/band-styles";
+import { formatRate } from "@/lib/rate-format";
 
 interface HeroBandCardProps {
   band: ThresholdBand | null;
@@ -43,8 +44,8 @@ export function HeroBandCard({
       )}
       {band.range.min !== null && band.range.max !== null && (
         <p className="text-xs text-muted-foreground mt-2">
-          {fromCurrency}/{toCurrency} range: {band.range.min.toFixed(4)} —{" "}
-          {band.range.max.toFixed(4)}
+          {fromCurrency}/{toCurrency} range: {formatRate(band.range.min)} —{" "}
+          {formatRate(band.range.max)}
         </p>
       )}
     </div>

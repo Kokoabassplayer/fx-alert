@@ -9,6 +9,7 @@ import { type PairAnalysisData } from '@/lib/dynamic-analysis';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Terminal, Info, Lightbulb } from 'lucide-react';
 import { useIsMobile } from "@/hooks/use-is-mobile";
+import { formatRate as formatAdaptiveRate } from '@/lib/rate-format';
 
 interface AnalysisDisplayProps {
   fromCurrency: string | null;
@@ -95,7 +96,7 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
   const { trend_summary, distribution_statistics, threshold_bands } = pairAnalysisData;
   const stats = distribution_statistics; // Alias for convenience
 
-  const formatRate = (rate: number | null | undefined) => rate?.toFixed(4) || 'N/A';
+  const formatRate = (rate: number | null | undefined) => formatAdaptiveRate(rate);
   const formatPercent = (value: number | null | undefined) => value !== null && value !== undefined ? `≈ ${(value * 100).toFixed(1)} %` : 'N/A';
 
 

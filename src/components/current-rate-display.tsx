@@ -29,6 +29,12 @@ import {
 } from "@/lib/bands";
 import { type PairAnalysisData, type ThresholdBand } from '@/lib/dynamic-analysis'; // Import new types
 import { getBadgeClassSoft } from '@/lib/band-styles';
+import {
+  getCompatibleFallbackAsset,
+  isGoldAsset,
+  isSupportedRatePair,
+} from '@/lib/rate-assets';
+import { formatRate } from '@/lib/rate-format';
 
 interface CurrentRateDisplayProps {
   alertPrefs: AlertPrefs;
@@ -79,15 +85,9 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
       if (currencies) {
         setAvailableCurrencies(currencies);
         onCurrenciesChange?.(currencies);
-        if (!currencies[toCurrency] || fromCurrency === toCurrency) {
-          const validKeys = Object.keys(currencies);
-          if (validKeys.length > 0) {
-            let newTo = validKeys.find(k => k !== fromCurrency);
-            if (!newTo && validKeys.length > 0) newTo = validKeys[0];
-            if (newTo && newTo !== toCurrency) {
-              onToCurrencyChange(newTo);
-            }
-          }
+        if (!currencies[toCurrency] || !isSupportedRatePair(fromCurrency, toCurrency)) {
+          const newTo = getCompatibleFallbackAsset(fromCurrency, currencies);
+          if (newTo && newTo !== toCurrency) onToCurrencyChange(newTo);
         }
       } else {
         toast({
@@ -103,14 +103,16 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
   // Effect for fetching the current rate (remains largely the same)
   const fetchRate = useCallback(async (currentFrom: string, currentTo: string) => {
     setIsLoading(true);
+    setCurrentRateData(null);
+    onRateDataChange?.(null);
     // Ensure from and to are different before fetching
     // This check is important here even if parent tries to manage it, as a safeguard
-    if (currentFrom === currentTo) {
+    if (!isSupportedRatePair(currentFrom, currentTo)) {
       if (Object.keys(availableCurrencies || {}).length > 1) { // Only show toast if there are other options
         toast({
           title: "Invalid Selection",
-          description: "From and To currencies cannot be the same. Please select different currencies.",
-          variant: "warning",
+          description: "Choose two different, non-equivalent assets.",
+          variant: "default",
         });
       }
       setIsLoading(false);
@@ -123,6 +125,8 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
       setCurrentRateData(data);
       onRateDataChange?.(data);
     } else {
+      setCurrentRateData(null);
+      onRateDataChange?.(null);
       toast({
         title: "Error Fetching Rate",
         description: `Could not fetch the current ${currentFrom}/${currentTo} exchange rate. Please try again later.`,
@@ -130,19 +134,22 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
       });
     }
     setIsLoading(false);
-  }, [toast]); // availableCurrencies removed as it's not directly used for decision here, only for initial setup
+  }, [availableCurrencies, onRateDataChange, toast]);
 
   useEffect(() => {
-    if (fromCurrency && toCurrency && fromCurrency !== toCurrency) {
+    if (isSupportedRatePair(fromCurrency, toCurrency)) {
       fetchRate(fromCurrency, toCurrency); // Use props directly
       const intervalId = setInterval(() => fetchRate(fromCurrency, toCurrency), REFRESH_INTERVAL_MS);
       return () => clearInterval(intervalId);
-    } else if (fromCurrency && toCurrency && fromCurrency === toCurrency) {
+    } else if (fromCurrency && toCurrency) {
       // If they are the same, clear current rate data and loading state, as fetchRate won't run
       setCurrentRateData(null);
+      onRateDataChange?.(null);
+      setCurrentDynamicBand(null);
+      onBandChange?.(null);
       setIsLoading(false);
     }
-  }, [fetchRate, fromCurrency, toCurrency]);
+  }, [fetchRate, fromCurrency, onBandChange, onRateDataChange, toCurrency]);
 
   // useEffect to classify the current rate against dynamic bands
   useEffect(() => {
@@ -211,11 +218,11 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
 
 
       if (staticBandForToast && staticBandForToast.name && alertPrefs[staticBandForToast.name]) {
-        const currentBandName = staticBandForToast.name;
+        const currentBandName = String(staticBandForToast.name);
         if (currentBandName !== prevBandRef.current && ['EXTREME_LOW', 'EXTREME_HIGH', 'LOW', 'HIGH'].includes(currentBandName)) { // Example levels
            toast({
               title: `Rate Alert: ${staticBandForToast.displayName} Zone!`,
-              description: `${fromCurrency}/${toCurrency} at ${rate.toFixed(4)}. Suggestion: ${staticBandForToast.action}`,
+              description: `${fromCurrency}/${toCurrency} at ${formatRate(rate)}. Suggestion: ${staticBandForToast.action}`,
               variant: (currentBandName === 'EXTREME_LOW' || currentBandName === 'EXTREME_HIGH') ? 'destructive' : 'default',
               // className: staticBandForToast.colorConfig.toastClass // This needs to be mapped if using dynamic levels
            });
@@ -237,7 +244,7 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
     onAlertPrefsChange({ ...alertPrefs, [bandName]: checked });
   };
 
-  const displayRate = rate !== undefined ? rate.toFixed(4) : "N/A";
+  const displayRate = formatRate(rate);
   const rateColorClass = currentDynamicBand ? "text-foreground" : "text-muted-foreground";
 
   const formatLastUpdatedDate = (date: Date | null): string => {
@@ -250,10 +257,15 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
   };
 
   const getDataSourceLabel = (): string => {
+    if (dataSource === 'frankfurter-derived') return 'Derived reference';
+    if (dataSource === 'frankfurter-v2') return 'Gold reference';
     return 'Daily';
   };
 
   const getDataSourceBadgeClass = (): string => {
+    if (dataSource === 'frankfurter-derived') {
+      return 'bg-amber-100 text-amber-800 border-amber-300';
+    }
     return 'bg-blue-100 text-blue-800 border-blue-300';
   };
 
@@ -263,20 +275,16 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
       <CardHeader className="bg-card/50">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <CardTitle className="text-primary flex-shrink-0">
-            {fromCurrency} / {toCurrency} Exchange Rate
+            {fromCurrency} / {toCurrency} {isGoldAsset(fromCurrency) || isGoldAsset(toCurrency) ? 'Reference Rate' : 'Exchange Rate'}
           </CardTitle>
           {isLoading && !currentRateData && <Loader2 className="h-5 w-5 animate-spin text-primary sm:ml-auto" />}
           <div className="flex gap-2 items-center mt-2 sm:mt-0 flex-wrap sm:flex-nowrap">
             <Select 
               value={fromCurrency} 
               onValueChange={(newFromValue) => {
-                if (newFromValue === toCurrency) {
-                  // If selected 'from' is same as current 'to', try to change 'to'
-                  const otherCurrencies = Object.keys(availableCurrencies || {}).filter(c => c !== newFromValue);
-                  if (otherCurrencies.length > 0) {
-                    onToCurrencyChange(otherCurrencies[0]); // Suggest new 'to'
-                  }
-                  // If no other currencies, parent will handle (or fetchRate will block)
+                if (!isSupportedRatePair(newFromValue, toCurrency) && availableCurrencies) {
+                  const fallback = getCompatibleFallbackAsset(newFromValue, availableCurrencies);
+                  if (fallback) onToCurrencyChange(fallback);
                 }
                 onFromCurrencyChange(newFromValue);
               }}
@@ -286,7 +294,7 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
               </SelectTrigger>
               <SelectContent>
                 {availableCurrencies && Object.entries(availableCurrencies).map(([code, name]) => (
-                  <SelectItem key={code} value={code} textValue={code} disabled={code === toCurrency && Object.keys(availableCurrencies || {}).length > 1}>
+                  <SelectItem key={code} value={code} textValue={code} disabled={!isSupportedRatePair(code, toCurrency)}>
                     {code} - {name}
                   </SelectItem>
                 ))}
@@ -296,13 +304,9 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
             <Select 
               value={toCurrency} 
               onValueChange={(newToValue) => {
-                if (newToValue === fromCurrency) {
-                  // If selected 'to' is same as current 'from', try to change 'from'
-                  const otherCurrencies = Object.keys(availableCurrencies || {}).filter(c => c !== newToValue);
-                  if (otherCurrencies.length > 0) {
-                     onFromCurrencyChange(otherCurrencies[0]); // Suggest new 'from'
-                  }
-                  // If no other currencies, parent will handle (or fetchRate will block)
+                if (!isSupportedRatePair(fromCurrency, newToValue) && availableCurrencies) {
+                  const fallback = getCompatibleFallbackAsset(newToValue, availableCurrencies);
+                  if (fallback) onFromCurrencyChange(fallback);
                 }
                 onToCurrencyChange(newToValue);
               }}
@@ -312,7 +316,7 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
               </SelectTrigger>
               <SelectContent>
                 {availableCurrencies && Object.entries(availableCurrencies).map(([code, name]) => (
-                  <SelectItem key={code} value={code} textValue={code} disabled={code === fromCurrency && Object.keys(availableCurrencies || {}).length > 1}>
+                  <SelectItem key={code} value={code} textValue={code} disabled={!isSupportedRatePair(fromCurrency, code)}>
                     {code} - {name}
                   </SelectItem>
                 ))}
@@ -354,7 +358,7 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
                   <div className="text-left sm:text-right mt-1 sm:mt-0">
                      {currentDynamicBand.range.min !== null && currentDynamicBand.range.max !== null && (
                        <p className="text-xs text-muted-foreground">
-                         Range: {currentDynamicBand.range.min.toFixed(4)} - {currentDynamicBand.range.max.toFixed(4)}
+                         Range: {formatRate(currentDynamicBand.range.min)} - {formatRate(currentDynamicBand.range.max)}
                        </p>
                      )}
                     {currentDynamicBand.probability !== null && (
@@ -392,7 +396,7 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
                      <>
                        <Info className="h-8 w-8 text-muted-foreground/50" />
                        <p>Rate band information will appear here.</p>
-                       { !currentDynamicBand && rate !== undefined && <p className="text-xs">Current rate {rate.toFixed(4)} not falling into defined bands.</p> }
+                       { !currentDynamicBand && rate !== undefined && <p className="text-xs">Current rate {formatRate(rate)} not falling into defined bands.</p> }
                      </>
                  }
                 </div>
@@ -400,6 +404,11 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
           </div>
         </div>
       </CardContent>
+      {(fromCurrency === 'THG' || toCurrency === 'THG') && (
+        <CardFooter className="bg-amber-50/60 dark:bg-amber-950/20 text-xs text-muted-foreground">
+          THG is a derived reference for one 96.5% Thai gold bar baht-weight (15.244 g), calculated from XAU. It is not a Gold Traders Association retail buy or sell price.
+        </CardFooter>
+      )}
       {/* 
         The CardFooter containing the "Alert & Chart Band Preferences" has been removed 
         as per the user's request because these settings are no longer needed.

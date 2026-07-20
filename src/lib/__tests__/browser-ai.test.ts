@@ -18,7 +18,7 @@ describe('generateTemplateInsight', () => {
     expect(result).toContain('31.98');
     expect(result).toContain('34.08');
     expect(result).toMatch(/\d+\.\d+%/);
-    expect(result).toMatch(/\d+ fewer THB/);
+    expect(result).toMatch(/[\d,.]+ fewer THB/);
   });
 
   test('says "below" when current rate is below mean', () => {

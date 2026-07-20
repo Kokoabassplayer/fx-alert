@@ -1,4 +1,12 @@
 import { fetchFrankfurterRate, FRANKFURTER_API_BASE_URL } from './frankfurter-api';
+import { fetchFrankfurterV2History, fetchFrankfurterV2Rate } from './frankfurter-v2-api';
+import {
+  appendGoldAssets,
+  applyNormalizedGoldRate,
+  isGoldAsset,
+  isSupportedRatePair,
+  normalizeGoldPair,
+} from './rate-assets';
 import { trackError } from './analytics';
 
 const API_BASE_URL = FRANKFURTER_API_BASE_URL;
@@ -18,7 +26,7 @@ export interface CurrentRateResponse {
 export interface RealTimeRateResponse {
   rate: number;
   timestamp: number;
-  source: 'frankfurter';
+  source: 'frankfurter' | 'frankfurter-v2' | 'frankfurter-derived';
   date: string;
   fromCurrency: string;
   toCurrency: string;
@@ -49,6 +57,17 @@ export interface MonthlyAggregatedRate {
 
 
 export async function fetchCurrentRate(from: string, to: string): Promise<CurrentRateResponse | null> {
+  if (isGoldAsset(from) || isGoldAsset(to)) {
+    const goldRate = await fetchRealTimeRate(from, to);
+    if (!goldRate) return null;
+    return {
+      amount: 1,
+      base: from,
+      date: goldRate.date,
+      rates: { [to]: goldRate.rate },
+    };
+  }
+
   try {
     // Add a cache-busting query parameter
     const timestamp = Date.now();
@@ -107,6 +126,26 @@ export async function fetchRealTimeRate(
   from: string,
   to: string
 ): Promise<RealTimeRateResponse | null> {
+  if (!isSupportedRatePair(from, to)) return null;
+
+  if (isGoldAsset(from) || isGoldAsset(to)) {
+    const normalizedPair = normalizeGoldPair(from, to);
+    const goldRate = await fetchFrankfurterV2Rate(
+      normalizedPair.apiFrom,
+      normalizedPair.apiTo,
+    );
+    if (!goldRate) return null;
+
+    return {
+      rate: applyNormalizedGoldRate(goldRate.rate, normalizedPair),
+      timestamp: new Date(`${goldRate.date}T00:00:00Z`).getTime(),
+      source: normalizedPair.derived ? 'frankfurter-derived' : 'frankfurter-v2',
+      date: goldRate.date,
+      fromCurrency: from,
+      toCurrency: to,
+    };
+  }
+
   // Use Frankfurter API (supports CORS, no auth needed)
   const apiRate = await fetchFrankfurterRate(from, to);
   if (apiRate) {
@@ -128,6 +167,8 @@ function formatDateForApi(date: Date): string {
 }
 
 export async function fetchRateHistory(from: string, to: string, days: number = 90): Promise<FormattedHistoricalRate[]> {
+  if (!isSupportedRatePair(from, to)) return [];
+
   const today = new Date();
   let startDate: string;
 
@@ -145,6 +186,20 @@ export async function fetchRateHistory(from: string, to: string, days: number = 
   if (new Date(startDate) > new Date(endDate)) {
     console.warn(`Start date ${startDate} is after end date ${endDate} for ${from}-${to}. Returning empty history.`);
     return [];
+  }
+
+  if (isGoldAsset(from) || isGoldAsset(to)) {
+    const normalizedPair = normalizeGoldPair(from, to);
+    const history = await fetchFrankfurterV2History(
+      normalizedPair.apiFrom,
+      normalizedPair.apiTo,
+      startDate,
+      endDate,
+    );
+    return history.map(({ date, rate }) => ({
+      date,
+      rate: applyNormalizedGoldRate(rate, normalizedPair),
+    }));
   }
   
   const apiUrl = `${API_BASE_URL}/${startDate}..${endDate}?from=${from}&to=${to}`;
@@ -280,7 +335,7 @@ export async function fetchAvailableCurrencies(): Promise<{ [key: string]: strin
         return null;
       }
     }
-    return data as { [key: string]: string };
+    return appendGoldAssets(data as { [key: string]: string });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     console.error("Generic error fetching available currencies:", error);

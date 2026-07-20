@@ -1,6 +1,7 @@
 // src/lib/dynamic-analysis.ts
 
 import { fetchRateHistory, FormattedHistoricalRate } from './currency-api';
+import { formatRate } from './rate-format';
 
 // Define a type similar to the structure of full_analysis.json
 // This will be the return type of our main analysis function.
@@ -130,17 +131,17 @@ function generateTrendSummary(
     const lastRate = rates[rates.length - 1].rate;
     const firstDate = rates[0].date;
     const lastDate = rates[rates.length - 1].date;
-    let desc = `Rate changed from ${firstRate.toFixed(4)} to ${lastRate.toFixed(4)}.`;
+    let desc = `Rate changed from ${formatRate(firstRate)} to ${formatRate(lastRate)}.`;
 
     // Check for stability (e.g., less than 1% change)
     if (Math.abs(firstRate - lastRate) < firstRate * 0.01) {
-      desc = `Rate remained relatively stable around ${firstRate.toFixed(4)}.`;
+      desc = `Rate remained relatively stable around ${formatRate(firstRate)}.`;
     } else if (lastRate > firstRate) {
       const percChange = ((lastRate - firstRate) / firstRate) * 100;
-      desc = `Rate increased by ${percChange.toFixed(1)}% from ${firstRate.toFixed(4)} to ${lastRate.toFixed(4)}.`;
+      desc = `Rate increased by ${percChange.toFixed(1)}% from ${formatRate(firstRate)} to ${formatRate(lastRate)}.`;
     } else {
       const percChange = ((firstRate - lastRate) / firstRate) * 100; // Positive value for decrease
-      desc = `Rate decreased by ${percChange.toFixed(1)}% from ${firstRate.toFixed(4)} to ${lastRate.toFixed(4)}.`;
+      desc = `Rate decreased by ${percChange.toFixed(1)}% from ${formatRate(firstRate)} to ${formatRate(lastRate)}.`;
     }
     return [{ period: `${firstDate} to ${lastDate}`, description: desc }];
   }
@@ -179,16 +180,16 @@ function generateTrendSummary(
     let description = '';
 
     if (previousSegmentAvgRate === null) {
-      description = `Initial period average rate around ${currentSegmentAvgRate.toFixed(4)}.`;
+      description = `Initial period average rate around ${formatRate(currentSegmentAvgRate)}.`;
     } else {
       // Calculate percentage change relative to the previous segment's average
       const changePercent = ((currentSegmentAvgRate - previousSegmentAvgRate) / previousSegmentAvgRate) * 100;
       if (Math.abs(changePercent) < 2) { // Less than 2% change considered stable
-        description = `Remained relatively stable from previous period, average ${currentSegmentAvgRate.toFixed(4)}.`;
+        description = `Remained relatively stable from previous period, average ${formatRate(currentSegmentAvgRate)}.`;
       } else if (changePercent > 0) {
-        description = `Rose by ${changePercent.toFixed(1)}% from previous period to an average of ${currentSegmentAvgRate.toFixed(4)}.`;
+        description = `Rose by ${changePercent.toFixed(1)}% from previous period to an average of ${formatRate(currentSegmentAvgRate)}.`;
       } else { // changePercent < 0
-        description = `Fell by ${Math.abs(changePercent).toFixed(1)}% from previous period to an average of ${currentSegmentAvgRate.toFixed(4)}.`;
+        description = `Fell by ${Math.abs(changePercent).toFixed(1)}% from previous period to an average of ${formatRate(currentSegmentAvgRate)}.`;
       }
     }
     trendPeriods.push({ period: periodStr, description });
