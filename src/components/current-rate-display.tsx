@@ -73,6 +73,7 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
 
   // Internal state for availableCurrencies is still needed
   const [availableCurrencies, setAvailableCurrencies] = useState<{ [key: string]: string } | null>(null);
+  const availableCurrenciesRef = useRef<{ [key: string]: string }>({});
 
   const rate = currentRateData?.rate;
   const lastUpdated = currentRateData?.timestamp ? new Date(currentRateData.timestamp) : null;
@@ -83,6 +84,7 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
     const getAvailableCurrencies = async () => {
       const currencies = await fetchAvailableCurrencies();
       if (currencies) {
+        availableCurrenciesRef.current = currencies;
         setAvailableCurrencies(currencies);
         onCurrenciesChange?.(currencies);
         if (!currencies[toCurrency] || !isSupportedRatePair(fromCurrency, toCurrency)) {
@@ -108,7 +110,7 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
     // Ensure from and to are different before fetching
     // This check is important here even if parent tries to manage it, as a safeguard
     if (!isSupportedRatePair(currentFrom, currentTo)) {
-      if (Object.keys(availableCurrencies || {}).length > 1) { // Only show toast if there are other options
+      if (Object.keys(availableCurrenciesRef.current).length > 1) { // Only show toast if there are other options
         toast({
           title: "Invalid Selection",
           description: "Choose two different, non-equivalent assets.",
@@ -134,7 +136,7 @@ const CurrentRateDisplay: FC<CurrentRateDisplayProps> = ({
       });
     }
     setIsLoading(false);
-  }, [availableCurrencies, onRateDataChange, toast]);
+  }, [onRateDataChange, toast]);
 
   useEffect(() => {
     if (isSupportedRatePair(fromCurrency, toCurrency)) {
