@@ -93,6 +93,7 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({
   const [chartDataRequestKey, setChartDataRequestKey] = useState<string | null>(null);
   const chartRequestKey = `${fromCurrency}|${toCurrency}|${selectedPeriodDays}`;
   const activeChartData = chartDataRequestKey === chartRequestKey ? chartData : [];
+  const hasValidPair = Boolean(fromCurrency && toCurrency && fromCurrency !== toCurrency);
 
   // Clear tapped point when dataset changes (currency pair or period)
   useEffect(() => {
@@ -107,6 +108,7 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({
     }
   }, [activeChartData]);
   const [isLoading, setIsLoading] = useState(false); // For historical data fetch
+  const isChartLoading = hasValidPair && (isLoading || chartDataRequestKey !== chartRequestKey);
   const { toast } = useToast();
   // const [selectedPeriod, setSelectedPeriod] = useState<string>("90"); // Remove internal period state
 
@@ -180,7 +182,7 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({
           setChartDataRequestKey(chartRequestKey);
         } else {
           setChartData([]);
-          setChartDataRequestKey(null);
+          setChartDataRequestKey(chartRequestKey);
           if (selectedPeriodDays !== 0) {
             toast({
               title: "No Data",
@@ -192,7 +194,10 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({
       } catch {
         // The history client fails closed. Keep this guard for unexpected errors
         // so a stale or rejected request cannot repopulate the chart.
-        if (isCurrentRequest) setChartData([]);
+        if (isCurrentRequest) {
+          setChartData([]);
+          setChartDataRequestKey(chartRequestKey);
+        }
       } finally {
         if (isCurrentRequest) setIsLoading(false);
       }
@@ -340,11 +345,11 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({
             )}
           </div>
         )}
-        {(isLoading && activeChartData.length === 0) ? (
+        {(isChartLoading && activeChartData.length === 0) ? (
           <div className="h-[350px] flex items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
-        ) : activeChartData.length === 0 && !isLoading ? (
+        ) : activeChartData.length === 0 && !isChartLoading ? (
           <div className="h-[350px] flex items-center justify-center text-muted-foreground text-center px-4">
             {fromCurrency && toCurrency && fromCurrency !== toCurrency ? 
               `No historical data to display for ${fromCurrency}/${toCurrency} for the selected period.` :
