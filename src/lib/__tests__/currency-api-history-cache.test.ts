@@ -3,6 +3,7 @@ import {
   clearRateHistoryCache,
   fetchRateHistory,
 } from '../currency-api';
+import { THAI_GOLD_XAU_FACTOR } from '../rate-assets';
 
 const mockFetch = jest.fn();
 
@@ -42,6 +43,25 @@ describe('historical rate request sharing', () => {
 
     expect(mockFetch).toHaveBeenCalledTimes(1);
     expect(chartData).toEqual(secondChartData);
+    expect(analysisData?.distribution_statistics.sample_days).toBe(2);
+  });
+
+  test('concurrent gold chart and analysis consumers issue one v2 request', async () => {
+    mockFetch.mockResolvedValue(jsonResponse([
+      { date: '2026-07-17', base: 'XAU', quote: 'THB', rate: 140000 },
+      { date: '2026-07-18', base: 'XAU', quote: 'THB', rate: 141000 },
+    ]));
+
+    const [chartData, analysisData, secondChartData] = await Promise.all([
+      fetchRateHistory('THG', 'THB', 30),
+      generatePairAnalysis('THG', 'THB', 30),
+      fetchRateHistory('THG', 'THB', 30),
+    ]);
+
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(String(mockFetch.mock.calls[0][0])).toContain('/v2/rates?base=XAU&quotes=THB');
+    expect(chartData).toEqual(secondChartData);
+    expect(chartData[0].rate).toBeCloseTo(140000 * THAI_GOLD_XAU_FACTOR, 8);
     expect(analysisData?.distribution_statistics.sample_days).toBe(2);
   });
 
