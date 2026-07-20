@@ -335,7 +335,8 @@ export function fetchRateHistory(
   const cachedRequest = rateHistoryCache.get(request.cacheKey);
   if (cachedRequest) return cachedRequest;
 
-  const pendingRequest = fetchRateHistoryUncached(request)
+  let pendingRequest: Promise<FormattedHistoricalRate[]>;
+  pendingRequest = fetchRateHistoryUncached(request)
     .catch((error: unknown) => {
       const message = error instanceof Error ? error.message : 'Unknown error';
       console.error(`Unexpected error fetching ${from}-${to} rate history:`, error);
@@ -346,7 +347,12 @@ export function fetchRateHistory(
       // Empty responses represent an unavailable or invalid upstream result. Do not
       // cache them so a later attempt can recover, while concurrent callers still
       // share this in-flight promise.
-      if (history.length === 0) rateHistoryCache.delete(request.cacheKey);
+      if (
+        history.length === 0 &&
+        rateHistoryCache.get(request.cacheKey) === pendingRequest
+      ) {
+        rateHistoryCache.delete(request.cacheKey);
+      }
       return history;
     });
 

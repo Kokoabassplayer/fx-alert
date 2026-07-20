@@ -16,6 +16,14 @@ function jsonResponse(data: unknown, ok = true, status = 200): Response {
   } as unknown as Response;
 }
 
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>(resolvePromise => {
+    resolve = resolvePromise;
+  });
+  return { promise, resolve };
+}
+
 describe('historical rate request sharing', () => {
   beforeEach(() => {
     mockFetch.mockReset();
@@ -87,6 +95,27 @@ describe('historical rate request sharing', () => {
 
     await expect(fetchRateHistory('USD', 'THB', 31)).resolves.toEqual([]);
     await expect(fetchRateHistory('USD', 'THB', 31)).resolves.toEqual([]);
+
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+
+  test('does not let a cleared empty request evict its replacement', async () => {
+    const oldResponse = deferred<Response>();
+    mockFetch
+      .mockReturnValueOnce(oldResponse.promise)
+      .mockResolvedValueOnce(jsonResponse({
+        amount: 1,
+        base: 'USD',
+        rates: { '2026-07-18': { THB: 32.5 } },
+      }));
+
+    const staleRequest = fetchRateHistory('USD', 'THB', 30);
+    clearRateHistoryCache();
+    await fetchRateHistory('USD', 'THB', 30);
+
+    oldResponse.resolve(jsonResponse({ amount: 1, base: 'USD', rates: {} }));
+    await staleRequest;
+    await fetchRateHistory('USD', 'THB', 30);
 
     expect(mockFetch).toHaveBeenCalledTimes(2);
   });
