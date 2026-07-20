@@ -4,6 +4,10 @@ import HistoryChartDisplay from '../history-chart-display';
 import { fetchRateHistory, type FormattedHistoricalRate } from '@/lib/currency-api';
 import { DEFAULT_ALERT_PREFS } from '@/lib/bands';
 
+type HistoryChartTestGlobal = typeof globalThis & {
+  __historyChartRenderedRates?: string[];
+};
+
 jest.mock('@/lib/currency-api', () => ({
   fetchRateHistory: jest.fn(),
 }));
@@ -31,11 +35,15 @@ jest.mock('recharts', () => {
   return {
     ResponsiveContainer: passthrough,
     LineChart: ({ data, children }: { data: FormattedHistoricalRate[]; children?: ReactNode }) =>
-      React.createElement(
-        'div',
-        { 'data-testid': 'history-chart', 'data-rates': data.map(point => point.rate).join(',') },
-        children,
-      ),
+      (() => {
+        const testGlobal = globalThis as HistoryChartTestGlobal;
+        (testGlobal.__historyChartRenderedRates ??= []).push(data.map(point => point.rate).join(','));
+        return React.createElement(
+          'div',
+          { 'data-testid': 'history-chart', 'data-rates': data.map(point => point.rate).join(',') },
+          children,
+        );
+      })(),
     Line: () => null,
     XAxis: () => null,
     YAxis: () => null,
@@ -59,9 +67,15 @@ const baseProps = {
   pairAnalysisData: null,
 };
 
+function renderedRates() {
+  const testGlobal = globalThis as HistoryChartTestGlobal;
+  return (testGlobal.__historyChartRenderedRates ??= []);
+}
+
 describe('HistoryChartDisplay stale history protection', () => {
   beforeEach(() => {
     mockFetchRateHistory.mockReset();
+    renderedRates().length = 0;
   });
 
   test.each([
@@ -112,5 +126,50 @@ describe('HistoryChartDisplay stale history protection', () => {
       await nextRequest.promise;
     });
     expect(screen.getByTestId('history-chart').getAttribute('data-rates')).toBe('2');
+  });
+
+  test.each([
+    { change: 'pair', nextFromCurrency: 'EUR', nextPeriodDays: 30 },
+    { change: 'period', nextFromCurrency: 'USD', nextPeriodDays: 60 },
+  ])('does not render the previous dataset during a $change change', async ({ nextFromCurrency, nextPeriodDays }) => {
+    const oldRequest = deferred<FormattedHistoricalRate[]>();
+    const nextRequest = deferred<FormattedHistoricalRate[]>();
+    mockFetchRateHistory
+      .mockReturnValueOnce(oldRequest.promise)
+      .mockReturnValueOnce(nextRequest.promise);
+
+    const { rerender } = render(
+      <HistoryChartDisplay
+        {...baseProps}
+        fromCurrency="USD"
+        toCurrency="THB"
+        selectedPeriodDays={30}
+      />,
+    );
+
+    await act(async () => {
+      oldRequest.resolve([{ date: '2026-07-17', rate: 1 }]);
+      await oldRequest.promise;
+    });
+    const rendersWithOldData = renderedRates().filter(rates => rates === '1').length;
+    expect(rendersWithOldData).toBeGreaterThan(0);
+
+    await act(async () => {
+      rerender(
+        <HistoryChartDisplay
+          {...baseProps}
+          fromCurrency={nextFromCurrency}
+          toCurrency="THB"
+          selectedPeriodDays={nextPeriodDays}
+        />,
+      );
+    });
+
+    expect(renderedRates().filter(rates => rates === '1')).toHaveLength(rendersWithOldData);
+
+    await act(async () => {
+      nextRequest.resolve([{ date: '2026-07-18', rate: 2 }]);
+      await nextRequest.promise;
+    });
   });
 });
