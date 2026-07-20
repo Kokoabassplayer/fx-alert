@@ -1,4 +1,5 @@
 import {
+  clearRateHistoryCache,
   fetchAvailableCurrencies,
   fetchCurrentRate,
   fetchRateHistory,
@@ -21,6 +22,7 @@ describe('gold rate routing', () => {
   beforeEach(() => {
     mockFetch.mockReset();
     global.fetch = mockFetch;
+    clearRateHistoryCache();
   });
 
   test('keeps ordinary fiat pairs on Frankfurter v1', async () => {
@@ -115,6 +117,21 @@ describe('gold rate routing', () => {
       { date: '2026-07-01', rate: 140000 * THAI_GOLD_XAU_FACTOR },
       { date: '2026-07-03', rate: 141000 * THAI_GOLD_XAU_FACTOR },
     ]);
+  });
+
+  test('keeps XAU, THG, and inverse history conversions isolated in the cache', async () => {
+    mockFetch.mockResolvedValue(jsonResponse([
+      { date: '2026-07-01', base: 'XAU', quote: 'THB', rate: 140000 },
+    ]));
+
+    const xauToThb = await fetchRateHistory('XAU', 'THB', 30);
+    const thgToThb = await fetchRateHistory('THG', 'THB', 30);
+    const thbToThg = await fetchRateHistory('THB', 'THG', 30);
+
+    expect(mockFetch).toHaveBeenCalledTimes(3);
+    expect(xauToThb[0].rate).toBe(140000);
+    expect(thgToThb[0].rate).toBeCloseTo(140000 * THAI_GOLD_XAU_FACTOR, 8);
+    expect(thbToThg[0].rate).toBeCloseTo((1 / 140000) / THAI_GOLD_XAU_FACTOR, 12);
   });
 
   test('fails closed for invalid gold pairs and malformed v2 payloads', async () => {

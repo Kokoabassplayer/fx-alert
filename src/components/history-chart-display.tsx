@@ -90,6 +90,10 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({
   const isMobile = useIsMobile();
   const [tappedPoint, setTappedPoint] = useState<{ date: string; rate: number } | null>(null);
   const [chartData, setChartData] = useState<FormattedHistoricalRate[]>([]);
+  const [chartDataRequestKey, setChartDataRequestKey] = useState<string | null>(null);
+  const chartRequestKey = `${fromCurrency}|${toCurrency}|${selectedPeriodDays}`;
+  const activeChartData = chartDataRequestKey === chartRequestKey ? chartData : [];
+  const hasValidPair = Boolean(fromCurrency && toCurrency && fromCurrency !== toCurrency);
 
   // Clear tapped point when dataset changes (currency pair or period)
   useEffect(() => {
@@ -98,15 +102,15 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({
 
   // Default tapped point to the latest data point for mobile
   useEffect(() => {
-    if (chartData.length > 0 && !tappedPoint) {
-      const last = chartData[chartData.length - 1];
+    if (activeChartData.length > 0 && !tappedPoint) {
+      const last = activeChartData[activeChartData.length - 1];
       setTappedPoint({ date: last.date, rate: last.rate });
     }
-  }, [chartData]);
+  }, [activeChartData]);
   const [isLoading, setIsLoading] = useState(false); // For historical data fetch
+  const isChartLoading = hasValidPair && (isLoading || chartDataRequestKey !== chartRequestKey);
   const { toast } = useToast();
   // const [selectedPeriod, setSelectedPeriod] = useState<string>("90"); // Remove internal period state
-  const [chartBands, setChartBands] = useState<BandDefinition[]>([]); // For dynamic chart bands
 
   const handleChartClick = useCallback((payload: any) => {
     if (isMobile && payload && payload.activePayload && payload.activePayload.length > 0) {
@@ -124,8 +128,7 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({
   //   return parseInt(selectedPeriod, 10);
   // }, [selectedPeriod]);
 
-  // useEffect to process dynamic threshold_bands into chartBands
-  useEffect(() => {
+  const chartBands = useMemo(() => {
     if (pairAnalysisData?.threshold_bands) {
       const newChartBands = pairAnalysisData.threshold_bands.map((dynamicBand: DynamicThresholdBand): BandDefinition => {
         const bandName = mapLevelToBandName(dynamicBand.level);
@@ -147,47 +150,73 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({
           colorConfig: colorConfig,
         };
       });
-      setChartBands(newChartBands);
-    } else {
-      setChartBands([]); // No dynamic data, so no bands on chart or use a fallback
+      return newChartBands;
     }
+    return [];
   }, [pairAnalysisData]);
 
 
   useEffect(() => {
-    const fetchData = async () => {
-      if (!fromCurrency || !toCurrency || fromCurrency === toCurrency) {
-        setChartData([]);
-        setIsLoading(false);
-        return;
-      }
-      setIsLoading(true);
-      // Use selectedPeriodDays prop directly for fetching data
-      const data = await fetchRateHistory(fromCurrency, toCurrency, selectedPeriodDays);
-      if (data.length > 0) {
-        setChartData(data);
-      } else {
-        setChartData([]);
-        if (selectedPeriodDays !== 0 && fromCurrency && toCurrency && fromCurrency !== toCurrency) {
-          toast({
-            title: "No Data",
-            description: `No historical data found for ${fromCurrency}/${toCurrency} for the selected period.`,
-            variant: "default",
-          });
-        }
-      }
+    let isCurrentRequest = true;
+
+    setChartData([]);
+    setChartDataRequestKey(null);
+
+    if (!fromCurrency || !toCurrency || fromCurrency === toCurrency) {
       setIsLoading(false);
+      return () => {
+        isCurrentRequest = false;
+      };
+    }
+
+    setIsLoading(true);
+
+    const fetchData = async () => {
+      try {
+        // Use selectedPeriodDays prop directly for fetching data
+        const data = await fetchRateHistory(fromCurrency, toCurrency, selectedPeriodDays);
+        if (!isCurrentRequest) return;
+
+        if (data.length > 0) {
+          setChartData(data);
+          setChartDataRequestKey(chartRequestKey);
+        } else {
+          setChartData([]);
+          setChartDataRequestKey(chartRequestKey);
+          if (selectedPeriodDays !== 0) {
+            toast({
+              title: "No Data",
+              description: `No historical data found for ${fromCurrency}/${toCurrency} for the selected period.`,
+              variant: "default",
+            });
+          }
+        }
+      } catch {
+        // The history client fails closed. Keep this guard for unexpected errors
+        // so a stale or rejected request cannot repopulate the chart.
+        if (isCurrentRequest) {
+          setChartData([]);
+          setChartDataRequestKey(chartRequestKey);
+        }
+      } finally {
+        if (isCurrentRequest) setIsLoading(false);
+      }
     };
+
     fetchData();
-  }, [selectedPeriodDays, fromCurrency, toCurrency, toast]); // Use selectedPeriodDays in dependency array
+
+    return () => {
+      isCurrentRequest = false;
+    };
+  }, [selectedPeriodDays, fromCurrency, toCurrency, toast, chartRequestKey]); // Use selectedPeriodDays in dependency array
 
 
   const yAxisDomain = useMemo(() => {
     let minDataRate: number | undefined = undefined;
     let maxDataRate: number | undefined = undefined;
 
-    if (chartData && chartData.length > 0) {
-      const rates = chartData.map(d => d.rate);
+    if (activeChartData && activeChartData.length > 0) {
+      const rates = activeChartData.map(d => d.rate);
       minDataRate = Math.min(...rates);
       maxDataRate = Math.max(...rates);
     }
@@ -240,7 +269,7 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({
 
     return [parseFloat((overallMin - padding).toFixed(decimals)), parseFloat((overallMax + padding).toFixed(decimals))] as [number, number];
 
-  }, [chartData, chartBands, alertPrefs, fromCurrency, toCurrency]); // Depends on chartBands now
+  }, [activeChartData, chartBands, alertPrefs, fromCurrency, toCurrency]); // Depends on chartBands now
 
 
   const CustomTooltip: FC<any> = ({ active, payload, label }) => {
@@ -281,15 +310,15 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({
     else if (selectedPeriodDays === (365 * 10)) periodDesc = "10-Year Trend";
     else if (selectedPeriodDays === -1) { // Max Available
         const apiDefaultStartYear = "2000"; // Frankfurter API typical start
-        const startYear = chartData.length > 0 ? new Date(chartData[0].date).getFullYear() : apiDefaultStartYear;
-        const endYear = chartData.length > 0 ? new Date(chartData[chartData.length -1].date).getFullYear() : new Date().getFullYear();
-        if (chartData.length === 0 && startYear.toString() === apiDefaultStartYear) return `Historical Trend (${pair})`; // Generic if no data yet for max
+        const startYear = activeChartData.length > 0 ? new Date(activeChartData[0].date).getFullYear() : apiDefaultStartYear;
+        const endYear = activeChartData.length > 0 ? new Date(activeChartData[activeChartData.length -1].date).getFullYear() : new Date().getFullYear();
+        if (activeChartData.length === 0 && startYear.toString() === apiDefaultStartYear) return `Historical Trend (${pair})`; // Generic if no data yet for max
         periodDesc = `Trend (${startYear} - ${endYear})`;
     } else {
         periodDesc = `Custom Period Trend (${selectedPeriodDays} days)`; // Fallback for other day counts
     }
     return `${periodDesc} for ${pair}`;
-  }, [selectedPeriodDays, chartData, fromCurrency, toCurrency]); // Use selectedPeriodDays in dependency array
+  }, [selectedPeriodDays, activeChartData, fromCurrency, toCurrency]); // Use selectedPeriodDays in dependency array
 
   return (
     <Card className="overflow-hidden shadow-lg rounded-xl">
@@ -305,7 +334,7 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({
       </CardHeader>
       <CardContent className="pt-6 pb-2 bg-background">
         {/* Mobile: tap-to-inspect info bar */}
-        {isMobile && chartData && chartData.length > 0 && (
+        {isMobile && activeChartData.length > 0 && (
           <div className="flex justify-between items-center px-4 py-1 text-sm text-muted-foreground border-b border-border/40">
             <span className="text-xs">Tap chart to inspect</span>
             {tappedPoint && (
@@ -316,11 +345,11 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({
             )}
           </div>
         )}
-        {(isLoading && (!chartData || chartData.length === 0)) ? (
+        {(isChartLoading && activeChartData.length === 0) ? (
           <div className="h-[350px] flex items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
-        ) : (!chartData || chartData.length === 0) && !isLoading ? (
+        ) : activeChartData.length === 0 && !isChartLoading ? (
           <div className="h-[350px] flex items-center justify-center text-muted-foreground text-center px-4">
             {fromCurrency && toCurrency && fromCurrency !== toCurrency ? 
               `No historical data to display for ${fromCurrency}/${toCurrency} for the selected period.` :
@@ -329,7 +358,7 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={isMobile ? 200 : 350}>
-            <LineChart data={chartData} margin={{ top: 5, right: isMobile ? 10 : 30, left: isMobile ? 5 : 25, bottom: 5 }} onClick={isMobile ? handleChartClick : undefined}>
+            <LineChart data={activeChartData} margin={{ top: 5, right: isMobile ? 10 : 30, left: isMobile ? 5 : 25, bottom: 5 }} onClick={isMobile ? handleChartClick : undefined}>
               <XAxis
                 dataKey="date"
                 tickFormatter={(value) => {

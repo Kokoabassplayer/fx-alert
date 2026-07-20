@@ -69,8 +69,11 @@ const UsdThbMonitorPage: FC = () => {
   }, []);
 
   const [pairAnalysisData, setPairAnalysisData] = useState<PairAnalysisData | null>(null);
+  const [pairAnalysisRequestKey, setPairAnalysisRequestKey] = useState<string | null>(null);
   const [isAnalysisLoading, setIsAnalysisLoading] = useState<boolean>(true);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
+  const analysisRequestKey = `${selectedFromCurrency}|${selectedToCurrency}|${selectedPeriodDays}`;
+  const activePairAnalysisData = pairAnalysisRequestKey === analysisRequestKey ? pairAnalysisData : null;
 
   // Mobile layout state — lifted from CurrentRateDisplay
   const [mobileRateData, setMobileRateData] = useState<RealTimeRateResponse | null>(null);
@@ -78,39 +81,51 @@ const UsdThbMonitorPage: FC = () => {
   const [mobileCurrencies, setMobileCurrencies] = useState<Record<string, string> | null>(null);
 
   useEffect(() => {
+    let isCurrentRequest = true;
+
     const loadPairAnalysis = async () => {
       if (!selectedFromCurrency || !selectedToCurrency) {
         setAnalysisError("Please select both 'from' and 'to' currencies.");
         setIsAnalysisLoading(false);
         setPairAnalysisData(null);
+        setPairAnalysisRequestKey(null);
         return;
       }
 
       setIsAnalysisLoading(true);
       setAnalysisError(null);
       setPairAnalysisData(null);
+      setPairAnalysisRequestKey(null);
 
       try {
         const data = await generatePairAnalysis(selectedFromCurrency, selectedToCurrency, selectedPeriodDays);
+        if (!isCurrentRequest) return;
+
         if (data) {
           setPairAnalysisData(data);
+          setPairAnalysisRequestKey(analysisRequestKey);
         } else {
           setAnalysisError('No analysis data could be generated for the selected pair.');
         }
       } catch (e: any) {
+        if (!isCurrentRequest) return;
         setAnalysisError(`Failed to generate analysis: ${e.message || 'Unknown error'}`);
       } finally {
-        setIsAnalysisLoading(false);
+        if (isCurrentRequest) setIsAnalysisLoading(false);
       }
     };
 
     loadPairAnalysis();
-  }, [selectedFromCurrency, selectedToCurrency, selectedPeriodDays]);
+
+    return () => {
+      isCurrentRequest = false;
+    };
+  }, [selectedFromCurrency, selectedToCurrency, selectedPeriodDays, analysisRequestKey]);
 
   // Track band recommendation when analysis data is ready
   useEffect(() => {
-    if (pairAnalysisData?.threshold_bands && selectedFromCurrency && selectedToCurrency) {
-      const opportuneBand = pairAnalysisData.threshold_bands.find(
+    if (activePairAnalysisData?.threshold_bands && selectedFromCurrency && selectedToCurrency) {
+      const opportuneBand = activePairAnalysisData.threshold_bands.find(
         b => b.level === 'OPPORTUNE' || b.level === 'NEUTRAL'
       );
       if (opportuneBand) {
@@ -127,7 +142,7 @@ const UsdThbMonitorPage: FC = () => {
         );
       }
     }
-  }, [pairAnalysisData, selectedFromCurrency, selectedToCurrency]);
+  }, [activePairAnalysisData, selectedFromCurrency, selectedToCurrency]);
 
   return (
     <>
@@ -141,7 +156,7 @@ const UsdThbMonitorPage: FC = () => {
           toCurrency={selectedToCurrency}
           onFromCurrencyChange={handleFromCurrencyChange}
           onToCurrencyChange={handleToCurrencyChange}
-          pairAnalysisData={pairAnalysisData}
+          pairAnalysisData={activePairAnalysisData}
           onRateDataChange={setMobileRateData}
           onBandChange={setMobileCurrentBand}
           onCurrenciesChange={setMobileCurrencies}
@@ -153,8 +168,8 @@ const UsdThbMonitorPage: FC = () => {
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
               <h3 className="text-lg font-semibold mb-1">
-                {pairAnalysisData?.distribution_statistics.mean
-                  ? `${selectedFromCurrency}/${selectedToCurrency} averages ${formatRate(pairAnalysisData.distribution_statistics.mean)}. Get notified when it hits your target.`
+                {activePairAnalysisData?.distribution_statistics.mean
+                  ? `${selectedFromCurrency}/${selectedToCurrency} averages ${formatRate(activePairAnalysisData.distribution_statistics.mean)}. Get notified when it hits your target.`
                   : 'Set rate alerts and get notified instantly'}
               </h3>
               <p className="text-sm text-primary-foreground/80">
@@ -219,7 +234,7 @@ const UsdThbMonitorPage: FC = () => {
             alertPrefs={alertPrefs}
             fromCurrency={selectedFromCurrency}
             toCurrency={selectedToCurrency}
-            pairAnalysisData={pairAnalysisData}
+            pairAnalysisData={activePairAnalysisData}
             selectedPeriodDays={selectedPeriodDays}
           />
 
@@ -234,7 +249,7 @@ const UsdThbMonitorPage: FC = () => {
                 fromCurrency={selectedFromCurrency}
                 toCurrency={selectedToCurrency}
                 currentRate={mobileRateData?.rate ?? null}
-                pairAnalysisData={pairAnalysisData}
+                pairAnalysisData={activePairAnalysisData}
                 isAnalysisLoading={isAnalysisLoading}
                 analysisError={analysisError}
               />
@@ -306,14 +321,14 @@ const UsdThbMonitorPage: FC = () => {
             alertPrefs={alertPrefs}
             fromCurrency={selectedFromCurrency}
             toCurrency={selectedToCurrency}
-            pairAnalysisData={pairAnalysisData}
+            pairAnalysisData={activePairAnalysisData}
             selectedPeriodDays={selectedPeriodDays}
           />
           <AnalysisDisplay
             fromCurrency={selectedFromCurrency}
             toCurrency={selectedToCurrency}
             currentRate={mobileRateData?.rate ?? null}
-            pairAnalysisData={pairAnalysisData}
+            pairAnalysisData={activePairAnalysisData}
             isAnalysisLoading={isAnalysisLoading}
             analysisError={analysisError}
           />
