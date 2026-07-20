@@ -166,8 +166,33 @@ function formatDateForApi(date: Date): string {
   return date.toISOString().split("T")[0];
 }
 
-export async function fetchRateHistory(from: string, to: string, days: number = 90): Promise<FormattedHistoricalRate[]> {
-  if (!isSupportedRatePair(from, to)) return [];
+interface RateHistoryRequest {
+  from: string;
+  to: string;
+  startDate: string;
+  endDate: string;
+  isGold: boolean;
+  apiFrom: string;
+  apiTo: string;
+  multiplier: number;
+  invert: boolean;
+  derived: boolean;
+  cacheKey: string;
+}
+
+const rateHistoryCache = new Map<string, Promise<FormattedHistoricalRate[]>>();
+
+/** Clear shared history requests between isolated consumers or tests. */
+export function clearRateHistoryCache(): void {
+  rateHistoryCache.clear();
+}
+
+function createRateHistoryRequest(
+  from: string,
+  to: string,
+  days: number,
+): RateHistoryRequest | null {
+  if (!isSupportedRatePair(from, to)) return null;
 
   const today = new Date();
   let startDate: string;
@@ -175,34 +200,66 @@ export async function fetchRateHistory(from: string, to: string, days: number = 
   if (days === -1) { // "Since Inception"
     // Frankfurter API earliest date for many pairs is 1999-01-04, but use a slightly later common one
     // or make this dynamic if certain pairs have much later start dates.
-    startDate = "2000-01-01"; 
+    startDate = "2000-01-01";
   } else {
     const pastDate = new Date();
     pastDate.setDate(today.getDate() - days);
     startDate = formatDateForApi(pastDate);
   }
   const endDate = formatDateForApi(today);
-  
+
   if (new Date(startDate) > new Date(endDate)) {
     console.warn(`Start date ${startDate} is after end date ${endDate} for ${from}-${to}. Returning empty history.`);
-    return [];
+    return null;
   }
 
-  if (isGoldAsset(from) || isGoldAsset(to)) {
-    const normalizedPair = normalizeGoldPair(from, to);
-    const history = await fetchFrankfurterV2History(
+  const isGold = isGoldAsset(from) || isGoldAsset(to);
+  const normalizedPair = isGold
+    ? normalizeGoldPair(from, to)
+    : { apiFrom: from, apiTo: to, multiplier: 1, invert: false, derived: false };
+
+  return {
+    from,
+    to,
+    startDate,
+    endDate,
+    isGold,
+    apiFrom: normalizedPair.apiFrom,
+    apiTo: normalizedPair.apiTo,
+    multiplier: normalizedPair.multiplier,
+    invert: normalizedPair.invert,
+    derived: normalizedPair.derived,
+    // Include the normalized API pair, conversion direction, and explicit range so
+    // equivalent consumers share only data that can be transformed identically.
+    cacheKey: [
+      isGold ? 'v2' : 'v1',
       normalizedPair.apiFrom,
       normalizedPair.apiTo,
+      normalizedPair.multiplier,
+      normalizedPair.invert ? 'invert' : 'direct',
       startDate,
       endDate,
+    ].join('|'),
+  };
+}
+
+async function fetchRateHistoryUncached(
+  request: RateHistoryRequest,
+): Promise<FormattedHistoricalRate[]> {
+  if (request.isGold) {
+    const history = await fetchFrankfurterV2History(
+      request.apiFrom,
+      request.apiTo,
+      request.startDate,
+      request.endDate,
     );
     return history.map(({ date, rate }) => ({
       date,
-      rate: applyNormalizedGoldRate(rate, normalizedPair),
+      rate: applyNormalizedGoldRate(rate, request),
     }));
   }
-  
-  const apiUrl = `${API_BASE_URL}/${startDate}..${endDate}?from=${from}&to=${to}`;
+
+  const apiUrl = `${API_BASE_URL}/${request.startDate}..${request.endDate}?from=${request.from}&to=${request.to}`;
 
   try {
     const response = await fetch(
@@ -211,7 +268,7 @@ export async function fetchRateHistory(from: string, to: string, days: number = 
     );
     if (!response.ok) {
       console.error(
-        `Failed to fetch rate history for ${from}-${to} (HTTP status):`,
+        `Failed to fetch rate history for ${request.from}-${request.to} (HTTP status):`,
         response.status,
         await response.text().catch(() => "Could not read response text")
       );
@@ -223,7 +280,7 @@ export async function fetchRateHistory(from: string, to: string, days: number = 
       data = await response.json();
     } catch (jsonError) {
        console.error(
-        `Failed to parse JSON response for ${from}-${to} rate history:`,
+        `Failed to parse JSON response for ${request.from}-${request.to} rate history:`,
         jsonError,
         await response.text().catch(() => "Could not read response text (after JSON parse failure)")
       );
@@ -231,25 +288,25 @@ export async function fetchRateHistory(from: string, to: string, days: number = 
     }
 
     if (typeof data !== 'object' || data === null) {
-        console.warn(`API response for ${from}-${to} rate history was not a non-null object:`, data);
+        console.warn(`API response for ${request.from}-${request.to} rate history was not a non-null object:`, data);
         return [];
     }
     
     if (!data.rates || typeof data.rates !== 'object') {
-      console.error(`Invalid data format for ${from}-${to} rate history (missing rates object):`, data);
+      console.error(`Invalid data format for ${request.from}-${request.to} rate history (missing rates object):`, data);
       return [];
     }
     
     const historicalData = data as HistoricalRateResponse;
 
     if (Object.keys(historicalData.rates).length === 0) {
-      console.warn(`No historical rates returned for ${from}-${to} between ${startDate} and ${endDate}.`);
+      console.warn(`No historical rates returned for ${request.from}-${request.to} between ${request.startDate} and ${request.endDate}.`);
       return [];
     }
 
     const formattedData = Object.entries(historicalData.rates)
       .map(([date, rateData]) => {
-        const rateValue = rateData && typeof rateData[to] === 'number' ? rateData[to] : 0;
+        const rateValue = rateData && typeof rateData[request.to] === 'number' ? rateData[request.to] : 0;
         return {
           date,
           rate: rateValue,
@@ -261,10 +318,40 @@ export async function fetchRateHistory(from: string, to: string, days: number = 
     return formattedData;
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    console.error(`Error fetching ${from}-${to} rate history:`, error);
-    trackError(message, `fetchRateHistory:${from}-${to}`);
+    console.error(`Error fetching ${request.from}-${request.to} rate history:`, error);
+    trackError(message, `fetchRateHistory:${request.from}-${request.to}`);
     return [];
   }
+}
+
+export function fetchRateHistory(
+  from: string,
+  to: string,
+  days: number = 90,
+): Promise<FormattedHistoricalRate[]> {
+  const request = createRateHistoryRequest(from, to, days);
+  if (!request) return Promise.resolve([]);
+
+  const cachedRequest = rateHistoryCache.get(request.cacheKey);
+  if (cachedRequest) return cachedRequest;
+
+  const pendingRequest = fetchRateHistoryUncached(request)
+    .catch((error: unknown) => {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      console.error(`Unexpected error fetching ${from}-${to} rate history:`, error);
+      trackError(message, `fetchRateHistory:${from}-${to}`);
+      return [];
+    })
+    .then((history) => {
+      // Empty responses represent an unavailable or invalid upstream result. Do not
+      // cache them so a later attempt can recover, while concurrent callers still
+      // share this in-flight promise.
+      if (history.length === 0) rateHistoryCache.delete(request.cacheKey);
+      return history;
+    });
+
+  rateHistoryCache.set(request.cacheKey, pendingRequest);
+  return pendingRequest;
 }
 
 

@@ -155,30 +155,52 @@ const HistoryChartDisplay: FC<HistoryChartDisplayProps> = ({
 
 
   useEffect(() => {
-    const fetchData = async () => {
-      if (!fromCurrency || !toCurrency || fromCurrency === toCurrency) {
-        setChartData([]);
-        setIsLoading(false);
-        return;
-      }
-      setIsLoading(true);
-      // Use selectedPeriodDays prop directly for fetching data
-      const data = await fetchRateHistory(fromCurrency, toCurrency, selectedPeriodDays);
-      if (data.length > 0) {
-        setChartData(data);
-      } else {
-        setChartData([]);
-        if (selectedPeriodDays !== 0 && fromCurrency && toCurrency && fromCurrency !== toCurrency) {
-          toast({
-            title: "No Data",
-            description: `No historical data found for ${fromCurrency}/${toCurrency} for the selected period.`,
-            variant: "default",
-          });
-        }
-      }
+    let isCurrentRequest = true;
+
+    setChartData([]);
+    setChartBands([]);
+
+    if (!fromCurrency || !toCurrency || fromCurrency === toCurrency) {
       setIsLoading(false);
+      return () => {
+        isCurrentRequest = false;
+      };
+    }
+
+    setIsLoading(true);
+
+    const fetchData = async () => {
+      try {
+        // Use selectedPeriodDays prop directly for fetching data
+        const data = await fetchRateHistory(fromCurrency, toCurrency, selectedPeriodDays);
+        if (!isCurrentRequest) return;
+
+        if (data.length > 0) {
+          setChartData(data);
+        } else {
+          setChartData([]);
+          if (selectedPeriodDays !== 0) {
+            toast({
+              title: "No Data",
+              description: `No historical data found for ${fromCurrency}/${toCurrency} for the selected period.`,
+              variant: "default",
+            });
+          }
+        }
+      } catch {
+        // The history client fails closed. Keep this guard for unexpected errors
+        // so a stale or rejected request cannot repopulate the chart.
+        if (isCurrentRequest) setChartData([]);
+      } finally {
+        if (isCurrentRequest) setIsLoading(false);
+      }
     };
+
     fetchData();
+
+    return () => {
+      isCurrentRequest = false;
+    };
   }, [selectedPeriodDays, fromCurrency, toCurrency, toast]); // Use selectedPeriodDays in dependency array
 
 
